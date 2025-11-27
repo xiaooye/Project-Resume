@@ -627,6 +627,22 @@ export default function NetworkTrafficDemo() {
 
   }, [data, requestDistribution, lbStrategy, isMounted]);
 
+  // Calculate comprehensive metrics first
+  const totalRequests = data.length > 0 ? data.reduce((sum, d) => sum + d.requests, 0) : 0;
+  const avgLatency = data.length > 0 ? data.reduce((sum, d) => sum + d.latency, 0) / data.length : 0;
+  const totalErrors = data.length > 0 ? data.reduce((sum, d) => sum + d.errorRate, 0) : 0;
+  
+  // P95 and P99 latency (critical for CTO)
+  const latencies = data.map(d => d.latency).sort((a, b) => a - b);
+  const p95Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : 0;
+  const p99Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.99)] : 0;
+  
+  // Capacity analysis
+  const maxCapacity = 10000; // per server
+  const utilization = data.length > 0 
+    ? (data.reduce((sum, d) => sum + d.requests, 0) / (data.length * maxCapacity)) * 100 
+    : 0;
+
   // Strategy recommendation system
   const getRecommendedStrategy = useCallback((): {
     strategy: LoadBalancingStrategy;
@@ -738,16 +754,6 @@ export default function NetworkTrafficDemo() {
 
   const recommendation = getRecommendedStrategy();
 
-  // Calculate comprehensive metrics
-  const totalRequests = data.length > 0 ? data.reduce((sum, d) => sum + d.requests, 0) : 0;
-  const avgLatency = data.length > 0 ? data.reduce((sum, d) => sum + d.latency, 0) / data.length : 0;
-  const totalErrors = data.length > 0 ? data.reduce((sum, d) => sum + d.errorRate, 0) : 0;
-  
-  // P95 and P99 latency (critical for CTO)
-  const latencies = data.map(d => d.latency).sort((a, b) => a - b);
-  const p95Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : 0;
-  const p99Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.99)] : 0;
-  
   // Anomaly detection
   const anomalies = data.filter(d => 
     d.errorRate > 5 || 
@@ -771,11 +777,6 @@ export default function NetworkTrafficDemo() {
     regionStats[region].avgLatency = regionStats[region].totalLatency / regionStats[region].servers;
   });
   
-  // Capacity analysis
-  const maxCapacity = 10000; // per server
-  const utilization = data.length > 0 
-    ? (data.reduce((sum, d) => sum + d.requests, 0) / (data.length * maxCapacity)) * 100 
-    : 0;
   const needsScaling = utilization > 80;
   
   // Health check
