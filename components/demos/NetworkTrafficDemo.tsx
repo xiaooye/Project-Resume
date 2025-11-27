@@ -73,12 +73,26 @@ export default function NetworkTrafficDemo() {
   }, [initializeServerStates]);
 
   // Simulate load balancing logic
+  // Track request routing history for animation
+  const [routingHistory, setRoutingHistory] = useState<Array<{
+    id: string;
+    from: string;
+    to: string;
+    timestamp: number;
+    strategy: LoadBalancingStrategy;
+  }>>([]);
+
   const simulateLoadBalancing = (servers: NetworkTrafficData[], strategy: LoadBalancingStrategy) => {
     if (servers.length === 0) return;
+
+    // Filter out down servers
+    const availableServers = servers.filter(s => !s.isDown && s.errorRate < 50);
+    if (availableServers.length === 0) return;
 
     // Simulate routing a batch of requests
     const requestsToRoute = Math.floor(Math.random() * 20) + 5; // 5-25 requests per update
     const distribution = new Map<string, number>();
+    const newRoutingHistory: typeof routingHistory = [];
     
     for (let i = 0; i < requestsToRoute; i++) {
       requestCounterRef.current += 1;
@@ -87,22 +101,29 @@ export default function NetworkTrafficDemo() {
 
       switch (strategy) {
         case "round-robin":
-          selectedServer = servers[requestCounterRef.current % servers.length];
+          // Round robin with available servers only
+          selectedServer = availableServers[requestCounterRef.current % availableServers.length];
           break;
         case "least-connections":
-          // Select server with lowest current requests
-          selectedServer = servers.reduce((min, server) => 
+          // Select server with lowest current requests (excluding down servers)
+          selectedServer = availableServers.reduce((min, server) => 
             server.requests < min.requests ? server : min
           );
           break;
         case "weighted-round-robin":
           // Weight by inverse latency (lower latency = higher weight)
-          const totalWeight = servers.reduce((sum, s) => 
+          // Exclude down servers and high error rate servers
+          const healthyServers = availableServers.filter(s => s.errorRate < 5);
+          if (healthyServers.length === 0) {
+            selectedServer = availableServers[0];
+            break;
+          }
+          const totalWeight = healthyServers.reduce((sum, s) => 
             sum + (1 / (s.latency + 1)) * lbParams.weightedLatencyFactor, 0
           );
           let random = Math.random() * totalWeight;
-          selectedServer = servers[0];
-          for (const server of servers) {
+          selectedServer = healthyServers[0];
+          for (const server of healthyServers) {
             random -= (1 / (server.latency + 1)) * lbParams.weightedLatencyFactor;
             if (random <= 0) {
               selectedServer = server;
@@ -112,15 +133,25 @@ export default function NetworkTrafficDemo() {
           break;
         case "ip-hash":
           // Hash-based selection (simulate consistent hashing)
-          const hash = (requestCounterRef.current + lbParams.ipHashSeed) % servers.length;
-          selectedServer = servers[hash];
+          // Only hash to available servers
+          const hash = (requestCounterRef.current + lbParams.ipHashSeed) % availableServers.length;
+          selectedServer = availableServers[hash];
           break;
         default:
-          selectedServer = servers[0];
+          selectedServer = availableServers[0];
       }
 
       const count = distribution.get(selectedServer.serverId) || 0;
       distribution.set(selectedServer.serverId, count + 1);
+
+      // Track routing for visualization
+      newRoutingHistory.push({
+        id: requestId,
+        from: "load-balancer",
+        to: selectedServer.serverId,
+        timestamp: Date.now(),
+        strategy,
+      });
 
       // Show animation for last request
       if (i === requestsToRoute - 1) {
@@ -132,6 +163,12 @@ export default function NetworkTrafficDemo() {
         setTimeout(() => setCurrentRequest(null), 1000);
       }
     }
+
+    // Update routing history (keep last 100)
+    setRoutingHistory((prev) => {
+      const updated = [...prev, ...newRoutingHistory];
+      return updated.slice(-100);
+    });
 
     // Update distribution
     setRequestDistribution((prev) => {
@@ -563,11 +600,20 @@ export default function NetworkTrafficDemo() {
       .style("font-weight", "bold")
       .text(`${lbStrategy.replace("-", " ").toUpperCase()} - Request Distribution`);
 
-    // Calculate balance score
+    // Calculate balance score and strategy performance metrics
     const totalRequests = distributionArray.reduce((sum, d) => sum + d.count, 0);
     const avgRequests = totalRequests / distributionArray.length;
     const variance = distributionArray.reduce((sum, d) => sum + Math.pow(d.count - avgRequests, 2), 0) / distributionArray.length;
     const balanceScore = 100 - Math.min(100, (Math.sqrt(variance) / avgRequests) * 100);
+    
+    // Calculate strategy performance metrics
+    const strategyMetrics = {
+      balanceScore,
+      avgLatency: distributionArray.reduce((sum, d) => sum + (d.server?.latency || 0), 0) / distributionArray.length,
+      maxLoad: Math.max(...distributionArray.map(d => d.count)),
+      minLoad: Math.min(...distributionArray.map(d => d.count)),
+      loadVariance: variance,
+    };
 
     // Add balance score
     svg
@@ -580,6 +626,117 @@ export default function NetworkTrafficDemo() {
       .text(`Balance Score: ${balanceScore.toFixed(1)}%`);
 
   }, [data, requestDistribution, lbStrategy, isMounted]);
+
+  // Strategy recommendation system
+  const getRecommendedStrategy = useCallback((): {
+    strategy: LoadBalancingStrategy;
+    reason: string;
+    score: number;
+  } => {
+    const activeScenarios = scenarios.filter(s => s.enabled);
+    const downServers = data.filter(d => d.isDown).length;
+    const highLatencyServers = data.filter(d => d.latency > 150).length;
+    const highErrorServers = data.filter(d => d.errorRate > 5).length;
+    const trafficSpike = activeScenarios.some(s => s.type === "traffic-spike" || s.type === "ddos");
+    const regionOutage = activeScenarios.some(s => s.type === "region-outage");
+    const serverDown = activeScenarios.some(s => s.type === "server-down") || downServers > 0;
+    
+    const strategies: Array<{
+      strategy: LoadBalancingStrategy;
+      score: number;
+      reasons: string[];
+    }> = [
+      {
+        strategy: "least-connections",
+        score: 0,
+        reasons: [],
+      },
+      {
+        strategy: "weighted-round-robin",
+        score: 0,
+        reasons: [],
+      },
+      {
+        strategy: "round-robin",
+        score: 0,
+        reasons: [],
+      },
+      {
+        strategy: "ip-hash",
+        score: 0,
+        reasons: [],
+      },
+    ];
+
+    // Score each strategy based on current conditions
+    
+    // Least Connections: Best for uneven load, server failures, traffic spikes
+    if (serverDown || trafficSpike) {
+      strategies[0].score += 30;
+      strategies[0].reasons.push("Handles server failures and traffic spikes well");
+    }
+    if (highLatencyServers > data.length * 0.2) {
+      strategies[0].score += 20;
+      strategies[0].reasons.push("Automatically avoids overloaded servers");
+    }
+    if (utilization > 70) {
+      strategies[0].score += 15;
+      strategies[0].reasons.push("Optimal for high utilization scenarios");
+    }
+
+    // Weighted Round Robin: Best for performance optimization, latency-sensitive apps
+    if (highLatencyServers > 0 && highLatencyServers < data.length * 0.3) {
+      strategies[1].score += 25;
+      strategies[1].reasons.push("Optimizes for low latency");
+    }
+    if (p95Latency > 150) {
+      strategies[1].score += 20;
+      strategies[1].reasons.push("Reduces latency by routing to faster servers");
+    }
+    if (!trafficSpike && !serverDown) {
+      strategies[1].score += 15;
+      strategies[1].reasons.push("Best for stable, performance-critical workloads");
+    }
+
+    // Round Robin: Best for simple, predictable load, uniform servers
+    if (downServers === 0 && highLatencyServers === 0 && !trafficSpike) {
+      strategies[2].score += 25;
+      strategies[2].reasons.push("Simple and predictable for uniform workloads");
+    }
+    if (utilization < 50) {
+      strategies[2].score += 15;
+      strategies[2].reasons.push("Efficient for low to medium load");
+    }
+    if (data.length <= 10) {
+      strategies[2].score += 10;
+      strategies[2].reasons.push("Good for small server pools");
+    }
+
+    // IP Hash: Best for session affinity, caching, stateful applications
+    if (regionOutage) {
+      strategies[3].score += 20;
+      strategies[3].reasons.push("Maintains session affinity during outages");
+    }
+    if (!trafficSpike && !serverDown) {
+      strategies[3].score += 15;
+      strategies[3].reasons.push("Ensures consistent routing for caching");
+    }
+    if (utilization < 60) {
+      strategies[3].score += 10;
+      strategies[3].reasons.push("Good for stateful applications");
+    }
+
+    // Find best strategy
+    const best = strategies.reduce((max, s) => s.score > max.score ? s : max);
+    
+    return {
+      strategy: best.strategy,
+      reason: best.reasons.join(". ") || "No specific recommendation",
+      score: best.score,
+    };
+  }, [data, scenarios, utilization, p95Latency]);
+
+  const recommendation = getRecommendedStrategy();
 
   // Calculate comprehensive metrics
   const totalRequests = data.length > 0 ? data.reduce((sum, d) => sum + d.requests, 0) : 0;
@@ -937,9 +1094,97 @@ export default function NetworkTrafficDemo() {
           <p className="subtitle is-6 mb-4">
             Shows how requests are distributed across servers using {lbStrategy.replace("-", " ")} algorithm
           </p>
+          
+          {/* Real-time Request Flow Animation */}
+          {routingHistory.length > 0 && (
+            <div className="box mb-4">
+              <h4 className="title is-5 mb-3">Real-time Request Routing (Last 20 Requests)</h4>
+              <div className="columns is-multiline">
+                {routingHistory.slice(-20).reverse().map((route, idx) => {
+                  const server = data.find(d => d.serverId === route.to);
+                  const age = Date.now() - route.timestamp;
+                  const isRecent = age < 2000; // Show animation for requests < 2 seconds old
+                  
+                  return (
+                    <motion.div
+                      key={route.id}
+                      className="column is-2"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: isRecent ? 1 : 0.5, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className={`box ${isRecent ? "has-background-info-light" : ""}`}>
+                        <div className="content">
+                          <p className="is-size-7">
+                            <strong>{route.id}</strong>
+                          </p>
+                          <p className="is-size-7">
+                            <span className="tag is-small">LB</span> →{" "}
+                            <span className={`tag is-small ${
+                              server?.isDown ? "is-danger" :
+                              server?.errorRate > 3 ? "is-warning" :
+                              "is-success"
+                            }`}>
+                              {route.to.split("-")[0]}
+                            </span>
+                          </p>
+                          <p className="is-size-7 has-text-grey">
+                            {age < 1000 ? `${age}ms ago` : `${(age / 1000).toFixed(1)}s ago`}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
           <div className="table-container">
             <svg ref={lbVizRef} width="100%" height="400" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet"></svg>
           </div>
+          
+          {/* Strategy Effectiveness Metrics */}
+          {requestDistribution.size > 0 && (
+            <div className="box mt-4">
+              <h4 className="title is-5 mb-3">Current Strategy Performance</h4>
+              <div className="columns">
+                <div className="column">
+                  <div className="content">
+                    <p><strong>Balance Score:</strong> {(() => {
+                      const distArray = Array.from(requestDistribution.values());
+                      const avg = distArray.reduce((a, b) => a + b, 0) / distArray.length;
+                      const variance = distArray.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / distArray.length;
+                      const score = 100 - Math.min(100, (Math.sqrt(variance) / avg) * 100);
+                      return score.toFixed(1) + "%";
+                    })()}</p>
+                    <p><strong>Total Requests Routed:</strong> {Array.from(requestDistribution.values()).reduce((a, b) => a + b, 0).toLocaleString()}</p>
+                    <p><strong>Servers Receiving Traffic:</strong> {requestDistribution.size}</p>
+                  </div>
+                </div>
+                <div className="column">
+                  <div className="content">
+                    <p><strong>Strategy:</strong> {lbStrategy.replace("-", " ").toUpperCase()}</p>
+                    <p><strong>Load Distribution:</strong> {
+                      (() => {
+                        const distArray = Array.from(requestDistribution.values());
+                        const max = Math.max(...distArray);
+                        const min = Math.min(...distArray);
+                        return max > 0 ? ((max - min) / max * 100).toFixed(1) + "% variance" : "N/A";
+                      })()
+                    }</p>
+                    <p><strong>Health Check:</strong> {
+                      data.filter(d => !d.isDown && d.errorRate < 5).length > 0 ? (
+                        <span className="tag is-success">✓ Healthy</span>
+                      ) : (
+                        <span className="tag is-danger">✗ Issues Detected</span>
+                      )
+                    }</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Load Balancing Analysis */}
@@ -1033,9 +1278,178 @@ export default function NetworkTrafficDemo() {
                     </select>
                   </div>
                 </div>
+                {recommendation.strategy !== lbStrategy && (
+                  <div className="notification is-info mt-2">
+                    <button className="delete" onClick={() => {}}></button>
+                    <strong>💡 Recommended: {recommendation.strategy.replace("-", " ").toUpperCase()}</strong>
+                    <p className="mt-2">{recommendation.reason}</p>
+                    <button
+                      className="button is-small is-primary mt-2"
+                      onClick={() => {
+                        setLbStrategy(recommendation.strategy);
+                        setRequestDistribution(new Map());
+                      }}
+                    >
+                      Switch to Recommended Strategy
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Strategy Comparison & Performance Analysis */}
+          <div className="box mt-4">
+            <h4 className="title is-5 mb-4">Strategy Performance Analysis</h4>
+            <div className="table-container">
+              <table className="table is-fullwidth is-striped">
+                <thead>
+                  <tr>
+                    <th>Strategy</th>
+                    <th>Best For</th>
+                    <th>Current Scenario Match</th>
+                    <th>Recommendation Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className={lbStrategy === "round-robin" ? "has-background-info-light" : ""}>
+                    <td><strong>Round Robin</strong></td>
+                    <td>Simple, uniform workloads, predictable load</td>
+                    <td>
+                      {recommendation.strategy === "round-robin" ? (
+                        <span className="tag is-success">✓ Best Match</span>
+                      ) : (
+                        <span className="tag is-light">Consider</span>
+                      )}
+                    </td>
+                    <td>
+                      <progress
+                        className={`progress ${recommendation.strategy === "round-robin" ? "is-success" : "is-light"}`}
+                        value={recommendation.strategy === "round-robin" ? recommendation.score : 0}
+                        max={100}
+                      >
+                        {recommendation.strategy === "round-robin" ? recommendation.score : 0}%
+                      </progress>
+                    </td>
+                  </tr>
+                  <tr className={lbStrategy === "least-connections" ? "has-background-info-light" : ""}>
+                    <td><strong>Least Connections</strong></td>
+                    <td>Uneven load, server failures, traffic spikes, high utilization</td>
+                    <td>
+                      {recommendation.strategy === "least-connections" ? (
+                        <span className="tag is-success">✓ Best Match</span>
+                      ) : (
+                        <span className="tag is-light">Consider</span>
+                      )}
+                    </td>
+                    <td>
+                      <progress
+                        className={`progress ${recommendation.strategy === "least-connections" ? "is-success" : "is-light"}`}
+                        value={recommendation.strategy === "least-connections" ? recommendation.score : 0}
+                        max={100}
+                      >
+                        {recommendation.strategy === "least-connections" ? recommendation.score : 0}%
+                      </progress>
+                    </td>
+                  </tr>
+                  <tr className={lbStrategy === "weighted-round-robin" ? "has-background-info-light" : ""}>
+                    <td><strong>Weighted Round Robin</strong></td>
+                    <td>Performance optimization, latency-sensitive apps, stable workloads</td>
+                    <td>
+                      {recommendation.strategy === "weighted-round-robin" ? (
+                        <span className="tag is-success">✓ Best Match</span>
+                      ) : (
+                        <span className="tag is-light">Consider</span>
+                      )}
+                    </td>
+                    <td>
+                      <progress
+                        className={`progress ${recommendation.strategy === "weighted-round-robin" ? "is-success" : "is-light"}`}
+                        value={recommendation.strategy === "weighted-round-robin" ? recommendation.score : 0}
+                        max={100}
+                      >
+                        {recommendation.strategy === "weighted-round-robin" ? recommendation.score : 0}%
+                      </progress>
+                    </td>
+                  </tr>
+                  <tr className={lbStrategy === "ip-hash" ? "has-background-info-light" : ""}>
+                    <td><strong>IP Hash</strong></td>
+                    <td>Session affinity, caching, stateful applications, consistent routing</td>
+                    <td>
+                      {recommendation.strategy === "ip-hash" ? (
+                        <span className="tag is-success">✓ Best Match</span>
+                      ) : (
+                        <span className="tag is-light">Consider</span>
+                      )}
+                    </td>
+                    <td>
+                      <progress
+                        className={`progress ${recommendation.strategy === "ip-hash" ? "is-success" : "is-light"}`}
+                        value={recommendation.strategy === "ip-hash" ? recommendation.score : 0}
+                        max={100}
+                      >
+                        {recommendation.strategy === "ip-hash" ? recommendation.score : 0}%
+                      </progress>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Scenario-Specific Recommendations */}
+          {scenarios.filter(s => s.enabled).length > 0 && (
+            <div className="box mt-4">
+              <h4 className="title is-5 mb-4">Scenario-Specific Solutions</h4>
+              <div className="content">
+                {scenarios.filter(s => s.enabled).map((scenario, idx) => {
+                  let solution = "";
+                  let recommendedStrategy: LoadBalancingStrategy = "least-connections";
+                  
+                  switch (scenario.type) {
+                    case "traffic-spike":
+                      solution = "During traffic spikes, use Least Connections to automatically route traffic away from overloaded servers. Consider enabling auto-scaling and rate limiting.";
+                      recommendedStrategy = "least-connections";
+                      break;
+                    case "server-down":
+                      solution = "When servers are down, Least Connections automatically excludes failed servers. Ensure health checks are configured and consider implementing circuit breakers.";
+                      recommendedStrategy = "least-connections";
+                      break;
+                    case "region-outage":
+                      solution = "For region outages, IP Hash maintains session affinity while routing to available regions. Consider implementing geo-routing and failover policies.";
+                      recommendedStrategy = "ip-hash";
+                      break;
+                    case "ddos":
+                      solution = "During DDoS attacks, use Least Connections combined with rate limiting and WAF. Consider implementing traffic filtering and auto-scaling to absorb the attack.";
+                      recommendedStrategy = "least-connections";
+                      break;
+                  }
+                  
+                  return (
+                    <div key={idx} className="notification is-warning">
+                      <strong>Scenario: {scenario.type.replace("-", " ").toUpperCase()}</strong>
+                      <p className="mt-2">{solution}</p>
+                      <p className="mt-2">
+                        <strong>Recommended Strategy:</strong>{" "}
+                        <span className="tag is-primary">{recommendedStrategy.replace("-", " ").toUpperCase()}</span>
+                        {recommendedStrategy !== lbStrategy && (
+                          <button
+                            className="button is-small is-primary ml-2"
+                            onClick={() => {
+                              setLbStrategy(recommendedStrategy);
+                              setRequestDistribution(new Map());
+                            }}
+                          >
+                            Apply
+                          </button>
+                        )}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {lbStrategy === "weighted-round-robin" && (
             <div className="field">
