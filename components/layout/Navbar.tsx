@@ -29,10 +29,24 @@ export default function Navbar() {
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (href.startsWith("#")) {
       e.preventDefault();
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
+      // If we're not on the home page, navigate first
+      if (pathname !== "/") {
+        window.location.href = `/${href}`;
+        return;
       }
+      // Wait a bit for any navigation to complete
+      setTimeout(() => {
+        const element = document.querySelector(href);
+        if (element) {
+          const offset = 80; // Account for fixed navbar
+          const elementPosition = element.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
     }
   };
 

@@ -160,6 +160,19 @@ export default function HeroSection() {
                 className="button is-primary is-large"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.querySelector("#demos");
+                  if (element) {
+                    const offset = 80; // Account for fixed navbar
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - offset;
+                    window.scrollTo({
+                      top: offsetPosition,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
               >
                 View Demos
               </motion.a>

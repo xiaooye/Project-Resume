@@ -132,6 +132,8 @@ The goal is to create an impressive, interactive portfolio that not only lists s
 4. **Testing**: Unit tests, E2E tests with Playwright
 5. **Deployment**: Vercel platform
 6. **Documentation**: README, DEVELOPMENT.md, inline code comments
+7. **Browser Testing**: **REQUIRED** - After completing each task, test in browser to ensure no console errors or warnings
+8. **Git Workflow**: **REQUIRED** - After completing each task and testing, commit changes and push to GitHub
 
 ### Design Requirements
 
@@ -144,14 +146,14 @@ The goal is to create an impressive, interactive portfolio that not only lists s
 ### Completed Tasks ✅
 
 - [x] 项目初始化 - Next.js 14 项目创建，TypeScript、Bulma CSS 配置
-- [x] 基础布局和导航 - 响应式导航栏，主题切换，平滑滚动
-- [x] 首页 Hero Section - 3D 背景，打字动画效果
-- [x] 实时网络流量演示 - WebSocket + D3.js 可视化
-- [x] 大数据处理演示 - 虚拟滚动，流式数据加载
-- [x] WebAssembly 3D 演示 - Three.js + WASM 加速
+
 
 ### In Progress 🚧
-
+- [ ] 基础布局和导航 - 响应式导航栏，主题切换，平滑滚动
+- [ ] 首页 Hero Section - 3D 背景，打字动画效果
+- [ ] 实时网络流量演示 - WebSocket + D3.js 可视化
+- [ ] 大数据处理演示 - 虚拟滚动，流式数据加载
+- [ ] WebAssembly 3D 演示 - Three.js + WASM 加速
 - [ ] WebAssembly 视频编码演示 - FFmpeg.wasm 视频处理
 
 ### Pending Tasks 📋

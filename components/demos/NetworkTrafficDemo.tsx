@@ -155,7 +155,7 @@ export default function NetworkTrafficDemo() {
 
     const colors = d3.schemeCategory10;
 
-    SERVER_COUNT.forEach((_, serverIndex) => {
+    Array.from({ length: SERVER_COUNT }).forEach((_, serverIndex) => {
       const serverData = timeData.filter((d) => d.serverId === `server-${serverIndex + 1}`);
       if (serverData.length > 0) {
         svg
