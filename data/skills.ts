@@ -1,6 +1,6 @@
 import { Skill } from "@/types";
 
-// 技能图标映射（使用 emoji 和文本图标）
+// Skill icon mapping (using emoji and text icons)
 export const skillIcons: Record<string, string> = {
   TypeScript: "📘",
   JavaScript: "📜",
@@ -27,7 +27,7 @@ export const skillIcons: Record<string, string> = {
   Linux: "🐧",
 };
 
-// 技能数据
+// Skills data
 export const skillsData: Skill[] = [
   { name: "TypeScript", level: 95, category: "Languages", yearsOfExperience: 8 },
   { name: "JavaScript", level: 98, category: "Languages", yearsOfExperience: 10 },
@@ -45,12 +45,12 @@ export const skillsData: Skill[] = [
   { name: "Machine Learning", level: 70, category: "AI/ML", yearsOfExperience: 3 },
 ];
 
-// 获取技能图标
+// Get skill icon
 export function getSkillIcon(skillName: string): string {
   return skillIcons[skillName] || "💻";
 }
 
-// 技能分类配置
+// Skill category configuration
 export const skillCategories = [
   { name: "Languages", label: "编程语言", color: "is-primary" },
   { name: "Frontend", label: "前端技术", color: "is-info" },

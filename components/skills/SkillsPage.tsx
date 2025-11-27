@@ -304,7 +304,7 @@ export default function SkillsPage() {
                   <input
                     className="input"
                     type="text"
-                    placeholder="搜索技能..."
+                    placeholder="Search skills..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     aria-label="Search skills"
@@ -324,10 +324,10 @@ export default function SkillsPage() {
                       onChange={(e) => setSortBy(e.target.value as SortOption)}
                       aria-label="Sort by"
                     >
-                      <option value="level">按熟练度</option>
-                      <option value="name">按名称</option>
-                      <option value="years">按经验</option>
-                      <option value="category">按分类</option>
+                      <option value="level">By Proficiency</option>
+                      <option value="name">By Name</option>
+                      <option value="years">By Experience</option>
+                      <option value="category">By Category</option>
                     </select>
                   </div>
                 </div>
@@ -351,7 +351,7 @@ export default function SkillsPage() {
 
         {/* Category Filter */}
         <div className="box liquid-glass-card mb-6">
-          <h2 className="title is-5 mb-4 liquid-glass-text">分类筛选</h2>
+          <h2 className="title is-5 mb-4 liquid-glass-text">Category Filter</h2>
           <div className="field is-grouped is-grouped-multiline">
             <div className="control">
               <button
@@ -360,7 +360,7 @@ export default function SkillsPage() {
                 aria-label="Show all skills"
                 aria-pressed={selectedCategory === "all"}
               >
-                全部 ({skillsData.length})
+                All ({skillsData.length})
               </button>
             </div>
             {categories.map((category) => {
@@ -383,8 +383,8 @@ export default function SkillsPage() {
 
         {/* Radar Chart */}
         <div className="box liquid-glass-card mb-6">
-          <h2 className="title is-4 mb-4 liquid-glass-text">技能雷达图</h2>
-          <p className="subtitle is-6 mb-4 liquid-glass-text">不同技术类别的熟练度水平</p>
+          <h2 className="title is-4 mb-4 liquid-glass-text">Skills Radar Chart</h2>
+          <p className="subtitle is-6 mb-4 liquid-glass-text">Proficiency levels across different technology categories</p>
           <svg
             ref={radarChartRef}
             width="100%"
@@ -419,8 +419,8 @@ export default function SkillsPage() {
 
         {/* Experience Timeline */}
         <div className="box liquid-glass-card mb-6">
-          <h2 className="title is-4 mb-4 liquid-glass-text">经验时间线</h2>
-          <p className="subtitle is-6 mb-4 liquid-glass-text">按经验年限分布的技能</p>
+          <h2 className="title is-4 mb-4 liquid-glass-text">Experience Timeline</h2>
+          <p className="subtitle is-6 mb-4 liquid-glass-text">Skills distribution by years of experience</p>
           <svg
             ref={timelineRef}
             width="100%"
@@ -433,11 +433,11 @@ export default function SkillsPage() {
         {/* Skills Grid */}
         <div className="box liquid-glass-card">
           <h2 className="title is-4 mb-4 liquid-glass-text">
-            技能详情 ({filteredAndSortedSkills.length})
+            Skill Details ({filteredAndSortedSkills.length})
           </h2>
           {filteredAndSortedSkills.length === 0 ? (
             <div className="notification is-info">
-              <p>没有找到匹配的技能。请尝试其他搜索条件。</p>
+              <p className="liquid-glass-text">No matching skills found. Please try different search criteria.</p>
             </div>
           ) : (
             <div className={`columns is-multiline ${isMobile ? "is-mobile" : ""}`}>
@@ -476,7 +476,7 @@ export default function SkillsPage() {
                       </div>
                       <div className="mb-2">
                         <div className="is-flex is-justify-content-space-between mb-1">
-                          <span className="liquid-glass-text is-size-7">熟练度</span>
+                          <span className="liquid-glass-text is-size-7">Proficiency</span>
                           <span className="liquid-glass-text is-size-7">{skill.level}%</span>
                         </div>
                         <progress
@@ -489,8 +489,8 @@ export default function SkillsPage() {
                         </progress>
                       </div>
                       <div className="is-flex is-justify-content-space-between">
-                        <span className="liquid-glass-text is-size-7">经验年限</span>
-                        <span className="liquid-glass-text is-size-7">{skill.yearsOfExperience} 年</span>
+                        <span className="liquid-glass-text is-size-7">Years of Experience</span>
+                        <span className="liquid-glass-text is-size-7">{skill.yearsOfExperience} years</span>
                       </div>
                     </div>
                   </motion.div>
@@ -528,7 +528,7 @@ export default function SkillsPage() {
                     <span className="mr-3" style={{ fontSize: "2rem" }} aria-hidden="true">
                       {getSkillIcon(selectedSkill.name)}
                     </span>
-                    <p className="modal-card-title" id="skill-modal-title">
+                    <p className="modal-card-title liquid-glass-text" id="skill-modal-title">
                       {selectedSkill.name}
                     </p>
                   </div>
@@ -541,13 +541,13 @@ export default function SkillsPage() {
                 <section className="modal-card-body">
                   <div className="content">
                     <div className="field">
-                      <label className="label">分类</label>
+                      <label className="label liquid-glass-text">Category</label>
                       <div className="control">
                         <span className="tag is-info is-large">{selectedSkill.category}</span>
                       </div>
                     </div>
                     <div className="field">
-                      <label className="label">熟练度</label>
+                      <label className="label liquid-glass-text">Proficiency</label>
                       <div className="control">
                         <progress
                           className="progress is-primary is-large"
@@ -557,26 +557,26 @@ export default function SkillsPage() {
                         >
                           {selectedSkill.level}%
                         </progress>
-                        <p className="help">{selectedSkill.level}%</p>
+                        <p className="help liquid-glass-text">{selectedSkill.level}%</p>
                       </div>
                     </div>
                     <div className="field">
-                      <label className="label">经验年限</label>
+                      <label className="label liquid-glass-text">Years of Experience</label>
                       <div className="control">
-                        <p className="is-size-5">{selectedSkill.yearsOfExperience} 年</p>
+                        <p className="is-size-5 liquid-glass-text">{selectedSkill.yearsOfExperience} years</p>
                       </div>
                     </div>
                     <div className="field">
-                      <label className="label">技能等级</label>
+                      <label className="label liquid-glass-text">Skill Level</label>
                       <div className="control">
                         <span className="tag is-success is-large">
                           {selectedSkill.level >= 90
-                            ? "专家"
+                            ? "Expert"
                             : selectedSkill.level >= 75
-                            ? "高级"
+                            ? "Advanced"
                             : selectedSkill.level >= 60
-                            ? "中级"
-                            : "初级"}
+                            ? "Intermediate"
+                            : "Beginner"}
                         </span>
                       </div>
                     </div>
@@ -588,7 +588,7 @@ export default function SkillsPage() {
                     onClick={() => setSelectedSkill(null)}
                     aria-label="Close modal"
                   >
-                    关闭
+                    Close
                   </button>
                 </footer>
               </motion.div>
