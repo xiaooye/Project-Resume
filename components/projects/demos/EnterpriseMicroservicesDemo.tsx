@@ -50,6 +50,14 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [activeTab, setActiveTab] = useState<"architecture" | "circuit-breaker" | "tracing" | "scaling" | "metrics">("architecture");
   
+  // User controls
+  const [requestRate, setRequestRate] = useState(1000); // requests per minute
+  const [simulationEnabled, setSimulationEnabled] = useState(true);
+  const [circuitBreakerThreshold, setCircuitBreakerThreshold] = useState(5); // error rate %
+  const [autoScalingEnabled, setAutoScalingEnabled] = useState(true);
+  const [targetLatency, setTargetLatency] = useState(100); // ms
+  const [manualServiceControl, setManualServiceControl] = useState<Map<string, { multiplier: number; forceStatus?: ServiceNode["status"] }>>(new Map());
+  
   // Services state
   const [services, setServices] = useState<ServiceNode[]>([]);
   const [circuitBreakers, setCircuitBreakers] = useState<Map<string, CircuitBreakerState>>(new Map());
@@ -62,6 +70,10 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
   const [totalRequests, setTotalRequests] = useState(0);
   const [errorRate, setErrorRate] = useState(0);
   const [uptime, setUptime] = useState(99.9);
+  
+  // Request simulation
+  const [requestQueue, setRequestQueue] = useState<Array<{ id: string; serviceId: string; timestamp: number }>>([]);
+  const [recentRequests, setRecentRequests] = useState<Array<{ id: string; serviceId: string; timestamp: number; latency: number; status: "success" | "error" }>>([]);
   
   const svgRef = useRef<SVGSVGElement>(null);
   const architectureRef = useRef<SVGSVGElement>(null);
@@ -123,10 +135,82 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     setScalingMetrics(scaling);
   }, []);
 
+  // Simulate request
+  const simulateRequest = useCallback((targetServiceId: string) => {
+    const service = services.find(s => s.id === targetServiceId);
+    if (!service) return;
+
+    const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+    
+    // Check circuit breaker
+    const breaker = circuitBreakers.get(targetServiceId);
+    if (breaker && breaker.state === "open") {
+      // Request blocked by circuit breaker
+      setRecentRequests(prev => [...prev.slice(-50), {
+        id: requestId,
+        serviceId: targetServiceId,
+        timestamp: startTime,
+        latency: 0,
+        status: "error",
+      }]);
+      return;
+    }
+
+    // Simulate latency based on service state
+    const baseLatency = service.latency;
+    const simulatedLatency = baseLatency + (Math.random() - 0.5) * baseLatency * 0.3;
+    const willError = service.errorRate > Math.random() * 10;
+
+    setTimeout(() => {
+      const result = {
+        id: requestId,
+        serviceId: targetServiceId,
+        timestamp: startTime,
+        latency: simulatedLatency,
+        status: willError ? "error" as const : "success" as const,
+      };
+      
+      setRecentRequests(prev => [...prev.slice(-50), result]);
+      
+      // Update circuit breaker
+      if (breaker) {
+        setCircuitBreakers(prev => {
+          const updated = new Map(prev);
+          const current = updated.get(targetServiceId);
+          if (current) {
+            if (willError) {
+              updated.set(targetServiceId, {
+                ...current,
+                failureCount: current.failureCount + 1,
+                lastFailureTime: Date.now(),
+                state: current.failureCount + 1 >= 5 ? "open" : current.state,
+              });
+            } else {
+              updated.set(targetServiceId, {
+                ...current,
+                successCount: current.successCount + 1,
+                state: current.state === "half-open" ? "closed" : current.state,
+              });
+            }
+          }
+          return updated;
+        });
+      }
+    }, simulatedLatency);
+  }, [services, circuitBreakers]);
+
   // Update metrics
   const updateMetrics = useCallback(() => {
+    if (!simulationEnabled) return;
+
     setServices(prev => prev.map(service => {
-      const baseRequests = service.requests;
+      const manual = manualServiceControl.get(service.id);
+      const baseMultiplier = manual?.multiplier || 1.0;
+      const forcedStatus = manual?.forceStatus;
+      
+      // Calculate base requests based on user input
+      const baseRequests = (requestRate / services.length) * baseMultiplier;
       const variation = (Math.random() - 0.5) * 0.2;
       const newRequests = Math.max(0, baseRequests * (1 + variation));
       
@@ -136,12 +220,14 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
       
       const newErrorRate = Math.min(5, Math.max(0, service.errorRate + (Math.random() - 0.5) * 0.5));
       
-      // Update status based on error rate and latency
-      let newStatus: ServiceNode["status"] = "healthy";
-      if (newErrorRate > 3 || newLatency > 150) {
-        newStatus = "down";
-      } else if (newErrorRate > 1 || newLatency > 100) {
-        newStatus = "degraded";
+      // Update status based on error rate and latency, or forced status
+      let newStatus: ServiceNode["status"] = forcedStatus || "healthy";
+      if (!forcedStatus) {
+        if (newErrorRate > circuitBreakerThreshold || newLatency > targetLatency * 1.5) {
+          newStatus = "down";
+        } else if (newErrorRate > circuitBreakerThreshold / 2 || newLatency > targetLatency) {
+          newStatus = "degraded";
+        }
       }
 
       return {
@@ -153,6 +239,18 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
         connections: Math.floor(newRequests / 20),
       };
     }));
+
+    // Generate new requests based on request rate (only if simulation is enabled)
+    if (requestRate > 0 && simulationEnabled) {
+      const requestsPerSecond = requestRate / 60;
+      const requestsToGenerate = Math.floor(requestsPerSecond);
+      for (let i = 0; i < requestsToGenerate; i++) {
+        const randomService = services[Math.floor(Math.random() * services.length)];
+        if (randomService && randomService.type !== "database" && randomService.type !== "cache") {
+          simulateRequest(randomService.id);
+        }
+      }
+    }
 
     // Update circuit breakers
     setCircuitBreakers(prev => {
@@ -191,24 +289,68 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     });
 
     // Update scaling metrics
-    setScalingMetrics(prev => {
-      const updated = new Map(prev);
-      updated.forEach((metric, serviceId) => {
-        const service = services.find(s => s.id === serviceId);
-        if (service) {
-          const targetReplicas = Math.ceil(service.requests / 2000);
-          updated.set(serviceId, {
-            ...metric,
-            currentReplicas: metric.currentReplicas + (targetReplicas > metric.targetReplicas ? 1 : -1),
-            targetReplicas: Math.max(2, Math.min(10, targetReplicas)),
-            cpuUsage: Math.min(100, metric.cpuUsage + (Math.random() - 0.5) * 10),
-            memoryUsage: Math.min(100, metric.memoryUsage + (Math.random() - 0.5) * 5),
-            requestRate: service.requests / 60,
-          });
-        }
+    if (autoScalingEnabled) {
+      setScalingMetrics(prev => {
+        const updated = new Map(prev);
+        updated.forEach((metric, serviceId) => {
+          const service = services.find(s => s.id === serviceId);
+          if (service) {
+            // Calculate target replicas based on latency and request rate
+            const requestsPerReplica = 2000; // Each replica can handle ~2000 req/min
+            const latencyBasedReplicas = service.latency > targetLatency ? 
+              Math.ceil(service.requests / requestsPerReplica) + 1 : 
+              Math.ceil(service.requests / requestsPerReplica);
+            
+            const targetReplicas = Math.max(2, Math.min(10, latencyBasedReplicas));
+            
+            // Gradually adjust current replicas towards target
+            let newCurrentReplicas = metric.currentReplicas;
+            if (targetReplicas > metric.currentReplicas) {
+              newCurrentReplicas = Math.min(targetReplicas, metric.currentReplicas + 1);
+            } else if (targetReplicas < metric.currentReplicas) {
+              newCurrentReplicas = Math.max(targetReplicas, metric.currentReplicas - 1);
+            }
+            
+            // Calculate CPU and memory based on load
+            const loadPerReplica = service.requests / newCurrentReplicas;
+            const cpuUsage = Math.min(100, (loadPerReplica / requestsPerReplica) * 100);
+            const memoryUsage = Math.min(100, cpuUsage * 0.8);
+            
+            updated.set(serviceId, {
+              ...metric,
+              currentReplicas: newCurrentReplicas,
+              targetReplicas: targetReplicas,
+              cpuUsage: cpuUsage,
+              memoryUsage: memoryUsage,
+              requestRate: service.requests / 60,
+            });
+          }
+        });
+        return updated;
       });
-      return updated;
-    });
+    } else {
+      // Manual scaling mode - only update metrics, not replicas
+      setScalingMetrics(prev => {
+        const updated = new Map(prev);
+        updated.forEach((metric, serviceId) => {
+          const service = services.find(s => s.id === serviceId);
+          if (service) {
+            const loadPerReplica = service.requests / metric.currentReplicas;
+            const requestsPerReplica = 2000;
+            const cpuUsage = Math.min(100, (loadPerReplica / requestsPerReplica) * 100);
+            const memoryUsage = Math.min(100, cpuUsage * 0.8);
+            
+            updated.set(serviceId, {
+              ...metric,
+              cpuUsage: cpuUsage,
+              memoryUsage: memoryUsage,
+              requestRate: service.requests / 60,
+            });
+          }
+        });
+        return updated;
+      });
+    }
 
     // Calculate aggregate metrics
     const allLatencies = services.map(s => s.latency).sort((a, b) => a - b);
@@ -224,17 +366,18 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     
     const avgErrorRate = services.reduce((sum, s) => sum + s.errorRate, 0) / services.length;
     setErrorRate(avgErrorRate);
-  }, [services]);
+  }, [services, simulationEnabled, requestRate, manualServiceControl, circuitBreakerThreshold, targetLatency, simulateRequest]);
 
   // Generate trace
   const generateTrace = useCallback(() => {
     const newTrace: TraceSpan[] = [];
     const startTime = Date.now();
+    const traceId = `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     let currentTime = startTime;
 
     // Gateway -> API -> Services -> Database
     const gatewaySpan: TraceSpan = {
-      id: "trace-1",
+      id: `${traceId}-1`,
       serviceId: "service-0",
       operation: "GET /api/orders",
       startTime: currentTime,
@@ -245,7 +388,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     newTrace.push(gatewaySpan);
 
     const apiSpan: TraceSpan = {
-      id: "trace-2",
+      id: `${traceId}-2`,
       serviceId: "service-1",
       operation: "Process Request",
       startTime: startTime + 10,
@@ -256,7 +399,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     newTrace.push(apiSpan);
 
     const orderSpan: TraceSpan = {
-      id: "trace-3",
+      id: `${traceId}-3`,
       serviceId: "service-2",
       operation: "Get Order",
       startTime: startTime + 20,
@@ -267,7 +410,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     newTrace.push(orderSpan);
 
     const dbSpan: TraceSpan = {
-      id: "trace-4",
+      id: `${traceId}-4`,
       serviceId: "service-5",
       operation: "SELECT orders",
       startTime: startTime + 25,
@@ -287,9 +430,13 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     const svg = d3.select(architectureRef.current);
     svg.selectAll("*").remove();
 
-    const width = architectureRef.current.clientWidth || 800;
+    // Use parent container width or default
+    const container = architectureRef.current.parentElement;
+    const width = container?.clientWidth || architectureRef.current.clientWidth || 800;
     const height = isMobile ? 400 : 500;
     svg.attr("width", width).attr("height", height);
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+    svg.attr("preserveAspectRatio", "xMidYMid meet");
 
     const margin = { top: 20, right: 20, bottom: 20, left: 20 };
     const innerWidth = width - margin.left - margin.right;
@@ -337,47 +484,60 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
       });
     });
 
-    // Draw connections
+    // Draw connections with animation
+    const drawConnection = (from: string, to: string, color: string, width: number, opacity: number) => {
+      const fromPos = nodePositions.get(from);
+      const toPos = nodePositions.get(to);
+      if (!fromPos || !toPos) return;
+
+      const line = g.append("line")
+        .attr("x1", fromPos.x)
+        .attr("y1", fromPos.y)
+        .attr("x2", fromPos.x)
+        .attr("y2", fromPos.y)
+        .attr("stroke", color)
+        .attr("stroke-width", width)
+        .attr("opacity", opacity);
+
+      if (!prefersReducedMotion) {
+        line.transition()
+          .duration(500)
+          .attr("x2", toPos.x)
+          .attr("y2", toPos.y);
+      } else {
+        line.attr("x2", toPos.x).attr("y2", toPos.y);
+      }
+    };
+
+    // Gateway to APIs
     gateway.forEach(gw => {
       apis.forEach(api => {
-        g.append("line")
-          .attr("x1", nodePositions.get(gw.id)?.x || 0)
-          .attr("y1", nodePositions.get(gw.id)?.y || 0)
-          .attr("x2", nodePositions.get(api.id)?.x || 0)
-          .attr("y2", nodePositions.get(api.id)?.y || 0)
-          .attr("stroke", "#6366f1")
-          .attr("stroke-width", 2)
-          .attr("opacity", 0.3);
+        drawConnection(gw.id, api.id, "#6366f1", 2, 0.4);
       });
     });
 
+    // APIs to Services
     apis.forEach(api => {
       serviceNodes.forEach(svc => {
-        g.append("line")
-          .attr("x1", nodePositions.get(api.id)?.x || 0)
-          .attr("y1", nodePositions.get(api.id)?.y || 0)
-          .attr("x2", nodePositions.get(svc.id)?.x || 0)
-          .attr("y2", nodePositions.get(svc.id)?.y || 0)
-          .attr("stroke", "#6366f1")
-          .attr("stroke-width", 1.5)
-          .attr("opacity", 0.2);
+        drawConnection(api.id, svc.id, "#6366f1", 1.5, 0.3);
       });
     });
 
+    // Services to Databases
     serviceNodes.forEach(svc => {
       databases.forEach(db => {
-        g.append("line")
-          .attr("x1", nodePositions.get(svc.id)?.x || 0)
-          .attr("y1", nodePositions.get(svc.id)?.y || 0)
-          .attr("x2", nodePositions.get(db.id)?.x || 0)
-          .attr("y2", nodePositions.get(db.id)?.y || 0)
-          .attr("stroke", "#10b981")
-          .attr("stroke-width", 1)
-          .attr("opacity", 0.2);
+        drawConnection(svc.id, db.id, "#10b981", 1, 0.3);
       });
     });
 
-    // Draw nodes
+    // Services to Cache
+    serviceNodes.forEach(svc => {
+      caches.forEach(cache => {
+        drawConnection(svc.id, cache.id, "#f59e0b", 1, 0.2);
+      });
+    });
+
+    // Draw nodes with animation
     services.forEach(service => {
       const pos = nodePositions.get(service.id);
       if (!pos) return;
@@ -385,23 +545,64 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
       const color = service.status === "healthy" ? "#10b981" : 
                    service.status === "degraded" ? "#f59e0b" : "#ef4444";
       
-      g.append("circle")
-        .attr("cx", pos.x)
-        .attr("cy", pos.y)
-        .attr("r", isMobile ? 15 : 20)
+      const nodeGroup = g.append("g")
+        .attr("transform", `translate(${pos.x}, ${pos.y})`)
+        .style("cursor", "pointer");
+
+      const circle = nodeGroup.append("circle")
+        .attr("r", 0)
         .attr("fill", color)
         .attr("stroke", "#fff")
         .attr("stroke-width", 2);
 
-      g.append("text")
-        .attr("x", pos.x)
-        .attr("y", pos.y + (isMobile ? 25 : 30))
+      if (!prefersReducedMotion) {
+        circle.transition()
+          .duration(300)
+          .delay(services.indexOf(service) * 50)
+          .attr("r", isMobile ? 15 : 20);
+      } else {
+        circle.attr("r", isMobile ? 15 : 20);
+      }
+
+      // Add pulsing animation for active services
+      if (service.status === "healthy" && !prefersReducedMotion) {
+        nodeGroup.append("circle")
+          .attr("r", isMobile ? 15 : 20)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 1)
+          .attr("opacity", 0.5)
+          .transition()
+          .duration(2000)
+          .ease(d3.easeLinear)
+          .attr("r", (isMobile ? 15 : 20) * 1.5)
+          .attr("opacity", 0)
+          .on("end", function repeat() {
+            d3.select(this)
+              .attr("r", isMobile ? 15 : 20)
+              .attr("opacity", 0.5)
+              .transition()
+              .duration(2000)
+              .ease(d3.easeLinear)
+              .attr("r", (isMobile ? 15 : 20) * 1.5)
+              .attr("opacity", 0)
+              .on("end", repeat);
+          });
+      }
+
+      nodeGroup.append("text")
+        .attr("y", isMobile ? 25 : 30)
         .attr("text-anchor", "middle")
         .attr("font-size", isMobile ? "10px" : "12px")
         .attr("fill", "currentColor")
+        .attr("font-weight", "500")
         .text(service.name.split(" ")[0]);
+
+      // Add tooltip on hover
+      nodeGroup.append("title")
+        .text(`${service.name}\nStatus: ${service.status}\nLatency: ${service.latency.toFixed(1)}ms\nRequests: ${Math.floor(service.requests)}/min`);
     });
-  }, [services, isMobile]);
+  }, [services, isMobile, prefersReducedMotion]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -429,7 +630,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
   }, [initializeServices]);
 
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted || !simulationEnabled) return;
 
     intervalRef.current = setInterval(() => {
       updateMetrics();
@@ -443,13 +644,30 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
         clearInterval(intervalRef.current);
       }
     };
-  }, [isMounted, updateMetrics, generateTrace]);
+  }, [isMounted, simulationEnabled, updateMetrics, generateTrace]);
 
   useEffect(() => {
-    if (activeTab === "architecture" && isMounted) {
-      renderArchitecture();
+    if (activeTab === "architecture" && isMounted && services.length > 0) {
+      // Delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        renderArchitecture();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [activeTab, isMounted, renderArchitecture]);
+  }, [activeTab, isMounted, services, renderArchitecture]);
+
+  // Re-render architecture on window resize
+  useEffect(() => {
+    if (activeTab === "architecture" && isMounted) {
+      const handleResize = () => {
+        if (services.length > 0) {
+          renderArchitecture();
+        }
+      };
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+  }, [activeTab, isMounted, services, renderArchitecture]);
 
   if (!isMounted) {
     return null;
@@ -543,41 +761,222 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
         </ul>
       </div>
 
+      {/* Control Panel */}
+      <div className="box liquid-glass-card mb-4">
+        <h4 className="title is-6 mb-4 liquid-glass-text">Simulation Controls</h4>
+        <div className="columns is-multiline">
+          <div className="column is-one-third-tablet is-half-mobile">
+            <div className="field">
+              <label className="label liquid-glass-text">Request Rate (req/min)</label>
+              <div className="control">
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  max="10000"
+                  step="100"
+                  value={requestRate}
+                  onChange={(e) => setRequestRate(Number(e.target.value))}
+                  aria-label="Request rate per minute"
+                />
+              </div>
+              <p className="help liquid-glass-text">Current: {requestRate} requests/minute</p>
+            </div>
+          </div>
+          <div className="column is-one-third-tablet is-half-mobile">
+            <div className="field">
+              <label className="label liquid-glass-text">Circuit Breaker Threshold (%)</label>
+              <div className="control">
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={circuitBreakerThreshold}
+                  onChange={(e) => setCircuitBreakerThreshold(Number(e.target.value))}
+                  aria-label="Circuit breaker error rate threshold"
+                />
+              </div>
+              <p className="help liquid-glass-text">Opens at {circuitBreakerThreshold}% error rate</p>
+            </div>
+          </div>
+          <div className="column is-one-third-tablet is-half-mobile">
+            <div className="field">
+              <label className="label liquid-glass-text">Target Latency (ms)</label>
+              <div className="control">
+                <input
+                  className="input"
+                  type="number"
+                  min="10"
+                  max="500"
+                  step="10"
+                  value={targetLatency}
+                  onChange={(e) => setTargetLatency(Number(e.target.value))}
+                  aria-label="Target latency in milliseconds"
+                />
+              </div>
+              <p className="help liquid-glass-text">Auto-scaling target: {targetLatency}ms</p>
+            </div>
+          </div>
+          <div className="column is-one-third-tablet is-half-mobile">
+            <div className="field">
+              <label className="checkbox liquid-glass-text">
+                <input
+                  type="checkbox"
+                  checked={simulationEnabled}
+                  onChange={(e) => setSimulationEnabled(e.target.checked)}
+                  aria-label="Enable simulation"
+                />
+                {" "}Enable Simulation
+              </label>
+            </div>
+          </div>
+          <div className="column is-one-third-tablet is-half-mobile">
+            <div className="field">
+              <label className="checkbox liquid-glass-text">
+                <input
+                  type="checkbox"
+                  checked={autoScalingEnabled}
+                  onChange={(e) => setAutoScalingEnabled(e.target.checked)}
+                  aria-label="Enable auto scaling"
+                />
+                {" "}Auto Scaling
+              </label>
+            </div>
+          </div>
+          <div className="column is-one-third-tablet is-half-mobile">
+            <div className="field">
+              <div className="control">
+                <button
+                  className="button is-primary"
+                  onClick={() => {
+                    // Trigger a test request to each service
+                    services.forEach(service => {
+                      if (service.type !== "database" && service.type !== "cache") {
+                        simulateRequest(service.id);
+                      }
+                    });
+                  }}
+                  aria-label="Send test requests to all services"
+                >
+                  Send Test Requests
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Architecture View */}
       {activeTab === "architecture" && (
         <div>
-          <h3 className="title is-5 mb-4 liquid-glass-text">Service Mesh Architecture</h3>
+          <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 className="title is-5 liquid-glass-text">Service Mesh Architecture</h3>
+            <div className="tags">
+              <span className="tag is-info">Istio Service Mesh</span>
+              <span className="tag is-success">{services.filter(s => s.status === "healthy").length} Healthy</span>
+              <span className="tag is-warning">{services.filter(s => s.status === "degraded").length} Degraded</span>
+              <span className="tag is-danger">{services.filter(s => s.status === "down").length} Down</span>
+            </div>
+          </div>
           <div className="box liquid-glass-card">
             <svg
               ref={architectureRef}
               className="is-fullwidth"
-              style={{ minHeight: isMobile ? "400px" : "500px" }}
+              style={{ minHeight: isMobile ? "400px" : "500px", display: "block" }}
               aria-label="Service mesh architecture diagram"
             />
+            {services.length === 0 && (
+              <div className="has-text-centered py-6">
+                <p className="liquid-glass-text">Loading architecture diagram...</p>
+              </div>
+            )}
           </div>
           <div className="columns is-multiline mt-4">
-            {services.map(service => (
-              <div key={service.id} className="column is-one-third-tablet is-half-mobile">
-                <div className="box liquid-glass-card">
-                  <div className="is-flex is-justify-content-space-between is-align-items-center mb-2">
-                    <h4 className="title is-6 liquid-glass-text">{service.name}</h4>
-                    <span className={`tag ${
-                      service.status === "healthy" ? "is-success" :
-                      service.status === "degraded" ? "is-warning" : "is-danger"
-                    }`}>
-                      {service.status}
-                    </span>
-                  </div>
-                  <div className="content is-small liquid-glass-text">
-                    <p><strong>Region:</strong> {service.region}</p>
-                    <p><strong>Requests:</strong> {Math.floor(service.requests).toLocaleString()}/min</p>
-                    <p><strong>Latency:</strong> {service.latency.toFixed(1)}ms</p>
-                    <p><strong>Error Rate:</strong> {service.errorRate.toFixed(2)}%</p>
-                    <p><strong>Connections:</strong> {service.connections}</p>
+            {services.map(service => {
+              const manual = manualServiceControl.get(service.id);
+              return (
+                <div key={service.id} className="column is-one-third-tablet is-half-mobile">
+                  <div className="box liquid-glass-card">
+                    <div className="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                      <h4 className="title is-6 liquid-glass-text">{service.name}</h4>
+                      <span className={`tag ${
+                        service.status === "healthy" ? "is-success" :
+                        service.status === "degraded" ? "is-warning" : "is-danger"
+                      }`}>
+                        {service.status}
+                      </span>
+                    </div>
+                    <div className="content is-small liquid-glass-text">
+                      <p><strong>Region:</strong> {service.region}</p>
+                      <p><strong>Requests:</strong> {Math.floor(service.requests).toLocaleString()}/min</p>
+                      <p><strong>Latency:</strong> {service.latency.toFixed(1)}ms</p>
+                      <p><strong>Error Rate:</strong> {service.errorRate.toFixed(2)}%</p>
+                      <p><strong>Connections:</strong> {service.connections}</p>
+                    </div>
+                    <div className="field is-grouped mt-3">
+                      <div className="control">
+                        <button
+                          className="button is-small is-primary"
+                          onClick={() => simulateRequest(service.id)}
+                          aria-label={`Send test request to ${service.name}`}
+                        >
+                          Test Request
+                        </button>
+                      </div>
+                      <div className="control">
+                        <div className="select is-small">
+                          <select
+                            value={manual?.forceStatus || "auto"}
+                            onChange={(e) => {
+                              const newControl = new Map(manualServiceControl);
+                              if (e.target.value === "auto") {
+                                newControl.delete(service.id);
+                              } else {
+                                newControl.set(service.id, {
+                                  multiplier: manual?.multiplier || 1.0,
+                                  forceStatus: e.target.value as ServiceNode["status"],
+                                });
+                              }
+                              setManualServiceControl(newControl);
+                            }}
+                            aria-label={`Set status for ${service.name}`}
+                          >
+                            <option value="auto">Auto</option>
+                            <option value="healthy">Force Healthy</option>
+                            <option value="degraded">Force Degraded</option>
+                            <option value="down">Force Down</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="field mt-2">
+                      <label className="label is-small liquid-glass-text">Traffic Multiplier</label>
+                      <div className="control">
+                        <input
+                          className="input is-small"
+                          type="number"
+                          min="0"
+                          max="5"
+                          step="0.1"
+                          value={manual?.multiplier || 1.0}
+                          onChange={(e) => {
+                            const newControl = new Map(manualServiceControl);
+                            newControl.set(service.id, {
+                              multiplier: Number(e.target.value),
+                              forceStatus: manual?.forceStatus,
+                            });
+                            setManualServiceControl(newControl);
+                          }}
+                          aria-label={`Traffic multiplier for ${service.name}`}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -620,39 +1019,58 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
       {/* Tracing View */}
       {activeTab === "tracing" && (
         <div>
-          <h3 className="title is-5 mb-4 liquid-glass-text">Distributed Tracing (OpenTelemetry)</h3>
-          <div className="box liquid-glass-card">
-            <div className="table-container">
-              <table className="table is-fullwidth">
-                <thead>
-                  <tr>
-                    <th className="liquid-glass-text">Trace ID</th>
-                    <th className="liquid-glass-text">Service</th>
-                    <th className="liquid-glass-text">Operation</th>
-                    <th className="liquid-glass-text">Duration (ms)</th>
-                    <th className="liquid-glass-text">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {traces.slice(-10).reverse().map(trace => {
-                    const service = services.find(s => s.id === trace.serviceId);
-                    return (
-                      <tr key={trace.id}>
-                        <td className="liquid-glass-text">{trace.id}</td>
-                        <td className="liquid-glass-text">{service?.name || "Unknown"}</td>
-                        <td className="liquid-glass-text">{trace.operation}</td>
-                        <td className="liquid-glass-text">{trace.duration.toFixed(2)}</td>
-                        <td>
-                          <span className={`tag ${trace.status === "success" ? "is-success" : "is-danger"}`}>
-                            {trace.status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 className="title is-5 liquid-glass-text">Distributed Tracing (OpenTelemetry)</h3>
+            <div className="tags">
+              <span className="tag is-info">{traces.length} Total Traces</span>
+              <span className="tag is-success">
+                {traces.filter(t => t.status === "success").length} Success
+              </span>
+              <span className="tag is-danger">
+                {traces.filter(t => t.status === "error").length} Errors
+              </span>
             </div>
+          </div>
+          <div className="box liquid-glass-card">
+            {traces.length === 0 ? (
+              <div className="has-text-centered py-6">
+                <p className="liquid-glass-text">No traces yet. Traces will appear as requests are processed.</p>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="table is-fullwidth">
+                  <thead>
+                    <tr>
+                      <th className="liquid-glass-text">Trace ID</th>
+                      <th className="liquid-glass-text">Service</th>
+                      <th className="liquid-glass-text">Operation</th>
+                      <th className="liquid-glass-text">Duration (ms)</th>
+                      <th className="liquid-glass-text">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {traces.slice(-10).reverse().map(trace => {
+                      const service = services.find(s => s.id === trace.serviceId);
+                      return (
+                        <tr key={trace.id}>
+                          <td className="liquid-glass-text">
+                            <code className="is-size-7">{trace.id.substring(0, 20)}...</code>
+                          </td>
+                          <td className="liquid-glass-text">{service?.name || "Unknown"}</td>
+                          <td className="liquid-glass-text">{trace.operation}</td>
+                          <td className="liquid-glass-text">{trace.duration.toFixed(2)}</td>
+                          <td>
+                            <span className={`tag ${trace.status === "success" ? "is-success" : "is-danger"}`}>
+                              {trace.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -660,22 +1078,44 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
       {/* Auto Scaling View */}
       {activeTab === "scaling" && (
         <div>
-          <h3 className="title is-5 mb-4 liquid-glass-text">Auto-Scaling Metrics</h3>
+          <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 className="title is-5 liquid-glass-text">Auto-Scaling Metrics</h3>
+            <div className="tags">
+              <span className="tag is-info">
+                {Array.from(scalingMetrics.values()).reduce((sum, m) => sum + m.currentReplicas, 0)} Total Replicas
+              </span>
+              <span className={`tag ${autoScalingEnabled ? "is-success" : "is-light"}`}>
+                {autoScalingEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </div>
+          </div>
           <div className="columns is-multiline">
             {Array.from(scalingMetrics.entries()).map(([serviceId, metric]) => {
               const service = services.find(s => s.id === serviceId);
               if (!service) return null;
               
+              const needsScaling = metric.currentReplicas !== metric.targetReplicas;
+              const scalingDirection = metric.targetReplicas > metric.currentReplicas ? "up" : "down";
+              
               return (
                 <div key={serviceId} className="column is-one-third-tablet is-half-mobile">
                   <div className="box liquid-glass-card">
-                    <h4 className="title is-6 liquid-glass-text">{service.name}</h4>
+                    <div className="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                      <h4 className="title is-6 liquid-glass-text">{service.name}</h4>
+                      {needsScaling && autoScalingEnabled && (
+                        <span className={`tag ${scalingDirection === "up" ? "is-success" : "is-warning"}`}>
+                          Scaling {scalingDirection}
+                        </span>
+                      )}
+                    </div>
                     <div className="content liquid-glass-text">
                       <p><strong>Current Replicas:</strong> {metric.currentReplicas}</p>
                       <p><strong>Target Replicas:</strong> {metric.targetReplicas}</p>
                       <p><strong>CPU Usage:</strong> {metric.cpuUsage.toFixed(1)}%</p>
                       <p><strong>Memory Usage:</strong> {metric.memoryUsage.toFixed(1)}%</p>
                       <p><strong>Request Rate:</strong> {metric.requestRate.toFixed(0)}/sec</p>
+                      <p><strong>Target Latency:</strong> {targetLatency}ms</p>
+                      <p><strong>Current Latency:</strong> {service.latency.toFixed(1)}ms</p>
                       <progress
                         className="progress is-info"
                         value={metric.cpuUsage}
@@ -684,7 +1124,59 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
                       >
                         {metric.cpuUsage.toFixed(1)}%
                       </progress>
+                      <progress
+                        className="progress is-success mt-2"
+                        value={metric.memoryUsage}
+                        max="100"
+                        aria-label={`Memory usage: ${metric.memoryUsage.toFixed(1)}%`}
+                      >
+                        {metric.memoryUsage.toFixed(1)}%
+                      </progress>
                     </div>
+                    {!autoScalingEnabled && (
+                      <div className="field mt-3">
+                        <div className="control">
+                          <button
+                            className="button is-small"
+                            onClick={() => {
+                              setScalingMetrics(prev => {
+                                const updated = new Map(prev);
+                                const current = updated.get(serviceId);
+                                if (current) {
+                                  updated.set(serviceId, {
+                                    ...current,
+                                    targetReplicas: current.targetReplicas + 1,
+                                  });
+                                }
+                                return updated;
+                              });
+                            }}
+                            aria-label={`Scale up ${service.name}`}
+                          >
+                            Scale Up
+                          </button>
+                          <button
+                            className="button is-small ml-2"
+                            onClick={() => {
+                              setScalingMetrics(prev => {
+                                const updated = new Map(prev);
+                                const current = updated.get(serviceId);
+                                if (current && current.targetReplicas > 1) {
+                                  updated.set(serviceId, {
+                                    ...current,
+                                    targetReplicas: current.targetReplicas - 1,
+                                  });
+                                }
+                                return updated;
+                              });
+                            }}
+                            aria-label={`Scale down ${service.name}`}
+                          >
+                            Scale Down
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -702,31 +1194,115 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
               <div className="box liquid-glass-card has-background-info-light">
                 <p className="heading liquid-glass-text">P95 Latency</p>
                 <p className="title is-4 liquid-glass-text">{p95Latency.toFixed(1)}ms</p>
+                <p className="is-size-7 liquid-glass-text">Target: &lt;100ms</p>
               </div>
             </div>
             <div className="column is-one-quarter-tablet is-half-mobile">
               <div className="box liquid-glass-card has-background-success-light">
                 <p className="heading liquid-glass-text">P99 Latency</p>
                 <p className="title is-4 liquid-glass-text">{p99Latency.toFixed(1)}ms</p>
+                <p className="is-size-7 liquid-glass-text">Target: &lt;200ms</p>
               </div>
             </div>
             <div className="column is-one-quarter-tablet is-half-mobile">
               <div className="box liquid-glass-card has-background-warning-light">
                 <p className="heading liquid-glass-text">Total Requests</p>
                 <p className="title is-4 liquid-glass-text">{(totalRequests / 1000).toFixed(1)}K/min</p>
+                <p className="is-size-7 liquid-glass-text">10M+ requests/day</p>
               </div>
             </div>
             <div className="column is-one-quarter-tablet is-half-mobile">
               <div className="box liquid-glass-card has-background-danger-light">
                 <p className="heading liquid-glass-text">Error Rate</p>
                 <p className="title is-4 liquid-glass-text">{errorRate.toFixed(2)}%</p>
+                <p className="is-size-7 liquid-glass-text">Target: &lt;0.1%</p>
               </div>
             </div>
             <div className="column is-one-quarter-tablet is-half-mobile">
               <div className="box liquid-glass-card has-background-primary-light">
                 <p className="heading liquid-glass-text">Uptime</p>
                 <p className="title is-4 liquid-glass-text">{uptime.toFixed(2)}%</p>
+                <p className="is-size-7 liquid-glass-text">SLA: 99.9%</p>
               </div>
+            </div>
+          </div>
+          
+          {/* Recent Requests */}
+          <div className="box liquid-glass-card mt-4">
+            <h4 className="title is-6 mb-4 liquid-glass-text">Recent Requests</h4>
+            {recentRequests.length === 0 ? (
+              <p className="liquid-glass-text">No requests yet. Use controls above to send requests.</p>
+            ) : (
+              <div className="table-container">
+                <table className="table is-fullwidth is-striped">
+                  <thead>
+                    <tr>
+                      <th className="liquid-glass-text">Request ID</th>
+                      <th className="liquid-glass-text">Service</th>
+                      <th className="liquid-glass-text">Latency (ms)</th>
+                      <th className="liquid-glass-text">Status</th>
+                      <th className="liquid-glass-text">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentRequests.slice(-20).reverse().map(req => {
+                      const service = services.find(s => s.id === req.serviceId);
+                      return (
+                        <tr key={req.id}>
+                          <td className="liquid-glass-text">
+                            <code className="is-size-7">{req.id.substring(0, 15)}...</code>
+                          </td>
+                          <td className="liquid-glass-text">{service?.name || "Unknown"}</td>
+                          <td className="liquid-glass-text">{req.latency.toFixed(1)}</td>
+                          <td>
+                            <span className={`tag ${req.status === "success" ? "is-success" : "is-danger"}`}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="liquid-glass-text">
+                            {new Date(req.timestamp).toLocaleTimeString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Service Health Summary */}
+          <div className="box liquid-glass-card mt-4">
+            <h4 className="title is-6 mb-4 liquid-glass-text">Service Health Summary</h4>
+            <div className="columns is-multiline">
+              {services.map(service => (
+                <div key={service.id} className="column is-one-third-tablet is-half-mobile">
+                  <div className="box liquid-glass-card">
+                    <div className="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                      <h5 className="title is-6 liquid-glass-text">{service.name}</h5>
+                      <span className={`tag ${
+                        service.status === "healthy" ? "is-success" :
+                        service.status === "degraded" ? "is-warning" : "is-danger"
+                      }`}>
+                        {service.status}
+                      </span>
+                    </div>
+                    <div className="content is-small liquid-glass-text">
+                      <p><strong>Latency:</strong> {service.latency.toFixed(1)}ms</p>
+                      <p><strong>Requests:</strong> {Math.floor(service.requests).toLocaleString()}/min</p>
+                      <p><strong>Error Rate:</strong> {service.errorRate.toFixed(2)}%</p>
+                      <progress
+                        className="progress is-info"
+                        value={100 - service.errorRate * 10}
+                        max="100"
+                        aria-label={`Health: ${100 - service.errorRate * 10}%`}
+                      >
+                        {(100 - service.errorRate * 10).toFixed(0)}%
+                      </progress>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

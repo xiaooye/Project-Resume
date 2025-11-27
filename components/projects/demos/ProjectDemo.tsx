@@ -234,9 +234,7 @@ function DefaultProjectDemo({ project }: { project: Project }) {
   );
 }
 
-// Import specific demo components
-import EnterpriseMicroservicesDemo from "./EnterpriseMicroservicesDemo";
-
+// Placeholder components for projects without specific demos yet
 function DistributedMonitoringDemo({ project }: { project: Project }) {
   return <DefaultProjectDemo project={project} />;
 }
