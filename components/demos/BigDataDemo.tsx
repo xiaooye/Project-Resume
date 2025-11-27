@@ -694,10 +694,15 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Time Series Analysis using WebAssembly
   useEffect(() => {
-    if (analysisType !== "time-series" || filteredData.length < 50) return;
+    if (analysisType !== "time-series" || filteredData.length < 50) {
+      // Clear results when switching away or not enough data
+      if (analysisType !== "time-series") {
+        setTimeSeriesAnalysis(null);
+      }
+      return;
+    }
     
     const calculateTimeSeries = async () => {
-      console.log("Recalculating time series with config:", analysisConfig.trendWindow, analysisConfig.forecastPeriods);
       // Sort by timestamp
       const sorted = [...filteredData].sort((a, b) => a.timestamp - b.timestamp);
       const timestamps = sorted.map(item => item.timestamp);
@@ -782,10 +787,15 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Correlation Analysis using WebAssembly
   useEffect(() => {
-    if (analysisType !== "correlation" || filteredData.length < 100) return;
+    if (analysisType !== "correlation" || filteredData.length < 100) {
+      // Clear results when switching away or not enough data
+      if (analysisType !== "correlation") {
+        setCorrelationAnalysis(null);
+      }
+      return;
+    }
     
     const calculateCorrelation = async () => {
-      console.log("Recalculating correlation with config:", analysisConfig.minCorrelation, analysisConfig.correlationMethod);
       const values = filteredData.map(item => item.value);
       const timestamps = filteredData.map(item => item.timestamp);
       const categories = filteredData.map(item => 
@@ -851,10 +861,15 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Anomaly Detection using WebAssembly
   useEffect(() => {
-    if (analysisType !== "anomaly" || filteredData.length < 50) return;
+    if (analysisType !== "anomaly" || filteredData.length < 50) {
+      // Clear results when switching away or not enough data
+      if (analysisType !== "anomaly") {
+        setAnomalyDetection(null);
+      }
+      return;
+    }
     
     const detectAnomalies = async () => {
-      console.log("Recalculating anomalies with config:", analysisConfig.anomalyThreshold, analysisConfig.anomalyMethod);
       const values = filteredData.map(item => item.value);
       const threshold = analysisConfig.anomalyThreshold;
       
@@ -934,10 +949,15 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Capacity Planning using WebAssembly
   useEffect(() => {
-    if (analysisType !== "capacity" || filteredData.length < 100) return;
+    if (analysisType !== "capacity" || filteredData.length < 100) {
+      // Clear results when switching away or not enough data
+      if (analysisType !== "capacity") {
+        setCapacityPlanning(null);
+      }
+      return;
+    }
     
     const calculateCapacity = async () => {
-      console.log("Recalculating capacity with config:", analysisConfig.growthRate, analysisConfig.headroom, analysisConfig.costPerUnit);
       const currentLoad = filteredData.length;
       
       try {
