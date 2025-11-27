@@ -207,19 +207,25 @@ export default function GlobalAgent() {
                       className={`mb-3 ${message.role === "user" ? "has-text-right" : ""}`}
                     >
                       <div
-                        className={`liquid-glass ${message.role === "user" ? "has-background-primary has-text-white" : "has-background-info has-text-white"}`}
+                        className="liquid-glass"
                         style={{
                           maxWidth: isMobile ? "92%" : "88%",
                           marginLeft: message.role === "user" ? "auto" : "0",
                           marginRight: message.role === "user" ? "0" : "auto",
-                          padding: "0.75rem",
-                          borderRadius: "12px",
+                          padding: "0.75rem 1rem",
+                          borderRadius: "16px",
+                          background: message.role === "user" 
+                            ? "rgba(99, 102, 241, 0.15)" 
+                            : "rgba(59, 130, 246, 0.15)",
+                          border: message.role === "user"
+                            ? "1px solid rgba(99, 102, 241, 0.25)"
+                            : "1px solid rgba(59, 130, 246, 0.25)",
                         }}
                       >
                         <div className="level is-mobile mb-1">
                           <div className="level-left">
                             <div className="level-item">
-                              <span className="is-size-7 has-text-weight-semibold">
+                              <span className={`is-size-7 has-text-weight-semibold ${message.role === "user" ? "has-text-primary" : "has-text-info"}`}>
                                 {message.role === "user" ? "You" : "Assistant"}
                               </span>
                             </div>
@@ -227,7 +233,7 @@ export default function GlobalAgent() {
                           <div className="level-right">
                             <div className="level-item">
                               <time 
-                                className="is-size-7 has-opacity-7"
+                                className="is-size-7 has-text-grey"
                                 dateTime={new Date(message.timestamp).toISOString()}
                               >
                                 {new Date(message.timestamp).toLocaleTimeString()}
