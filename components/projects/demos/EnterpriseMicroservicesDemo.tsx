@@ -1038,7 +1038,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
               </div>
             ) : (
               <div className="table-container">
-                <table className="table is-fullwidth">
+                <table className="table is-fullwidth liquid-glass-card">
                   <thead>
                     <tr>
                       <th className="liquid-glass-text">Trace ID</th>
@@ -1054,7 +1054,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
                       return (
                         <tr key={trace.id}>
                           <td className="liquid-glass-text">
-                            <code className="is-size-7">{trace.id.substring(0, 20)}...</code>
+                            <code className="is-size-7 liquid-glass-text">{trace.id.substring(0, 20)}...</code>
                           </td>
                           <td className="liquid-glass-text">{service?.name || "Unknown"}</td>
                           <td className="liquid-glass-text">{trace.operation}</td>
@@ -1108,14 +1108,14 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
                         </span>
                       )}
                     </div>
-                    <div className="content liquid-glass-text">
-                      <p><strong>Current Replicas:</strong> {metric.currentReplicas}</p>
-                      <p><strong>Target Replicas:</strong> {metric.targetReplicas}</p>
-                      <p><strong>CPU Usage:</strong> {metric.cpuUsage.toFixed(1)}%</p>
-                      <p><strong>Memory Usage:</strong> {metric.memoryUsage.toFixed(1)}%</p>
-                      <p><strong>Request Rate:</strong> {metric.requestRate.toFixed(0)}/sec</p>
-                      <p><strong>Target Latency:</strong> {targetLatency}ms</p>
-                      <p><strong>Current Latency:</strong> {service.latency.toFixed(1)}ms</p>
+                    <div className="content">
+                      <p className="liquid-glass-text"><strong>Current Replicas:</strong> {metric.currentReplicas}</p>
+                      <p className="liquid-glass-text"><strong>Target Replicas:</strong> {metric.targetReplicas}</p>
+                      <p className="liquid-glass-text"><strong>CPU Usage:</strong> {metric.cpuUsage.toFixed(1)}%</p>
+                      <p className="liquid-glass-text"><strong>Memory Usage:</strong> {metric.memoryUsage.toFixed(1)}%</p>
+                      <p className="liquid-glass-text"><strong>Request Rate:</strong> {metric.requestRate.toFixed(0)}/sec</p>
+                      <p className="liquid-glass-text"><strong>Target Latency:</strong> {targetLatency}ms</p>
+                      <p className="liquid-glass-text"><strong>Current Latency:</strong> {service.latency.toFixed(1)}ms</p>
                       <progress
                         className="progress is-info"
                         value={metric.cpuUsage}
@@ -1234,7 +1234,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
               <p className="liquid-glass-text">No requests yet. Use controls above to send requests.</p>
             ) : (
               <div className="table-container">
-                <table className="table is-fullwidth is-striped">
+                <table className="table is-fullwidth is-striped liquid-glass-card">
                   <thead>
                     <tr>
                       <th className="liquid-glass-text">Request ID</th>
@@ -1250,7 +1250,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
                       return (
                         <tr key={req.id}>
                           <td className="liquid-glass-text">
-                            <code className="is-size-7">{req.id.substring(0, 15)}...</code>
+                            <code className="is-size-7 liquid-glass-text">{req.id.substring(0, 15)}...</code>
                           </td>
                           <td className="liquid-glass-text">{service?.name || "Unknown"}</td>
                           <td className="liquid-glass-text">{req.latency.toFixed(1)}</td>

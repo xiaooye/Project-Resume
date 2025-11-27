@@ -504,6 +504,45 @@ html.dark .liquid-glass-text {
   opacity: 1;
 }
 
+/* 表格主题支持 */
+.liquid-glass-card table {
+  background-color: transparent;
+}
+
+.liquid-glass-card table thead th {
+  color: inherit;
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+html.dark .liquid-glass-card table thead th {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.liquid-glass-card table tbody td {
+  color: inherit;
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+html.dark .liquid-glass-card table tbody td {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.liquid-glass-card table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+html.dark .liquid-glass-card table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.liquid-glass-card table.is-striped tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
 /* WebAssembly 动画优化类 */
 .wasm-accelerated {
   will-change: var(--wasm-will-change);
