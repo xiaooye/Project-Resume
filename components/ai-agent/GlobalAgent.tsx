@@ -2,7 +2,7 @@
 
 /**
  * Global AI Agent Component
- * Floating button and chat interface accessible from anywhere in the app
+ * Compact, high-contrast floating chat interface
  * Uses ONLY Bulma CSS classes - no inline styles except for dynamic calculations
  */
 
@@ -53,7 +53,7 @@ export default function GlobalAgent() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 200);
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [input]);
@@ -84,22 +84,22 @@ export default function GlobalAgent() {
 
   return (
     <>
-      {/* Floating Action Button - Using Bulma classes with minimal inline styles for positioning */}
+      {/* Floating Action Button - Smaller, more compact */}
       <motion.button
-        className={`button is-primary is-rounded ${isMobile ? "" : "is-large"}`}
+        className="button is-primary is-rounded"
         style={{
           position: "fixed",
-          bottom: isMobile ? "16px" : "24px",
-          right: isMobile ? "16px" : "24px",
+          bottom: isMobile ? "16px" : "20px",
+          right: isMobile ? "16px" : "20px",
           zIndex: 1000,
-          width: isMobile ? "56px" : "64px",
-          height: isMobile ? "56px" : "64px",
+          width: isMobile ? "48px" : "52px",
+          height: isMobile ? "48px" : "52px",
           borderRadius: "50%",
         }}
         onClick={toggleAgent}
         aria-label={isOpen ? "Close AI assistant" : "Open AI assistant"}
         aria-expanded={isOpen}
-        whileHover={prefersReducedMotion ? {} : { scale: 1.1 }}
+        whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
         whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
         initial={false}
         animate={{
@@ -107,7 +107,7 @@ export default function GlobalAgent() {
         }}
         transition={{ duration: 0.2 }}
       >
-        <span className={`icon ${isMobile ? "" : "is-large"}`}>
+        <span className="icon">
           <i className={`fas ${isOpen ? "fa-times" : "fa-robot"}`}></i>
         </span>
       </motion.button>
@@ -116,7 +116,7 @@ export default function GlobalAgent() {
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - Lighter for better contrast */}
             <motion.div
               className="is-overlay"
               style={{
@@ -125,7 +125,7 @@ export default function GlobalAgent() {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.3)",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
                 zIndex: 998,
               }}
               initial={{ opacity: 0 }}
@@ -135,17 +135,18 @@ export default function GlobalAgent() {
               aria-hidden="true"
             />
             
-            {/* Chat Dialog */}
+            {/* Chat Dialog - Compact, better contrast */}
             <motion.div
-              className={`box ${isMobile ? "is-mobile" : ""} is-flex is-flex-direction-column`}
+              className="box is-flex is-flex-direction-column"
               style={{
                 position: "fixed",
-                bottom: isMobile ? "80px" : "100px",
-                right: isMobile ? "16px" : "24px",
-                width: isMobile ? "calc(100vw - 32px)" : "420px",
-                maxWidth: isMobile ? "calc(100vw - 32px)" : "420px",
-                maxHeight: "calc(100vh - 120px)",
+                bottom: isMobile ? "70px" : "80px",
+                right: isMobile ? "12px" : "20px",
+                width: isMobile ? "calc(100vw - 24px)" : "340px",
+                maxWidth: isMobile ? "calc(100vw - 24px)" : "340px",
+                maxHeight: "calc(100vh - 100px)",
                 zIndex: 999,
+                padding: isMobile ? "0.75rem" : "1rem",
               }}
               initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -156,22 +157,22 @@ export default function GlobalAgent() {
               aria-label="AI Assistant Chat"
               aria-modal="true"
             >
-              {/* Header */}
-              <div className="level mb-4">
+              {/* Header - Compact */}
+              <div className="level mb-2">
                 <div className="level-left">
                   <div className="level-item">
-                    <h3 className="title is-5 mb-0">
-                      <span className="icon mr-2">
+                    <h4 className="title is-6 mb-0">
+                      <span className="icon mr-1">
                         <i className="fas fa-robot"></i>
                       </span>
                       <span>AI Assistant</span>
-                    </h3>
+                    </h4>
                   </div>
                 </div>
                 <div className="level-right">
                   <div className="level-item">
                     <button
-                      className="button is-small is-light"
+                      className="button is-small is-text"
                       onClick={clearMessages}
                       disabled={messages.length <= 1}
                       aria-label="Clear chat history"
@@ -179,134 +180,133 @@ export default function GlobalAgent() {
                       <span className="icon is-small">
                         <i className="fas fa-trash"></i>
                       </span>
-                      {!isMobile && <span className="ml-1">Clear</span>}
                     </button>
                   </div>
                 </div>
               </div>
 
-            {/* Current Context Info */}
-            {currentContext && (
-              <div className="notification is-info is-light is-small mb-4">
-                <p className="is-size-7">
-                  <strong>Current page:</strong> {currentContext.title || currentContext.pathname}
-                </p>
-              </div>
-            )}
-
-            {/* Messages Area */}
-            <div
-              className="box has-background-light mb-4"
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                minHeight: isMobile ? "250px" : "350px",
-                maxHeight: isMobile ? "400px" : "500px",
-              }}
-              role="log"
-              aria-live="polite"
-              aria-label="Chat messages"
-            >
-              {messages.length === 0 ? (
-                <div className="has-text-centered has-text-grey py-6">
-                  <span className="icon is-large mb-4">
-                    <i className="fas fa-comments"></i>
-                  </span>
-                  <p className="mb-2">Start a conversation with your AI assistant</p>
-                  <p className="is-size-7">I can help you navigate and interact with this app</p>
-                </div>
-              ) : (
-                <div className="content">
-                  {messages.map((message) => (
-                    <motion.div
-                      key={message.id}
-                      initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={`mb-3 ${message.role === "user" ? "has-text-right" : ""}`}
-                    >
-                      <div
-                        className={`message ${message.role === "user" ? "is-primary" : "is-info"}`}
-                        style={{
-                          maxWidth: isMobile ? "90%" : "85%",
-                          marginLeft: message.role === "user" ? "auto" : "0",
-                          marginRight: message.role === "user" ? "0" : "auto",
-                        }}
-                      >
-                        <div className="message-header">
-                          <span>
-                            {message.role === "user" ? "You" : "Assistant"}
-                          </span>
-                        </div>
-                        <div className="message-body">
-                          <p
-                            className="is-size-6 mb-2"
-                            style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                          >
-                            {message.content}
-                          </p>
-                          <p className="is-size-7 has-text-grey">
-                            <time dateTime={new Date(message.timestamp).toISOString()}>
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </time>
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                  {isProcessing && (
-                    <div className="has-text-centered py-4" role="status" aria-live="polite">
-                      <span className="loader"></span>
-                      <p className="is-size-7 has-text-grey mt-2">Thinking...</p>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
+              {/* Current Context Info - Compact */}
+              {currentContext && (
+                <div className="notification is-info is-small mb-2 py-2 px-3">
+                  <p className="is-size-7 mb-0">
+                    <strong>Page:</strong> {currentContext.title || currentContext.pathname}
+                  </p>
                 </div>
               )}
-            </div>
 
-            {/* Input Area */}
-            <div className="field">
-              <div className="control">
-                <textarea
-                  ref={textareaRef}
-                  className="textarea"
-                  rows={2}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask me anything... (Press Enter to send, Shift+Enter for new line)"
-                  disabled={isProcessing}
-                  aria-label="Chat input"
-                />
-              </div>
-              <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-2`}>
-                <div className="control">
-                  <button
-                    className={`button is-primary ${isMobile ? "is-fullwidth" : ""}`}
-                    onClick={handleSend}
-                    disabled={!input.trim() || isProcessing}
-                    aria-label="Send message"
-                  >
-                    <span className="icon">
-                      <i className="fas fa-paper-plane"></i>
+              {/* Messages Area - Compact with better contrast */}
+              <div
+                className="box has-background-white-ter mb-2"
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  minHeight: isMobile ? "200px" : "280px",
+                  maxHeight: isMobile ? "320px" : "400px",
+                  padding: "0.75rem",
+                }}
+                role="log"
+                aria-live="polite"
+                aria-label="Chat messages"
+              >
+                {messages.length === 0 ? (
+                  <div className="has-text-centered has-text-grey-dark py-4">
+                    <span className="icon mb-2">
+                      <i className="fas fa-comments"></i>
                     </span>
-                    <span>Send</span>
-                  </button>
-                </div>
+                    <p className="is-size-7 mb-1">Start a conversation</p>
+                    <p className="is-size-7">I can help you navigate and interact</p>
+                  </div>
+                ) : (
+                  <div className="content is-small">
+                    {messages.map((message) => (
+                      <motion.div
+                        key={message.id}
+                        initial={prefersReducedMotion ? {} : { opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className={`mb-2 ${message.role === "user" ? "has-text-right" : ""}`}
+                      >
+                        <div
+                          className={`message ${message.role === "user" ? "is-primary" : "is-info"}`}
+                          style={{
+                            maxWidth: isMobile ? "92%" : "88%",
+                            marginLeft: message.role === "user" ? "auto" : "0",
+                            marginRight: message.role === "user" ? "0" : "auto",
+                          }}
+                        >
+                          <div className="message-header is-small">
+                            <span className="is-size-7">
+                              {message.role === "user" ? "You" : "Assistant"}
+                            </span>
+                          </div>
+                          <div className="message-body py-2 px-3">
+                            <p
+                              className="is-size-7 mb-1"
+                              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                            >
+                              {message.content}
+                            </p>
+                            <p className="is-size-7 has-text-grey">
+                              <time dateTime={new Date(message.timestamp).toISOString()}>
+                                {new Date(message.timestamp).toLocaleTimeString()}
+                              </time>
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {isProcessing && (
+                      <div className="has-text-centered py-2" role="status" aria-live="polite">
+                        <span className="loader is-small"></span>
+                        <p className="is-size-7 has-text-grey mt-1">Thinking...</p>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
               </div>
-              <p className="help">
-                <span className="icon is-small">
-                  <i className="fas fa-info-circle"></i>
-                </span>
-                I can help you navigate, interact with demos, and answer questions about this app.
-              </p>
-            </div>
-          </motion.div>
+
+              {/* Input Area - Compact */}
+              <div className="field mb-0">
+                <div className="control">
+                  <textarea
+                    ref={textareaRef}
+                    className="textarea is-small"
+                    rows={1}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask me anything..."
+                    disabled={isProcessing}
+                    aria-label="Chat input"
+                  />
+                </div>
+                <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-1 mb-0`}>
+                  <div className="control">
+                    <button
+                      className={`button is-primary is-small ${isMobile ? "is-fullwidth" : ""}`}
+                      onClick={handleSend}
+                      disabled={!input.trim() || isProcessing}
+                      aria-label="Send message"
+                    >
+                      <span className="icon is-small">
+                        <i className="fas fa-paper-plane"></i>
+                      </span>
+                      <span>Send</span>
+                    </button>
+                  </div>
+                </div>
+                <p className="help is-size-7 mt-1 mb-0">
+                  <span className="icon is-small">
+                    <i className="fas fa-info-circle"></i>
+                  </span>
+                  Press Enter to send, Shift+Enter for new line
+                </p>
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
     </>
   );
 }
-
