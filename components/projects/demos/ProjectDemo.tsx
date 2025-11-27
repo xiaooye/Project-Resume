@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Project } from "@/types";
 import { getProjectIcon } from "@/data/projects";
 import Link from "next/link";
+import EnterpriseMicroservicesDemo from "./EnterpriseMicroservicesDemo";
 
 interface ProjectDemoProps {
   project: Project;
@@ -46,32 +47,52 @@ export default function ProjectDemo({ project }: ProjectDemoProps) {
 
   // Map project ID to specific demo component
   const getDemoComponent = () => {
-    const componentMap: Record<string, () => JSX.Element> = {
-      "1": () => <EnterpriseMicroservicesDemo project={project} />,
-      "2": () => <DistributedMonitoringDemo project={project} />,
-      "3": () => <MultiTenantSaaSDemo project={project} />,
-      "4": () => <HighPerformanceAPIGatewayDemo project={project} />,
-      "5": () => <RealTimeDataStreamingDemo project={project} />,
-      "6": () => <AutoScalingInfrastructureDemo project={project} />,
-      "7": () => <EnterpriseTypeScriptFrameworkDemo project={project} />,
-      "8": () => <ComponentDesignSystemDemo project={project} />,
-      "9": () => <DeveloperProductivityDemo project={project} />,
-      "10": () => <CostOptimizationAnalyticsDemo project={project} />,
-      "11": () => <PerformanceOptimizationDemo project={project} />,
-      "12": () => <ScalableEcommerceDemo project={project} />,
-      "13": () => <GraphQLFederationDemo project={project} />,
-      "14": () => <ServerlessApplicationFrameworkDemo project={project} />,
-      "15": () => <RealTimeCollaborationDemo project={project} />,
-      "16": () => <EventDrivenArchitectureDemo project={project} />,
-      "17": () => <DistributedCacheDemo project={project} />,
-      "18": () => <APIRateLimitingDemo project={project} />,
-      "19": () => <SecurityAuditComplianceDemo project={project} />,
-      "20": () => <IdentityAccessManagementDemo project={project} />,
-      "21": () => <BigDataProcessingEngineDemo project={project} />,
-    };
-
-    const Component = componentMap[project.id];
-    return Component ? <Component /> : <DefaultProjectDemo project={project} />;
+    switch (project.id) {
+      case "1":
+        return <EnterpriseMicroservicesDemo project={project} />;
+      case "2":
+        return <DistributedMonitoringDemo project={project} />;
+      case "3":
+        return <MultiTenantSaaSDemo project={project} />;
+      case "4":
+        return <HighPerformanceAPIGatewayDemo project={project} />;
+      case "5":
+        return <RealTimeDataStreamingDemo project={project} />;
+      case "6":
+        return <AutoScalingInfrastructureDemo project={project} />;
+      case "7":
+        return <EnterpriseTypeScriptFrameworkDemo project={project} />;
+      case "8":
+        return <ComponentDesignSystemDemo project={project} />;
+      case "9":
+        return <DeveloperProductivityDemo project={project} />;
+      case "10":
+        return <CostOptimizationAnalyticsDemo project={project} />;
+      case "11":
+        return <PerformanceOptimizationDemo project={project} />;
+      case "12":
+        return <ScalableEcommerceDemo project={project} />;
+      case "13":
+        return <GraphQLFederationDemo project={project} />;
+      case "14":
+        return <ServerlessApplicationFrameworkDemo project={project} />;
+      case "15":
+        return <RealTimeCollaborationDemo project={project} />;
+      case "16":
+        return <EventDrivenArchitectureDemo project={project} />;
+      case "17":
+        return <DistributedCacheDemo project={project} />;
+      case "18":
+        return <APIRateLimitingDemo project={project} />;
+      case "19":
+        return <SecurityAuditComplianceDemo project={project} />;
+      case "20":
+        return <IdentityAccessManagementDemo project={project} />;
+      case "21":
+        return <BigDataProcessingEngineDemo project={project} />;
+      default:
+        return <DefaultProjectDemo project={project} />;
+    }
   };
 
   return (
@@ -213,10 +234,8 @@ function DefaultProjectDemo({ project }: { project: Project }) {
   );
 }
 
-// Placeholder components for each project - will be implemented
-function EnterpriseMicroservicesDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
+// Import specific demo components
+import EnterpriseMicroservicesDemo from "./EnterpriseMicroservicesDemo";
 
 function DistributedMonitoringDemo({ project }: { project: Project }) {
   return <DefaultProjectDemo project={project} />;
