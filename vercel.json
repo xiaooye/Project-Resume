@@ -1,0 +1,24 @@
+{
+  "functions": {
+    "app/api/network-traffic/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/network-traffic",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-transform, no-store, must-revalidate"
+        },
+        {
+          "key": "X-Accel-Buffering",
+          "value": "no"
+        }
+      ]
+    }
+  ]
+}
+

@@ -147,8 +147,12 @@ if (serverStates.size === 0) {
   initializeServerStates();
 }
 
-export const runtime = "nodejs"; // Ensure Node.js runtime for Vercel compatibility
-export const maxDuration = 300; // 5 minutes max for Vercel
+// Vercel optimization: Use nodejs runtime for SSE streaming
+// maxDuration: Hobby (10s), Pro (60s), Enterprise (300s)
+// For long-running streams, we'll handle reconnection on client side
+export const runtime = "nodejs";
+export const maxDuration = 60; // Optimize for Pro plan (60s), client will reconnect
+export const dynamic = "force-dynamic"; // Ensure no caching for real-time data
 
 export async function GET(request: NextRequest) {
   // Initialize if needed (for serverless cold starts)
@@ -222,15 +226,28 @@ export async function GET(request: NextRequest) {
       // Clean up on client disconnect
       request.signal.addEventListener("abort", () => {
         clearInterval(interval);
-        // Clean up config after 5 minutes of inactivity
-        setTimeout(() => {
-          configs.delete(sessionId);
-        }, 5 * 60 * 1000);
+        // Clean up config immediately (Vercel serverless is stateless)
+        // Note: In production, consider using Vercel KV for persistent storage
         try {
+          configs.delete(sessionId);
           controller.close();
         } catch (e) {
           // Ignore errors on cleanup
         }
+      });
+
+      // Vercel optimization: Send keepalive ping every 15 seconds to prevent timeout
+      const keepaliveInterval = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(": keepalive\n\n"));
+        } catch (error) {
+          clearInterval(keepaliveInterval);
+        }
+      }, 15000);
+
+      // Clean up keepalive on abort
+      request.signal.addEventListener("abort", () => {
+        clearInterval(keepaliveInterval);
       });
     },
   });
@@ -238,10 +255,25 @@ export async function GET(request: NextRequest) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
+      "Cache-Control": "no-cache, no-transform, no-store, must-revalidate",
       "Connection": "keep-alive",
       "X-Accel-Buffering": "no", // Disable buffering for Nginx/Vercel
       "X-Session-Id": sessionId, // Send session ID to client
+      "Access-Control-Allow-Origin": "*", // CORS for Vercel
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Cache-Control",
+    },
+  });
+}
+
+// Handle OPTIONS for CORS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
     },
   });
 }
@@ -255,7 +287,10 @@ export async function POST(request: NextRequest) {
     if (!sessionId) {
       return new Response(JSON.stringify({ error: "sessionId is required" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
       });
     }
 
@@ -282,13 +317,19 @@ export async function POST(request: NextRequest) {
     
     return new Response(JSON.stringify({ success: true, sessionId }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
     });
   } catch (error) {
     console.error("Error updating configuration:", error);
     return new Response(JSON.stringify({ error: "Invalid request" }), {
       status: 400,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
     });
   }
 }

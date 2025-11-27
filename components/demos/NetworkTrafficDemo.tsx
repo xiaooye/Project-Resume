@@ -227,7 +227,14 @@ export default function NetworkTrafficDemo() {
     }
   }, [updateInterval, serverStates, scenarios]);
 
+  // Auto-reconnect state for Vercel optimization
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const RECONNECT_DELAY = 2000; // 2 seconds
+
   // Real-time WebSocket-like connection using Server-Sent Events
+  // Optimized for Vercel: handles reconnection, timeouts, and errors
   useEffect(() => {
     if (!isMounted) return;
 
@@ -237,44 +244,88 @@ export default function NetworkTrafficDemo() {
         sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       }
       
-      // Connect to real-time data stream with session ID
-      const url = `/api/network-traffic?sessionId=${encodeURIComponent(sessionIdRef.current)}`;
-      const eventSource = new EventSource(url);
-      eventSourceRef.current = eventSource;
+      const connect = () => {
+        // Connect to real-time data stream with session ID
+        const url = `/api/network-traffic?sessionId=${encodeURIComponent(sessionIdRef.current!)}`;
+        const eventSource = new EventSource(url);
+        eventSourceRef.current = eventSource;
 
-      eventSource.onmessage = (event) => {
-        try {
-          const newData = JSON.parse(event.data) as NetworkTrafficData[];
-          setData(newData);
-          // Maintain history for latency trend chart (last 50 updates)
-          setDataHistory((prev) => {
-            const updated = [...prev, newData];
-            return updated.slice(-50); // Keep only last 50 updates
-          });
-          
-          // Simulate load balancing logic for visualization
-          if (isConnected) {
-            simulateLoadBalancing(newData, lbStrategy);
+        eventSource.onmessage = (event) => {
+          try {
+            // Ignore keepalive messages
+            if (event.data.trim() === "" || event.data.startsWith(":")) {
+              return;
+            }
+            
+            const newData = JSON.parse(event.data) as NetworkTrafficData[];
+            setData(newData);
+            // Maintain history for latency trend chart (last 50 updates)
+            setDataHistory((prev) => {
+              const updated = [...prev, newData];
+              return updated.slice(-50); // Keep only last 50 updates
+            });
+            
+            // Simulate load balancing logic for visualization
+            if (isConnected) {
+              simulateLoadBalancing(newData, lbStrategy);
+            }
+            
+            // Reset reconnect attempts on successful message
+            setReconnectAttempts(0);
+          } catch (error) {
+            console.error("Error parsing network traffic data:", error);
           }
-        } catch (error) {
-          console.error("Error parsing network traffic data:", error);
-        }
+        };
+
+        // Send initial configuration when connection opens
+        eventSource.onopen = () => {
+          updateServerConfig();
+          setReconnectAttempts(0); // Reset on successful connection
+        };
+
+        eventSource.onerror = (error) => {
+          console.error("EventSource error:", error);
+          
+          // Close current connection
+          eventSource.close();
+          eventSourceRef.current = null;
+          
+          // Vercel optimization: Auto-reconnect on timeout/error
+          // Vercel serverless functions have time limits, so we need to reconnect
+          if (isConnected && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            const attempts = reconnectAttempts + 1;
+            setReconnectAttempts(attempts);
+            
+            // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+            const delay = Math.min(RECONNECT_DELAY * Math.pow(2, attempts - 1), 30000);
+            
+            console.log(`Reconnecting in ${delay}ms (attempt ${attempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+            
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (isConnected) {
+                connect(); // Reconnect
+              }
+            }, delay);
+          } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            console.error("Max reconnection attempts reached. Please manually reconnect.");
+            setIsConnected(false);
+          }
+        };
       };
 
-      // Send initial configuration when connection opens
-      eventSource.onopen = () => {
-        updateServerConfig();
-      };
-
-      eventSource.onerror = (error) => {
-        console.error("EventSource error:", error);
-        eventSource.close();
-        setIsConnected(false);
-      };
+      // Initial connection
+      connect();
 
       return () => {
-        eventSource.close();
-        eventSourceRef.current = null;
+        // Cleanup
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
       };
     } else {
       // Disconnect
@@ -282,8 +333,13 @@ export default function NetworkTrafficDemo() {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      setReconnectAttempts(0);
     }
-  }, [isConnected, isMounted, updateServerConfig]);
+  }, [isConnected, isMounted, updateServerConfig, reconnectAttempts]);
 
   // Update server config when settings change
   useEffect(() => {
@@ -863,6 +919,22 @@ export default function NetworkTrafficDemo() {
               monitors <strong>50 servers</strong> across 6 global regions, receiving data updates 
               every <strong>200ms</strong> (5 updates per second) via Server-Sent Events (SSE).
             </p>
+            {reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS && (
+              <div className="notification is-warning">
+                <strong>⚠️ Reconnecting...</strong> Attempt {reconnectAttempts}/{MAX_RECONNECT_ATTEMPTS}
+                <p className="mt-2">
+                  Vercel serverless functions have execution time limits. The connection will automatically reconnect.
+                </p>
+              </div>
+            )}
+            {reconnectAttempts >= MAX_RECONNECT_ATTEMPTS && (
+              <div className="notification is-danger">
+                <strong>❌ Connection Failed</strong>
+                <p className="mt-2">
+                  Max reconnection attempts reached. Please click "Connect" to retry.
+                </p>
+              </div>
+            )}
             <div className="columns">
               <div className="column">
                 <h4 className="title is-5 mb-3">Key Features:</h4>
