@@ -504,19 +504,24 @@ export default function NetworkTrafficDemo() {
       .attr("y", (d) => yScale(d.requests) - 5)
       .text((d) => d.requests);
 
-    // Add axes
+    // Add axes - use formatted Y-axis for better readability
     const xAxis = d3.axisBottom(xScale);
-    const yAxis = d3.axisLeft(yScale);
+
+    // Remove existing axes if they exist (for updates)
+    svg.selectAll("g.x-axis").remove();
+    svg.selectAll("g.y-axis").remove();
 
     svg
       .append("g")
+      .attr("class", "x-axis")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(xAxis);
 
     svg
       .append("g")
+      .attr("class", "y-axis")
       .attr("transform", `translate(${margin.left},0)`)
-      .call(yAxis);
+      .call(yAxisFormatter); // Use formatted Y-axis with k notation
 
     // Add axis labels
     svg
