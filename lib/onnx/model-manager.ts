@@ -365,13 +365,23 @@ export class ModelManager {
       // Build context from conversation history
       let fullPrompt = prompt;
       
+      // Build prompt - don't include the current message in history
+      // The conversationHistory should NOT include the current message
       if (options?.conversationHistory && options.conversationHistory.length > 0) {
-        // Format conversation history for the model
-        // Limit history to last 10 messages to avoid context overflow
-        const recentHistory = options.conversationHistory.slice(-10);
+        // Filter out the last message if it's the same as the current prompt (avoid duplication)
+        // Limit history to last 8 messages to avoid context overflow (leave room for current message)
+        const historyWithoutCurrent = options.conversationHistory
+          .filter((msg, index, arr) => {
+            // Remove the last message if it matches the current prompt (it's the user's current message)
+            if (index === arr.length - 1 && msg.role === "user" && msg.content === prompt) {
+              return false;
+            }
+            return true;
+          })
+          .slice(-8);
         
-        // Format conversation history - use a cleaner format
-        const historyText = recentHistory
+        // Format conversation history - use a cleaner format for GPT-2
+        const historyText = historyWithoutCurrent
           .map((msg) => {
             if (msg.role === "user") {
               return `User: ${msg.content}`;
@@ -381,8 +391,12 @@ export class ModelManager {
           })
           .join("\n");
         
-        // Build prompt with history
-        fullPrompt = `${historyText}\nUser: ${prompt}\nAssistant:`;
+        // Build prompt with history - add current message
+        if (historyText) {
+          fullPrompt = `${historyText}\nUser: ${prompt}\nAssistant:`;
+        } else {
+          fullPrompt = `User: ${prompt}\nAssistant:`;
+        }
       } else {
         // No history, just use the prompt with assistant prefix
         fullPrompt = `User: ${prompt}\nAssistant:`;
@@ -459,21 +473,101 @@ export class ModelManager {
         if (generatedText && fullPrompt) {
           const originalText = generatedText;
           
-          // Check if prompt is at the start
+          // Strategy 1: Check if the full prompt is at the start
           if (generatedText.startsWith(fullPrompt)) {
             generatedText = generatedText.slice(fullPrompt.length).trim();
-            console.log("[LLM Debug] Removed prompt from start. Original:", originalText.substring(0, 100), "... New:", generatedText.substring(0, 100));
+            console.log("[LLM Debug] Removed full prompt from start");
           } 
-          // Check if prompt is somewhere in the text
-          else if (generatedText.includes(fullPrompt)) {
-            const promptIndex = generatedText.indexOf(fullPrompt);
-            generatedText = generatedText.slice(promptIndex + fullPrompt.length).trim();
-            console.log("[LLM Debug] Removed prompt from middle. Original:", originalText.substring(0, 100), "... New:", generatedText.substring(0, 100));
-          }
-          // Check if we need to remove just the "Assistant:" part at the end
-          else if (generatedText.startsWith("Assistant:")) {
-            generatedText = generatedText.slice("Assistant:".length).trim();
-            console.log("[LLM Debug] Removed 'Assistant:' prefix. New:", generatedText.substring(0, 100));
+          // Strategy 2: Try to find where the prompt ends and extract only after "Assistant:"
+          else {
+            // Find the last occurrence of "Assistant:" in the prompt
+            const assistantMarker = "Assistant:";
+            const lastAssistantIndex = fullPrompt.lastIndexOf(assistantMarker);
+            
+            if (lastAssistantIndex !== -1) {
+              // Everything after "Assistant:" in the prompt should be removed
+              const promptAfterAssistant = fullPrompt.slice(lastAssistantIndex + assistantMarker.length).trim();
+              
+              // Find where this appears in the generated text
+              const promptEndIndex = generatedText.indexOf(promptAfterAssistant, lastAssistantIndex);
+              
+              if (promptEndIndex !== -1) {
+                // Extract everything after the prompt
+                generatedText = generatedText.slice(promptEndIndex + promptAfterAssistant.length).trim();
+                console.log("[LLM Debug] Removed prompt after Assistant marker");
+              } else {
+                // Fallback: just remove everything up to and including the last "Assistant:" in the prompt
+                const promptUpToAssistant = fullPrompt.slice(0, lastAssistantIndex + assistantMarker.length);
+                if (generatedText.startsWith(promptUpToAssistant)) {
+                  generatedText = generatedText.slice(promptUpToAssistant.length).trim();
+                  console.log("[LLM Debug] Removed prompt up to Assistant marker");
+                }
+              }
+            }
+            
+            // Strategy 3: If still contains the prompt, try to find the first "Assistant:" after the prompt
+            if (generatedText.includes(fullPrompt)) {
+              const promptIndex = generatedText.indexOf(fullPrompt);
+              const afterPrompt = generatedText.slice(promptIndex + fullPrompt.length);
+              // Find the next "Assistant:" after the prompt
+              const nextAssistantIndex = afterPrompt.indexOf("Assistant:");
+              if (nextAssistantIndex !== -1) {
+                generatedText = afterPrompt.slice(nextAssistantIndex + "Assistant:".length).trim();
+                console.log("[LLM Debug] Extracted text after next Assistant marker");
+              } else {
+                generatedText = afterPrompt.trim();
+                console.log("[LLM Debug] Extracted text after prompt");
+              }
+            }
+            
+            // Strategy 4: Clean up any remaining "Assistant:" prefixes at the start
+            while (generatedText.startsWith("Assistant:")) {
+              generatedText = generatedText.slice("Assistant:".length).trim();
+            }
+            
+            // Strategy 5: Remove repetitive patterns (model got stuck in a loop)
+            // Split by lines and remove duplicate consecutive lines
+            const lines = generatedText.split("\n");
+            if (lines.length > 2) {
+              const cleanedLines: string[] = [];
+              let lastLine = "";
+              let duplicateCount = 0;
+              
+              for (const line of lines) {
+                const trimmedLine = line.trim();
+                // Skip empty lines and duplicates
+                if (trimmedLine.length === 0) continue;
+                
+                if (trimmedLine === lastLine) {
+                  duplicateCount++;
+                  // Only keep first occurrence, skip all duplicates
+                  if (duplicateCount > 1) {
+                    continue;
+                  }
+                } else {
+                  duplicateCount = 0;
+                }
+                
+                cleanedLines.push(line);
+                lastLine = trimmedLine;
+              }
+              
+              if (cleanedLines.length < lines.length) {
+                generatedText = cleanedLines.join("\n").trim();
+                console.log("[LLM Debug] Removed", lines.length - cleanedLines.length, "duplicate/repetitive lines");
+              }
+            }
+            
+            // Strategy 6: If text still contains "Assistant:" multiple times, extract only the first meaningful response
+            const assistantMatches = generatedText.match(/Assistant:\s*(.+?)(?=\n|$)/g);
+            if (assistantMatches && assistantMatches.length > 1) {
+              // Take only the first assistant response
+              const firstResponse = assistantMatches[0].replace(/^Assistant:\s*/, "").trim();
+              if (firstResponse.length > 0) {
+                generatedText = firstResponse;
+                console.log("[LLM Debug] Extracted first assistant response from multiple matches");
+              }
+            }
           }
         }
         
