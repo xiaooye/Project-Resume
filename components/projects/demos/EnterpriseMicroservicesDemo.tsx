@@ -252,13 +252,13 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
       }
     }
 
-    // Update circuit breakers
+    // Update circuit breakers based on error rate and threshold
     setCircuitBreakers(prev => {
       const updated = new Map(prev);
       updated.forEach((breaker, serviceId) => {
         const service = services.find(s => s.id === serviceId);
         if (service) {
-          if (service.errorRate > 5 && breaker.state === "closed") {
+          if (service.errorRate > circuitBreakerThreshold && breaker.state === "closed") {
             updated.set(serviceId, {
               ...breaker,
               state: "open",
@@ -270,14 +270,14 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
               ...breaker,
               state: "half-open",
             });
-          } else if (breaker.state === "half-open" && service.errorRate < 1) {
+          } else if (breaker.state === "half-open" && service.errorRate < circuitBreakerThreshold / 2) {
             updated.set(serviceId, {
               ...breaker,
               state: "closed",
               successCount: breaker.successCount + 1,
               failureCount: 0,
             });
-          } else if (service.errorRate < 1) {
+          } else if (service.errorRate < circuitBreakerThreshold / 2 && breaker.state === "closed") {
             updated.set(serviceId, {
               ...breaker,
               successCount: breaker.successCount + 1,
@@ -366,7 +366,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
     
     const avgErrorRate = services.reduce((sum, s) => sum + s.errorRate, 0) / services.length;
     setErrorRate(avgErrorRate);
-  }, [services, simulationEnabled, requestRate, manualServiceControl, circuitBreakerThreshold, targetLatency, simulateRequest]);
+  }, [services, simulationEnabled, requestRate, manualServiceControl, circuitBreakerThreshold, targetLatency, simulateRequest, autoScalingEnabled]);
 
   // Generate trace
   const generateTrace = useCallback(() => {
