@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+**No inline css or css variable, only use bulma classname and bulma's layout and component for all style related code.** 
+---
+**No inline css or css variable, only use bulma classname and bulma's layout and component for all style related code.** 

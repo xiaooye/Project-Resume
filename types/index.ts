@@ -24,6 +24,16 @@ export interface NetworkTrafficData {
   latency: number;
   throughput: number;
   errorRate: number;
+  connections?: number;
+  isDown?: boolean; // For server down simulation
+}
+
+export interface SimulationScenario {
+  type: "normal" | "traffic-spike" | "server-down" | "region-outage" | "ddos";
+  enabled: boolean;
+  affectedServers?: string[]; // Server IDs affected
+  trafficMultiplier?: number; // For traffic spike
+  duration?: number; // Duration in seconds
 }
 
 export interface BigDataItem {

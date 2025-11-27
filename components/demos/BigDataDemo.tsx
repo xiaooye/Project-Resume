@@ -53,12 +53,12 @@ export default function BigDataDemo() {
     return filteredData.slice(start, end);
   }, [filteredData, currentPage]);
 
-  // Virtual scrolling - simplified to work without inline styles
+  // Virtual scrolling - simplified to work with only Bulma classes
   const visibleRange = useMemo(() => {
     if (!useVirtualization || !isMounted) return { start: 0, end: paginatedData.length };
-    const containerHeight = 600; // Fixed container height
-    const start = Math.max(0, Math.floor(scrollTop / VIRTUAL_ITEM_HEIGHT) - 2);
-    const visibleCount = Math.ceil(containerHeight / VIRTUAL_ITEM_HEIGHT) + 4;
+    // Show more items at once for better UX without spacer
+    const start = Math.max(0, Math.floor(scrollTop / VIRTUAL_ITEM_HEIGHT) - 5);
+    const visibleCount = 30; // Show 30 items at a time
     const end = Math.min(start + visibleCount, filteredData.length);
     return { start, end };
   }, [scrollTop, filteredData.length, useVirtualization, paginatedData.length, isMounted]);
@@ -71,20 +71,6 @@ export default function BigDataDemo() {
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
   };
-
-  // Set spacer heights using CSS custom properties (no inline styles)
-  useEffect(() => {
-    if (!isMounted) return;
-    const spacers = document.querySelectorAll('[data-spacer-height]');
-    spacers.forEach((spacer) => {
-      const height = spacer.getAttribute('data-spacer-height');
-      if (height) {
-        const el = spacer as HTMLElement;
-        el.style.setProperty('--spacer-height', `${height}px`);
-        el.style.height = 'var(--spacer-height)';
-      }
-    });
-  }, [visibleRange, filteredData.length, isMounted]);
 
   const [memoryUsage, setMemoryUsage] = useState(0);
   const [renderTime, setRenderTime] = useState(0);
@@ -184,12 +170,7 @@ export default function BigDataDemo() {
               </div>
             ) : renderMethod === "virtual" ? (
               <div className="is-relative">
-                {/* Spacer for items before visible range - using data attribute for height */}
-                {visibleRange.start > 0 && (
-                  <div data-spacer-height={visibleRange.start * VIRTUAL_ITEM_HEIGHT}>
-                    {/* Height set via useEffect */}
-                  </div>
-                )}
+                {/* Simplified virtual scrolling - render visible items only */}
                 <div>
                   {virtualItems.map((item) => (
                     <motion.div
@@ -213,10 +194,12 @@ export default function BigDataDemo() {
                     </motion.div>
                   ))}
                 </div>
-                {/* Spacer for items after visible range */}
-                {visibleRange.end < filteredData.length && (
-                  <div data-spacer-height={(filteredData.length - visibleRange.end) * VIRTUAL_ITEM_HEIGHT}>
-                    {/* Height set via useEffect */}
+                {virtualItems.length < filteredData.length && (
+                  <div className="has-text-centered py-6">
+                    <p className="subtitle">
+                      Showing {virtualItems.length} of {filteredData.length.toLocaleString()} items
+                    </p>
+                    <p className="help">Scroll to load more items</p>
                   </div>
                 )}
               </div>

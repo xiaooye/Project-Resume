@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import * as d3 from "d3";
-import { NetworkTrafficData } from "@/types";
+import { NetworkTrafficData, SimulationScenario } from "@/types";
 
-function generateMockData(): NetworkTrafficData[] {
-  // Generate initial data for 50 servers (matches API)
-  return Array.from({ length: 50 }, (_, i) => ({
-    timestamp: Date.now(),
-    serverId: `server-${i + 1}`,
-    requests: Math.floor(Math.random() * 1000) + 100,
-    latency: Math.random() * 200 + 50,
-    throughput: Math.random() * 100 + 10,
-    errorRate: Math.random() * 5,
-  }));
-}
+const SERVER_COUNT = 50;
+const REGIONS = ["us-east", "us-west", "eu-west", "eu-central", "ap-southeast", "ap-northeast"];
+
+// Server state for realistic data generation
+type ServerState = {
+  baseRequests: number;
+  baseLatency: number;
+  trend: number;
+  volatility: number;
+  manualMultiplier?: number; // For manual traffic adjustment
+  isDown?: boolean;
+};
 
 type LoadBalancingStrategy = "round-robin" | "least-connections" | "weighted-round-robin" | "ip-hash";
 
@@ -27,18 +28,132 @@ export default function NetworkTrafficDemo() {
   const [lbStrategy, setLbStrategy] = useState<LoadBalancingStrategy>("round-robin");
   const [requestDistribution, setRequestDistribution] = useState<Map<string, number>>(new Map());
   const [currentRequest, setCurrentRequest] = useState<{ id: string; target: string; timestamp: number } | null>(null);
+  
+  // New control states
+  const [updateInterval, setUpdateInterval] = useState(200); // ms
+  const [serverStates, setServerStates] = useState<Map<string, ServerState>>(new Map());
+  const [scenarios, setScenarios] = useState<SimulationScenario[]>([]);
+  const [lbParams, setLbParams] = useState({
+    weightedLatencyFactor: 1.0, // For weighted round robin
+    ipHashSeed: 0, // For IP hash
+  });
+  
   const svgRef = useRef<SVGSVGElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
   const lbVizRef = useRef<SVGSVGElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const requestCounterRef = useRef(0);
+  const serverStatesRef = useRef<Map<string, ServerState>>(new Map());
+
+  // Initialize server states
+  const initializeServerStates = useCallback(() => {
+    const states = new Map<string, ServerState>();
+    for (let i = 0; i < SERVER_COUNT; i++) {
+      const region = REGIONS[i % REGIONS.length];
+      const serverId = `${region}-server-${Math.floor(i / REGIONS.length) + 1}`;
+      states.set(serverId, {
+        baseRequests: Math.floor(Math.random() * 5000) + 1000,
+        baseLatency: Math.random() * 100 + 20,
+        trend: (Math.random() - 0.5) * 0.1,
+        volatility: Math.random() * 0.3 + 0.1,
+        manualMultiplier: 1.0,
+        isDown: false,
+      });
+    }
+    setServerStates(states);
+    serverStatesRef.current = states;
+  }, []);
+
+  // Generate network data with scenarios
+  const generateNetworkData = useCallback((): NetworkTrafficData[] => {
+    const now = Date.now();
+    const states = serverStatesRef.current;
+    const data: NetworkTrafficData[] = [];
+    
+    // Apply scenarios
+    const activeScenarios = scenarios.filter(s => s.enabled);
+    const downServers = new Set<string>();
+    let globalTrafficMultiplier = 1.0;
+    
+    activeScenarios.forEach(scenario => {
+      if (scenario.type === "traffic-spike") {
+        globalTrafficMultiplier *= (scenario.trafficMultiplier || 3.0);
+      } else if (scenario.type === "server-down" && scenario.affectedServers) {
+        scenario.affectedServers.forEach(id => downServers.add(id));
+      } else if (scenario.type === "region-outage" && scenario.affectedServers) {
+        scenario.affectedServers.forEach(id => downServers.add(id));
+      }
+    });
+
+    for (let i = 0; i < SERVER_COUNT; i++) {
+      const region = REGIONS[i % REGIONS.length];
+      const serverId = `${region}-server-${Math.floor(i / REGIONS.length) + 1}`;
+      const state = states.get(serverId);
+      
+      if (!state) continue;
+      
+      const isDown = downServers.has(serverId) || state.isDown;
+      
+      if (isDown) {
+        data.push({
+          timestamp: now,
+          serverId,
+          region,
+          requests: 0,
+          latency: 0,
+          throughput: 0,
+          errorRate: 100,
+          isDown: true,
+        });
+        continue;
+      }
+
+      // Update trend
+      state.trend += (Math.random() - 0.5) * 0.05;
+      state.trend = Math.max(-0.5, Math.min(0.5, state.trend));
+
+      // Calculate requests with trend, volatility, manual multiplier, and scenarios
+      const trendEffect = state.baseRequests * state.trend * 0.1;
+      const volatilityEffect = state.baseRequests * state.volatility * (Math.random() - 0.5) * 2;
+      const requests = Math.max(100, Math.floor(
+        (state.baseRequests + trendEffect + volatilityEffect) * 
+        (state.manualMultiplier || 1.0) * 
+        globalTrafficMultiplier
+      ));
+
+      // Latency correlated with load
+      const loadFactor = requests / state.baseRequests;
+      const latency = Math.max(10, state.baseLatency * (0.8 + loadFactor * 0.4) + Math.random() * 20);
+
+      // Throughput correlated with requests
+      const throughput = requests * (0.05 + Math.random() * 0.1);
+
+      // Error rate increases with high load or scenarios
+      let errorRate = loadFactor > 1.5 ? Math.random() * 8 + 2 : Math.random() * 2;
+      if (activeScenarios.some(s => s.type === "ddos")) {
+        errorRate += Math.random() * 10;
+      }
+
+      data.push({
+        timestamp: now,
+        serverId,
+        region,
+        requests: Math.round(requests),
+        latency: Math.round(latency * 100) / 100,
+        throughput: Math.round(throughput * 100) / 100,
+        errorRate: Math.round(errorRate * 100) / 100,
+        isDown: false,
+      });
+    }
+
+    return data;
+  }, [scenarios]);
 
   // Initialize only on client side to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
-    // Set initial empty data
-    setData(generateMockData());
-  }, []);
+    initializeServerStates();
+  }, [initializeServerStates]);
 
   // Simulate load balancing logic
   const simulateLoadBalancing = (servers: NetworkTrafficData[], strategy: LoadBalancingStrategy) => {
@@ -65,11 +180,13 @@ export default function NetworkTrafficDemo() {
           break;
         case "weighted-round-robin":
           // Weight by inverse latency (lower latency = higher weight)
-          const totalWeight = servers.reduce((sum, s) => sum + (1 / (s.latency + 1)), 0);
+          const totalWeight = servers.reduce((sum, s) => 
+            sum + (1 / (s.latency + 1)) * lbParams.weightedLatencyFactor, 0
+          );
           let random = Math.random() * totalWeight;
           selectedServer = servers[0];
           for (const server of servers) {
-            random -= (1 / (server.latency + 1));
+            random -= (1 / (server.latency + 1)) * lbParams.weightedLatencyFactor;
             if (random <= 0) {
               selectedServer = server;
               break;
@@ -78,7 +195,7 @@ export default function NetworkTrafficDemo() {
           break;
         case "ip-hash":
           // Hash-based selection (simulate consistent hashing)
-          const hash = requestCounterRef.current % servers.length;
+          const hash = (requestCounterRef.current + lbParams.ipHashSeed) % servers.length;
           selectedServer = servers[hash];
           break;
         default:
@@ -114,52 +231,40 @@ export default function NetworkTrafficDemo() {
     });
   };
 
-  // Real-time WebSocket-like connection using Server-Sent Events
+  // Client-side data generation with adjustable interval
   useEffect(() => {
-    if (!isMounted) return;
-
-    if (isConnected) {
-      // Connect to real-time data stream
-      const eventSource = new EventSource("/api/network-traffic");
-      eventSourceRef.current = eventSource;
-
-      eventSource.onmessage = (event) => {
-        try {
-          const newData = JSON.parse(event.data) as NetworkTrafficData[];
-          setData(newData);
-          // Maintain history for latency trend chart (last 50 updates)
-          setDataHistory((prev) => {
-            const updated = [...prev, newData];
-            return updated.slice(-50); // Keep only last 50 updates
-          });
-          
-          // Simulate load balancing logic for visualization
-          if (isConnected) {
-            simulateLoadBalancing(newData, lbStrategy);
-          }
-        } catch (error) {
-          console.error("Error parsing network traffic data:", error);
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error("EventSource error:", error);
-        eventSource.close();
-        setIsConnected(false);
-      };
-
-      return () => {
-        eventSource.close();
-        eventSourceRef.current = null;
-      };
-    } else {
-      // Disconnect
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+    if (!isMounted || !isConnected) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
+      return;
     }
-  }, [isConnected, isMounted]);
+
+    // Generate initial data
+    const newData = generateNetworkData();
+    setData(newData);
+    setDataHistory([newData]);
+    simulateLoadBalancing(newData, lbStrategy);
+
+    // Set up interval for updates
+    intervalRef.current = setInterval(() => {
+      const updatedData = generateNetworkData();
+      setData(updatedData);
+      setDataHistory((prev) => {
+        const updated = [...prev, updatedData];
+        return updated.slice(-50); // Keep only last 50 updates
+      });
+      simulateLoadBalancing(updatedData, lbStrategy);
+    }, updateInterval);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isConnected, isMounted, updateInterval, generateNetworkData, lbStrategy]);
 
   useEffect(() => {
     if (!isMounted || !svgRef.current || !data.length) return;
@@ -279,9 +384,14 @@ export default function NetworkTrafficDemo() {
       });
     });
 
+    // Fix: Only show actual data range, not full width
+    const maxTime = timeData.length > 0 ? Math.max(...timeData.map(d => d.time)) : 0;
+    const minTime = timeData.length > 0 ? Math.min(...timeData.map(d => d.time)) : 0;
+    const timeRange = maxTime - minTime || 1;
+    
     const xScale = d3
       .scaleLinear()
-      .domain([0, timeData.length - 1])
+      .domain([minTime, minTime + Math.max(timeRange, 1)]) // Only show actual data range
       .range([margin.left, width - margin.right]);
 
     const yScale = d3
@@ -824,42 +934,13 @@ export default function NetworkTrafficDemo() {
           </div>
         </div>
 
-        {/* Load Balancing Strategy Selection */}
-        <div className="box mb-6">
-          <h3 className="title is-4 mb-4">Load Balancing Strategy</h3>
-          <div className="field is-grouped">
-            <div className="control">
-              <div className="select is-medium">
-                <select
-                  value={lbStrategy}
-                  onChange={(e) => {
-                    setLbStrategy(e.target.value as LoadBalancingStrategy);
-                    setRequestDistribution(new Map()); // Reset distribution
-                  }}
-                >
-                  <option value="round-robin">Round Robin</option>
-                  <option value="least-connections">Least Connections</option>
-                  <option value="weighted-round-robin">Weighted Round Robin</option>
-                  <option value="ip-hash">IP Hash (Consistent Hashing)</option>
-                </select>
-              </div>
-            </div>
-            <div className="control">
-              <p className="help">
-                {lbStrategy === "round-robin" && "Distributes requests sequentially across all servers"}
-                {lbStrategy === "least-connections" && "Routes to server with fewest active connections"}
-                {lbStrategy === "weighted-round-robin" && "Routes based on server performance (lower latency = higher weight)"}
-                {lbStrategy === "ip-hash" && "Uses hash of request to ensure consistent routing"}
-              </p>
-            </div>
+        {/* Load Balancing Info */}
+        {currentRequest && (
+          <div className="notification is-info mb-6">
+            <strong>Latest Request:</strong> {currentRequest.id} → {currentRequest.target} 
+            <span className="ml-2 tag is-light">{(Date.now() - currentRequest.timestamp)}ms ago</span>
           </div>
-          {currentRequest && (
-            <div className="notification is-info mt-4">
-              <strong>Latest Request:</strong> {currentRequest.id} → {currentRequest.target} 
-              <span className="ml-2 tag is-light">{(Date.now() - currentRequest.timestamp)}ms ago</span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Load Balancing Visualization */}
         <div className="box mb-6">
@@ -917,6 +998,266 @@ export default function NetworkTrafficDemo() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Simulation Control Panel */}
+        <div className="box mb-6">
+          <h3 className="title is-4 mb-4">Simulation Control Panel</h3>
+          
+          <div className="columns">
+            <div className="column">
+              <div className="field">
+                <label className="label">Update Interval (ms)</label>
+                <div className="control">
+                  <input
+                    className="input"
+                    type="number"
+                    min="50"
+                    max="5000"
+                    step="50"
+                    value={updateInterval}
+                    onChange={(e) => setUpdateInterval(Math.max(50, parseInt(e.target.value) || 200))}
+                    disabled={isConnected}
+                  />
+                </div>
+                <p className="help">Controls how often data updates (50-5000ms)</p>
+              </div>
+            </div>
+            
+            <div className="column">
+              <div className="field">
+                <label className="label">Load Balancing Strategy</label>
+                <div className="control">
+                  <div className="select is-fullwidth">
+                    <select
+                      value={lbStrategy}
+                      onChange={(e) => {
+                        setLbStrategy(e.target.value as LoadBalancingStrategy);
+                        setRequestDistribution(new Map());
+                      }}
+                    >
+                      <option value="round-robin">Round Robin</option>
+                      <option value="least-connections">Least Connections</option>
+                      <option value="weighted-round-robin">Weighted Round Robin</option>
+                      <option value="ip-hash">IP Hash</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {lbStrategy === "weighted-round-robin" && (
+            <div className="field">
+              <label className="label">Latency Weight Factor: {lbParams.weightedLatencyFactor.toFixed(2)}</label>
+              <div className="control">
+                <input
+                  className="slider is-fullwidth"
+                  type="range"
+                  min="0.1"
+                  max="5.0"
+                  step="0.1"
+                  value={lbParams.weightedLatencyFactor}
+                  onChange={(e) => setLbParams({ ...lbParams, weightedLatencyFactor: parseFloat(e.target.value) })}
+                />
+              </div>
+              <p className="help">Higher values prioritize low-latency servers more</p>
+            </div>
+          )}
+
+          {lbStrategy === "ip-hash" && (
+            <div className="field">
+              <label className="label">IP Hash Seed: {lbParams.ipHashSeed}</label>
+              <div className="control">
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  max="1000"
+                  value={lbParams.ipHashSeed}
+                  onChange={(e) => setLbParams({ ...lbParams, ipHashSeed: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <p className="help">Seed value for consistent hashing</p>
+            </div>
+          )}
+
+          <div className="field mt-4">
+            <label className="label">Scenario Simulation</label>
+            <div className="buttons">
+              <button
+                className={`button ${scenarios.some(s => s.type === "traffic-spike" && s.enabled) ? "is-warning" : "is-light"}`}
+                onClick={() => {
+                  const existing = scenarios.find(s => s.type === "traffic-spike");
+                  if (existing) {
+                    setScenarios(scenarios.map(s => 
+                      s.type === "traffic-spike" ? { ...s, enabled: !s.enabled } : s
+                    ));
+                  } else {
+                    setScenarios([...scenarios, {
+                      type: "traffic-spike",
+                      enabled: true,
+                      trafficMultiplier: 3.0,
+                    }]);
+                  }
+                }}
+              >
+                {scenarios.some(s => s.type === "traffic-spike" && s.enabled) ? "✓ Traffic Spike" : "Traffic Spike"}
+              </button>
+              
+              <button
+                className={`button ${scenarios.some(s => s.type === "server-down" && s.enabled) ? "is-danger" : "is-light"}`}
+                onClick={() => {
+                  const existing = scenarios.find(s => s.type === "server-down");
+                  if (existing) {
+                    setScenarios(scenarios.map(s => 
+                      s.type === "server-down" ? { ...s, enabled: !s.enabled } : s
+                    ));
+                  } else {
+                    // Randomly select 3 servers to go down
+                    const randomServers = Array.from({ length: 3 }, () => {
+                      const region = REGIONS[Math.floor(Math.random() * REGIONS.length)];
+                      const serverNum = Math.floor(Math.random() * 10) + 1;
+                      return `${region}-server-${serverNum}`;
+                    });
+                    setScenarios([...scenarios, {
+                      type: "server-down",
+                      enabled: true,
+                      affectedServers: randomServers,
+                    }]);
+                  }
+                }}
+              >
+                {scenarios.some(s => s.type === "server-down" && s.enabled) ? "✓ Server Down" : "Server Down"}
+              </button>
+              
+              <button
+                className={`button ${scenarios.some(s => s.type === "region-outage" && s.enabled) ? "is-danger" : "is-light"}`}
+                onClick={() => {
+                  const existing = scenarios.find(s => s.type === "region-outage");
+                  if (existing) {
+                    setScenarios(scenarios.map(s => 
+                      s.type === "region-outage" ? { ...s, enabled: !s.enabled } : s
+                    ));
+                  } else {
+                    // Select a random region
+                    const region = REGIONS[Math.floor(Math.random() * REGIONS.length)];
+                    const affectedServers = data
+                      .filter(d => d.region === region)
+                      .map(d => d.serverId);
+                    setScenarios([...scenarios, {
+                      type: "region-outage",
+                      enabled: true,
+                      affectedServers,
+                    }]);
+                  }
+                }}
+              >
+                {scenarios.some(s => s.type === "region-outage" && s.enabled) ? "✓ Region Outage" : "Region Outage"}
+              </button>
+              
+              <button
+                className={`button ${scenarios.some(s => s.type === "ddos" && s.enabled) ? "is-danger" : "is-light"}`}
+                onClick={() => {
+                  const existing = scenarios.find(s => s.type === "ddos");
+                  if (existing) {
+                    setScenarios(scenarios.map(s => 
+                      s.type === "ddos" ? { ...s, enabled: !s.enabled } : s
+                    ));
+                  } else {
+                    setScenarios([...scenarios, {
+                      type: "ddos",
+                      enabled: true,
+                      trafficMultiplier: 10.0,
+                    }]);
+                  }
+                }}
+              >
+                {scenarios.some(s => s.type === "ddos" && s.enabled) ? "✓ DDoS Attack" : "DDoS Attack"}
+              </button>
+            </div>
+            {scenarios.filter(s => s.enabled).length > 0 && (
+              <div className="notification is-info mt-3">
+                <strong>Active Scenarios:</strong>
+                <ul className="mt-2">
+                  {scenarios.filter(s => s.enabled).map((s, idx) => (
+                    <li key={idx}>
+                      {s.type === "traffic-spike" && `Traffic Spike (${s.trafficMultiplier}x)`}
+                      {s.type === "server-down" && `Server Down (${s.affectedServers?.length} servers)`}
+                      {s.type === "region-outage" && `Region Outage (${s.affectedServers?.length} servers)`}
+                      {s.type === "ddos" && `DDoS Attack (${s.trafficMultiplier}x traffic)`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="field mt-4">
+            <label className="label">Manual Server Traffic Adjustment</label>
+            <p className="help mb-3">Adjust traffic multiplier for specific servers or regions</p>
+            <div className="table-container" style={{ maxHeight: "200px", overflowY: "auto" }}>
+              <table className="table is-narrow is-fullwidth">
+                <thead>
+                  <tr>
+                    <th>Server</th>
+                    <th>Region</th>
+                    <th>Traffic Multiplier</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from(serverStates.entries()).slice(0, 10).map(([serverId, state]) => {
+                    const region = serverId.split("-")[0] + "-" + serverId.split("-")[1];
+                    return (
+                      <tr key={serverId}>
+                        <td>{serverId}</td>
+                        <td><span className="tag is-info">{region}</span></td>
+                        <td>
+                          <input
+                            className="input is-small"
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={state.manualMultiplier || 1.0}
+                            onChange={(e) => {
+                              const newStates = new Map(serverStates);
+                              const current = newStates.get(serverId);
+                              if (current) {
+                                current.manualMultiplier = parseFloat(e.target.value) || 1.0;
+                                newStates.set(serverId, current);
+                                setServerStates(newStates);
+                                serverStatesRef.current = newStates;
+                              }
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            className={`button is-small ${state.isDown ? "is-danger" : "is-light"}`}
+                            onClick={() => {
+                              const newStates = new Map(serverStates);
+                              const current = newStates.get(serverId);
+                              if (current) {
+                                current.isDown = !current.isDown;
+                                newStates.set(serverId, current);
+                                setServerStates(newStates);
+                                serverStatesRef.current = newStates;
+                              }
+                            }}
+                          >
+                            {state.isDown ? "Bring Up" : "Take Down"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="help mt-2">Showing first 10 servers. Use multiplier 0-10x. Click "Take Down" to simulate server failure.</p>
           </div>
         </div>
 
