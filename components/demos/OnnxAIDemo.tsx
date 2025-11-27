@@ -13,6 +13,8 @@ import LLMChatInterface from "./onnx-ai/LLMChatInterface";
 import ImageClassificationInterface from "./onnx-ai/ImageClassificationInterface";
 import TextClassificationInterface from "./onnx-ai/TextClassificationInterface";
 import PerformanceComparison, { BackendPerformance } from "./onnx-ai/PerformanceComparison";
+import { agentService } from "@/lib/ai-agent/agent-service";
+import { useEffect } from "react";
 
 type InputSource = "camera" | "upload" | "url" | "text";
 
@@ -58,6 +60,84 @@ export default function OnnxAIDemo() {
   // Responsive design
   const [isMobile, setIsMobile] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+
+  // Register page context and actions for AI Agent
+  useEffect(() => {
+    if (!isMounted) return;
+
+    // Register page context (will be updated when models are loaded)
+    const updateContext = () => {
+      agentService.registerPageContext("/demos/onnx-ai", () => ({
+        pathname: "/demos/onnx-ai",
+        title: "ONNX Runtime Web AI Demo",
+        availableActions: [
+          {
+            command: { type: "loadModel", modelId: "" },
+            description: "Load an AI model",
+            parameters: { modelId: "string" },
+          },
+          {
+            command: { type: "runInference", input: "" },
+            description: "Run inference on input",
+            parameters: { input: "string | File" },
+          },
+        ],
+        pageContent: "ONNX Runtime Web AI Demo - Run AI models in your browser",
+        interactiveElements: availableModels.map((model) => ({
+          id: `model-${model.id}`,
+          type: "model",
+          label: model.name,
+          action: `loadModel:${model.id}`,
+        })),
+      }));
+    };
+
+    updateContext();
+
+    // Register action handlers
+    agentService.registerAction("loadModel", async (params: { modelId: string }) => {
+      if (params.modelId) {
+        const model = availableModels.find((m) => m.id === params.modelId);
+        if (model) {
+          setCurrentModelId(params.modelId);
+          setCurrentModel(model);
+          // Trigger load
+          setTimeout(() => {
+            loadModel();
+          }, 100);
+          return `Loading model: ${model.name}`;
+        }
+        return `Model ${params.modelId} not found`;
+      } else if (availableModels.length > 0) {
+        setCurrentModelId(availableModels[0].id);
+        setCurrentModel(availableModels[0]);
+        setTimeout(() => {
+          loadModel();
+        }, 100);
+        return `Loading default model: ${availableModels[0].name}`;
+      }
+      return "No models available";
+    });
+
+    agentService.registerAction("runInference", async (params: { input: string | File }) => {
+      if (!isModelLoaded || !currentModel) {
+        return "Please load a model first. You can say 'load a model' to load one.";
+      }
+      if (params.input) {
+        if (typeof params.input === "string") {
+          try {
+            await runInference(params.input);
+            return "Inference completed successfully";
+          } catch (error) {
+            return `Inference failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+          }
+        } else {
+          return "File input processing not yet implemented. Please use text input.";
+        }
+      }
+      return "No input provided";
+    });
+  }, [isMounted, availableModels, isModelLoaded, currentModel, loadModel, runInference]);
 
   // Initialize models list
   useEffect(() => {

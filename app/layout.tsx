@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import Navbar from "@/components/layout/Navbar";
+import { AgentProvider } from "@/lib/ai-agent/agent-context";
+import GlobalAgent from "@/components/ai-agent/GlobalAgent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,8 +45,11 @@ export default function RootLayout({
         <div className="floating-shapes"></div>
         <div className="noise-texture"></div>
         <ThemeProvider>
-          <Navbar />
-          <main className="is-fullheight pt-6">{children}</main>
+          <AgentProvider>
+            <Navbar />
+            <main className="is-fullheight pt-6">{children}</main>
+            <GlobalAgent />
+          </AgentProvider>
         </ThemeProvider>
       </body>
     </html>
