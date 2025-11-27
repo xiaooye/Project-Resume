@@ -233,6 +233,12 @@ export default function NetworkTrafficDemo() {
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_DELAY = 2000; // 2 seconds
 
+  // Throttle state to prevent UI flashing on fast updates
+  const dataBufferRef = useRef<NetworkTrafficData[] | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
+  const throttleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const UI_UPDATE_THROTTLE = 100; // Update UI at most every 100ms (10fps minimum)
+
   // Real-time WebSocket-like connection using Server-Sent Events
   // Optimized for Vercel: handles reconnection, timeouts, and errors
   useEffect(() => {
@@ -244,6 +250,26 @@ export default function NetworkTrafficDemo() {
         sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       }
       
+      // Throttled update function to prevent UI flashing (defined outside connect for cleanup access)
+      const updateUI = () => {
+        if (dataBufferRef.current) {
+          const bufferedData = dataBufferRef.current;
+          dataBufferRef.current = null; // Clear buffer
+          
+          setData(bufferedData);
+          // Maintain history for latency trend chart (last 50 updates)
+          setDataHistory((prev) => {
+            const updated = [...prev, bufferedData];
+            return updated.slice(-50); // Keep only last 50 updates
+          });
+          
+          // Simulate load balancing logic for visualization
+          if (isConnected) {
+            simulateLoadBalancing(bufferedData, lbStrategy);
+          }
+        }
+      };
+
       const connect = () => {
         // Connect to real-time data stream with session ID
         const url = `/api/network-traffic?sessionId=${encodeURIComponent(sessionIdRef.current!)}`;
@@ -258,16 +284,34 @@ export default function NetworkTrafficDemo() {
             }
             
             const newData = JSON.parse(event.data) as NetworkTrafficData[];
-            setData(newData);
-            // Maintain history for latency trend chart (last 50 updates)
-            setDataHistory((prev) => {
-              const updated = [...prev, newData];
-              return updated.slice(-50); // Keep only last 50 updates
-            });
             
-            // Simulate load balancing logic for visualization
-            if (isConnected) {
-              simulateLoadBalancing(newData, lbStrategy);
+            // Buffer the data instead of immediately updating
+            dataBufferRef.current = newData;
+            
+            const now = Date.now();
+            const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+            
+            // Throttle UI updates to prevent flashing
+            if (timeSinceLastUpdate >= UI_UPDATE_THROTTLE) {
+              // Update immediately if enough time has passed
+              lastUpdateTimeRef.current = now;
+              updateUI();
+              
+              // Clear any pending throttle timeout
+              if (throttleIntervalRef.current) {
+                clearTimeout(throttleIntervalRef.current);
+                throttleIntervalRef.current = null;
+              }
+            } else {
+              // Schedule update if not already scheduled
+              if (!throttleIntervalRef.current) {
+                const delay = UI_UPDATE_THROTTLE - timeSinceLastUpdate;
+                throttleIntervalRef.current = setTimeout(() => {
+                  lastUpdateTimeRef.current = Date.now();
+                  updateUI();
+                  throttleIntervalRef.current = null;
+                }, delay);
+              }
             }
             
             // Reset reconnect attempts on successful message
@@ -326,6 +370,14 @@ export default function NetworkTrafficDemo() {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
+        if (throttleIntervalRef.current) {
+          clearTimeout(throttleIntervalRef.current);
+          throttleIntervalRef.current = null;
+        }
+        // Process any remaining buffered data before cleanup
+        if (dataBufferRef.current) {
+          updateUI();
+        }
       };
     } else {
       // Disconnect
@@ -352,7 +404,12 @@ export default function NetworkTrafficDemo() {
     if (!isMounted || !svgRef.current || !data.length) return;
 
     const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+    // Don't remove all elements - use transitions instead to prevent flashing
+    // Only remove if this is the first render
+    const isFirstRender = svg.selectAll("rect").empty();
+    if (isFirstRender) {
+      svg.selectAll("*").remove();
+    }
 
     // Scale up for 50 servers - use responsive width
     const containerWidth = svgRef.current.clientWidth || 1200;
@@ -389,17 +446,26 @@ export default function NetworkTrafficDemo() {
       })
       .attr("opacity", 0.8);
 
-    // Add labels
-    svg
-      .selectAll("text")
-      .data(data)
-      .enter()
+    // Update labels with smooth transitions
+    const labels = svg.selectAll("text.label").data(data, (d: NetworkTrafficData) => d.serverId);
+    
+    labels.exit().remove();
+    
+    const labelsEnter = labels.enter()
       .append("text")
+      .attr("class", "label")
       .attr("x", (d) => (xScale(d.serverId) || 0) + xScale.bandwidth() / 2)
-      .attr("y", (d) => yScale(d.requests) - 5)
+      .attr("y", height - margin.bottom)
       .attr("text-anchor", "middle")
       .attr("fill", "#363636")
       .style("font-size", "12px")
+      .text((d) => d.requests);
+    
+    labelsEnter.merge(labels as any)
+      .transition()
+      .duration(150)
+      .attr("x", (d) => (xScale(d.serverId) || 0) + xScale.bandwidth() / 2)
+      .attr("y", (d) => yScale(d.requests) - 5)
       .text((d) => d.requests);
 
     // Add axes
