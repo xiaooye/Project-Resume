@@ -1851,25 +1851,59 @@ export default function BigDataDemo() {
     return filteredData.slice(start, end);
   }, [filteredData, currentPage]);
 
-  // Virtual scrolling - simplified to work with only Bulma classes
+  // Virtual scrolling - fixed to prevent scroll jumping
+  const itemHeight = useMemo(() => isMobile ? MOBILE_VIRTUAL_ITEM_HEIGHT : VIRTUAL_ITEM_HEIGHT, [isMobile]);
+  const dataToUse = useMemo(() => {
+    return Array.isArray(processedData) ? processedData : filteredData;
+  }, [processedData, filteredData]);
+  const totalItems = dataToUse.length;
+  const totalHeight = totalItems * itemHeight;
+  
   const visibleRange = useMemo(() => {
-    if (!useVirtualization || !isMounted) return { start: 0, end: paginatedData.length };
-    const itemHeight = isMobile ? MOBILE_VIRTUAL_ITEM_HEIGHT : VIRTUAL_ITEM_HEIGHT;
-    const visibleCount = isMobile ? 10 : 30; // Fewer items on mobile for better performance
-    const start = Math.max(0, Math.floor(scrollTop / itemHeight) - (isMobile ? 2 : 5));
-    const end = Math.min(start + visibleCount, filteredData.length);
+    if (!useVirtualization || !isMounted) return { start: 0, end: Math.min(50, totalItems) };
+    const containerHeight = isMobile ? 400 : 600;
+    const visibleCount = Math.ceil(containerHeight / itemHeight) + 5; // Extra buffer
+    const buffer = Math.max(3, Math.floor(visibleCount * 0.2)); // 20% buffer
+    const start = Math.max(0, Math.floor(scrollTop / itemHeight) - buffer);
+    const end = Math.min(start + visibleCount + buffer * 2, totalItems);
     return { start, end };
-  }, [scrollTop, filteredData.length, useVirtualization, paginatedData.length, isMounted, isMobile]);
+  }, [scrollTop, totalItems, useVirtualization, isMounted, isMobile, itemHeight]);
 
   const virtualItems = useMemo(() => {
     if (!useVirtualization || !isMounted) return paginatedData;
-    const dataToUse = Array.isArray(processedData) ? processedData : filteredData;
     return dataToUse.slice(visibleRange.start, visibleRange.end);
-  }, [filteredData, processedData, visibleRange, useVirtualization, paginatedData, isMounted]);
+  }, [dataToUse, visibleRange, useVirtualization, paginatedData, isMounted]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  };
+  // Optimized scroll handler with debouncing to prevent scroll jumping
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rafRef = useRef<number | null>(null);
+  
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const newScrollTop = e.currentTarget.scrollTop;
+    
+    // Cancel any pending animation frame
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    
+    // Use requestAnimationFrame for smooth, synchronized updates
+    rafRef.current = requestAnimationFrame(() => {
+      setScrollTop(newScrollTop);
+      rafRef.current = null;
+    });
+  }, []);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Touch-friendly scroll handling for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -3725,36 +3759,40 @@ export default function BigDataDemo() {
                 </div>
               ) : Array.isArray(processedData) ? (
                 renderMethod === "virtual" ? (
-                <div className="is-relative">
-                  {/* Simplified virtual scrolling - render visible items only */}
-                  <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
-                    <thead>
-                      <tr>
-                        <th>ID / Name</th>
-                        <th className="is-hidden-mobile">Category Hierarchy</th>
-                        <th>Value</th>
-                        <th className="is-hidden-tablet">Region</th>
-                        <th className="is-hidden-tablet">Status</th>
-                        <th className="is-hidden-tablet">Priority</th>
-                        <th className="is-hidden-tablet">Quality</th>
-                        <th className="is-hidden-tablet">Revenue</th>
-                        <th className="is-hidden-tablet">Cost</th>
-                        <th className="is-hidden-tablet">Efficiency</th>
-                        <th className="is-hidden-tablet">Error Rate</th>
-                        <th>Timestamp</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {virtualItems.map((item, index) => (
-                      <motion.tr
-                        key={item.id}
-                        initial={reducedMotion ? false : { opacity: 0, x: -20 }}
-                        animate={reducedMotion ? false : { opacity: 1, x: 0 }}
-                        transition={reducedMotion ? {} : { duration: 0.2 }}
-                        className={isMobile ? "py-4" : ""}
-                        role="row"
-                        aria-rowindex={visibleRange.start + index + 1}
-                      >
+                <div style={{ position: "relative", minHeight: totalHeight }}>
+                  {/* Top spacer to maintain scroll position */}
+                  {visibleRange.start > 0 && (
+                    <div style={{ height: visibleRange.start * itemHeight }} aria-hidden="true" />
+                  )}
+                  
+                  {/* Visible items table */}
+                  <div style={{ position: "relative" }}>
+                    <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
+                      <thead>
+                        <tr>
+                          <th>ID / Name</th>
+                          <th className="is-hidden-mobile">Category Hierarchy</th>
+                          <th>Value</th>
+                          <th className="is-hidden-tablet">Region</th>
+                          <th className="is-hidden-tablet">Status</th>
+                          <th className="is-hidden-tablet">Priority</th>
+                          <th className="is-hidden-tablet">Quality</th>
+                          <th className="is-hidden-tablet">Revenue</th>
+                          <th className="is-hidden-tablet">Cost</th>
+                          <th className="is-hidden-tablet">Efficiency</th>
+                          <th className="is-hidden-tablet">Error Rate</th>
+                          <th>Timestamp</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {virtualItems.map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className={isMobile ? "py-4" : ""}
+                          role="row"
+                          aria-rowindex={visibleRange.start + index + 1}
+                          style={{ height: itemHeight }}
+                        >
                         <td>
                           <div className={isMobile ? "is-flex is-flex-direction-column" : ""}>
                             <strong className="is-size-7">{item.name}</strong>
@@ -3866,17 +3904,15 @@ export default function BigDataDemo() {
                             {new Date(item.timestamp).toLocaleString()}
                           </small>
                         </td>
-                      </motion.tr>
+                      </tr>
                     ))}
-                  </tbody>
-                </table>
-                {virtualItems.length < filteredData.length && (
-                  <div className="has-text-centered py-6" role="status">
-                    <p className="subtitle">
-                      Showing {virtualItems.length} of {filteredData.length.toLocaleString()} items
-                    </p>
-                    <p className="help">Scroll to load more items</p>
+                      </tbody>
+                    </table>
                   </div>
+                  
+                  {/* Bottom spacer to maintain correct scroll position */}
+                  {visibleRange.end < totalItems && (
+                    <div style={{ height: Math.max(0, (totalItems - visibleRange.end) * itemHeight) }} aria-hidden="true" />
                   )}
                 </div>
               ) : (
