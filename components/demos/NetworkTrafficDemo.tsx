@@ -195,8 +195,14 @@ export default function NetworkTrafficDemo() {
     if (!isMounted) return;
 
     if (isConnected) {
-      // Connect to real-time data stream
-      const eventSource = new EventSource("/api/network-traffic");
+      // Generate or reuse session ID
+      if (!sessionIdRef.current) {
+        sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      }
+      
+      // Connect to real-time data stream with session ID
+      const url = `/api/network-traffic?sessionId=${encodeURIComponent(sessionIdRef.current)}`;
+      const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
@@ -218,13 +224,8 @@ export default function NetworkTrafficDemo() {
         }
       };
 
-      // Get session ID from response headers (if available)
+      // Send initial configuration when connection opens
       eventSource.onopen = () => {
-        // Session ID will be in the URL or we'll generate one
-        if (!sessionIdRef.current) {
-          sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        }
-        // Send initial configuration
         updateServerConfig();
       };
 
