@@ -389,14 +389,14 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
   - [x] **WCAG 2.2 AAA** - 语义化 HTML，键盘导航，屏幕阅读器支持
   - [x] **性能** - 图片懒加载，代码分割
 
-- [ ] **技能展示页面** (CTO Expectation: Technical Competency)
-  - [ ] 技能雷达图 - D3.js 可视化，交互式图表
-  - [ ] 技术栈图标 - 图标库，分类展示
-  - [ ] 经验年限展示 - 时间线，项目关联
-  - [ ] 技能熟练度可视化 - 进度条，等级显示
-  - [ ] **响应式优化** - 移动端图表适配，简化视图
-  - [ ] **WCAG 2.2 AAA** - 图表数据表格化，颜色对比度
-  - [ ] **数据驱动** - 技能数据管理，动态更新
+- [x] **技能展示页面** (CTO Expectation: Technical Competency)
+  - [x] 技能雷达图 - D3.js 可视化，交互式图表
+  - [x] 技术栈图标 - 图标库，分类展示
+  - [x] 经验年限展示 - 时间线，项目关联
+  - [x] 技能熟练度可视化 - 进度条，等级显示
+  - [x] **响应式优化** - 移动端图表适配，简化视图
+  - [x] **WCAG 2.2 AAA** - 图表数据表格化，颜色对比度
+  - [x] **数据驱动** - 技能数据管理，动态更新
 
 - [ ] **联系表单页面** (Staff Level: User Experience)
   - [ ] 表单验证 - 实时验证，错误提示

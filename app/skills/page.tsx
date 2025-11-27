@@ -1,13 +1,6 @@
-export default function SkillsPage() {
-  return (
-    <section className="section">
-      <div className="container">
-        <div className="liquid-glass p-6 has-text-centered">
-          <h1 className="title is-1 liquid-glass-text">Skills</h1>
-          <p className="subtitle is-4 liquid-glass-text">Coming soon...</p>
-        </div>
-      </div>
-    </section>
-  );
+import SkillsPage from "@/components/skills/SkillsPage";
+
+export default function Skills() {
+  return <SkillsPage />;
 }
 
