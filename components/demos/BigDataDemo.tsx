@@ -23,7 +23,7 @@ const STREAM_UPDATE_INTERVAL = 50; // Update UI every 50ms
 
 type ViewMode = "table" | "chart" | "analysis" | "stream";
 type ChartType = "bar" | "line" | "pie" | "heatmap" | "scatter" | "area" | "boxplot" | "histogram";
-type SortField = "name" | "value" | "category" | "timestamp";
+type SortField = "name" | "value" | "category" | "timestamp" | "mainCategory" | "region" | "status" | "priority" | "quality" | "revenue" | "cost" | "efficiency" | "errorRate";
 type SortOrder = "asc" | "desc";
 type StreamSource = "websocket" | "sse" | "simulated";
 type AnalysisType = "descriptive" | "time-series" | "correlation" | "anomaly" | "forecast" | "capacity";
@@ -520,7 +520,7 @@ function processData(
   data: BigDataItem[],
   sortField?: SortField,
   sortOrder?: SortOrder,
-  groupBy?: "category" | "date"
+  groupBy?: "category" | "date" | "mainCategory" | "region" | "status"
 ) {
   let processed = [...data];
   
@@ -548,6 +548,42 @@ function processData(
         grouped[item.category] = [];
       }
       grouped[item.category].push(item);
+    });
+    return grouped;
+  }
+  
+  if (groupBy === "mainCategory") {
+    const grouped: Record<string, BigDataItem[]> = {};
+    processed.forEach(item => {
+      const key = item.mainCategory || "Unknown";
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(item);
+    });
+    return grouped;
+  }
+  
+  if (groupBy === "region") {
+    const grouped: Record<string, BigDataItem[]> = {};
+    processed.forEach(item => {
+      const key = item.region || "Unknown";
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(item);
+    });
+    return grouped;
+  }
+  
+  if (groupBy === "status") {
+    const grouped: Record<string, BigDataItem[]> = {};
+    processed.forEach(item => {
+      const key = item.status || "unknown";
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(item);
     });
     return grouped;
   }
@@ -677,7 +713,7 @@ export default function BigDataDemo() {
   const [analysisType, setAnalysisType] = useState<AnalysisType>("descriptive");
   const [sortField, setSortField] = useState<SortField | undefined>();
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [groupBy, setGroupBy] = useState<"category" | "date" | undefined>();
+  const [groupBy, setGroupBy] = useState<"category" | "date" | "mainCategory" | "region" | "status" | undefined>();
   const [timeRange, setTimeRange] = useState<"1h" | "24h" | "7d" | "30d" | "all">("all");
   const [selectedDimensions, setSelectedDimensions] = useState<string[]>(["value", "category"]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -2334,7 +2370,15 @@ export default function BigDataDemo() {
                             <option value="">No Sort</option>
                             <option value="name">Sort by Name</option>
                             <option value="value">Sort by Value</option>
-                            <option value="category">Sort by Category</option>
+                            <option value="mainCategory">Sort by Main Category</option>
+                            <option value="region">Sort by Region</option>
+                            <option value="status">Sort by Status</option>
+                            <option value="priority">Sort by Priority</option>
+                            <option value="quality">Sort by Quality</option>
+                            <option value="revenue">Sort by Revenue</option>
+                            <option value="cost">Sort by Cost</option>
+                            <option value="efficiency">Sort by Efficiency</option>
+                            <option value="errorRate">Sort by Error Rate</option>
                             <option value="timestamp">Sort by Date</option>
                           </select>
                         </div>
@@ -2357,11 +2401,14 @@ export default function BigDataDemo() {
                         <div className="select">
                           <select
                             value={groupBy || ""}
-                            onChange={(e) => setGroupBy(e.target.value as "category" | "date" || undefined)}
+                            onChange={(e) => setGroupBy(e.target.value as "category" | "date" | "mainCategory" | "region" | "status" || undefined)}
                             aria-label="Group by"
                           >
                             <option value="">No Grouping</option>
-                            <option value="category">Group by Category</option>
+                            <option value="mainCategory">Group by Main Category</option>
+                            <option value="category">Group by Category (Level 3)</option>
+                            <option value="region">Group by Region</option>
+                            <option value="status">Group by Status</option>
                             <option value="date">Group by Date</option>
                           </select>
                         </div>
@@ -2561,13 +2608,17 @@ export default function BigDataDemo() {
               aria-label="Real-time stream data"
               aria-live="polite"
             >
-              <table className="table is-fullwidth is-hoverable" role="table">
+              <table className="table is-fullwidth is-hoverable is-striped" role="table">
                 <thead>
                   <tr>
                     <th>Time</th>
                     <th>Name</th>
-                    <th>Category</th>
+                    <th className="is-hidden-mobile">Category Hierarchy</th>
                     <th>Value</th>
+                    <th className="is-hidden-tablet">Region</th>
+                    <th className="is-hidden-tablet">Status</th>
+                    <th className="is-hidden-tablet">Quality</th>
+                    <th className="is-hidden-tablet">Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2581,12 +2632,67 @@ export default function BigDataDemo() {
                       <td>
                         <small>{new Date(item.timestamp).toLocaleTimeString()}</small>
                       </td>
-                      <td>{item.name}</td>
                       <td>
-                        <span className="tag">{item.category}</span>
+                        <strong className="is-size-7">{item.name}</strong>
+                        {isMobile && (
+                          <div className="tags mt-1">
+                            <span className="tag is-small">{item.mainCategory}</span>
+                            <span className={`tag is-small ${
+                              item.status === "active" ? "is-success" :
+                              item.status === "completed" ? "is-info" :
+                              item.status === "pending" ? "is-warning" :
+                              "is-danger"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="is-hidden-mobile">
+                        <div className="is-flex is-flex-direction-column">
+                          <span className="tag is-primary is-light is-small mb-1">{item.mainCategory}</span>
+                          <span className="tag is-info is-light is-small mb-1">{item.subCategory}</span>
+                          <span className="tag is-link is-light is-small">{item.categoryLevel3}</span>
+                        </div>
                       </td>
                       <td className="has-text-right">
-                        <strong>{item.value.toLocaleString()}</strong>
+                        <strong>${item.value.toLocaleString()}</strong>
+                        {isMobile && (
+                          <div className="mt-1">
+                            <span className={`tag is-small ${
+                              item.quality > 80 ? "is-success" :
+                              item.quality > 60 ? "is-warning" :
+                              "is-danger"
+                            }`}>
+                              Q: {item.quality}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="is-hidden-tablet">
+                        <span className="tag">{item.region}</span>
+                      </td>
+                      <td className="is-hidden-tablet">
+                        <span className={`tag ${
+                          item.status === "active" ? "is-success" :
+                          item.status === "completed" ? "is-info" :
+                          item.status === "pending" ? "is-warning" :
+                          "is-danger"
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="is-hidden-tablet has-text-centered">
+                        <span className={`tag ${
+                          item.quality > 80 ? "is-success" :
+                          item.quality > 60 ? "is-warning" :
+                          "is-danger"
+                        }`}>
+                          {item.quality}
+                        </span>
+                      </td>
+                      <td className="is-hidden-tablet has-text-right">
+                        <span className="has-text-success">${item.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </td>
                     </motion.tr>
                   ))}
@@ -3535,13 +3641,21 @@ export default function BigDataDemo() {
                 renderMethod === "virtual" ? (
                 <div className="is-relative">
                   {/* Simplified virtual scrolling - render visible items only */}
-                  <table className="table is-fullwidth is-hoverable" role="table" aria-label="Data items">
-                    <thead className="is-sr-only">
+                  <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
+                    <thead>
                       <tr>
-                        <th>Item Name</th>
-                        <th>Category</th>
+                        <th>ID / Name</th>
+                        <th className="is-hidden-mobile">Category Hierarchy</th>
                         <th>Value</th>
-                        <th>Date</th>
+                        <th className="is-hidden-tablet">Region</th>
+                        <th className="is-hidden-tablet">Status</th>
+                        <th className="is-hidden-tablet">Priority</th>
+                        <th className="is-hidden-tablet">Quality</th>
+                        <th className="is-hidden-tablet">Revenue</th>
+                        <th className="is-hidden-tablet">Cost</th>
+                        <th className="is-hidden-tablet">Efficiency</th>
+                        <th className="is-hidden-tablet">Error Rate</th>
+                        <th>Timestamp</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3557,25 +3671,113 @@ export default function BigDataDemo() {
                       >
                         <td>
                           <div className={isMobile ? "is-flex is-flex-direction-column" : ""}>
-                            <strong>{item.name}</strong>
-                            <br />
-                            <small className="has-text-grey">{item.category}</small>
+                            <strong className="is-size-7">{item.name}</strong>
+                            {isMobile && (
+                              <>
+                                <div className="tags mt-1">
+                                  <span className="tag is-small">{item.mainCategory}</span>
+                                  <span className="tag is-small is-light">{item.subCategory}</span>
+                                </div>
+                                <div className="mt-1">
+                                  <span className={`tag is-small ${
+                                    item.status === "active" ? "is-success" :
+                                    item.status === "completed" ? "is-info" :
+                                    item.status === "pending" ? "is-warning" :
+                                    "is-danger"
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                  <span className="tag is-small ml-1">{item.region}</span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </td>
                         <td className="is-hidden-mobile">
-                          <span className="tag">{item.category}</span>
+                          <div className="is-flex is-flex-direction-column">
+                            <span className="tag is-primary is-light mb-1">{item.mainCategory}</span>
+                            <span className="tag is-info is-light mb-1">{item.subCategory}</span>
+                            <span className="tag is-link is-light mb-1">{item.categoryLevel3}</span>
+                            <span className="tag is-light">{item.categoryLevel4}</span>
+                          </div>
                         </td>
                         <td className="has-text-right">
                           <div className={isMobile ? "is-flex is-flex-direction-column is-align-items-flex-end" : ""}>
-                            <div className="title is-5">{item.value.toLocaleString()}</div>
-                            <small className="has-text-grey">
-                              {new Date(item.timestamp).toLocaleDateString()}
-                            </small>
+                            <div className="title is-6 mb-1">${item.value.toLocaleString()}</div>
+                            {isMobile && (
+                              <div className="is-flex is-align-items-center mt-1">
+                                <span className={`tag is-small mr-1 ${
+                                  item.quality > 80 ? "is-success" :
+                                  item.quality > 60 ? "is-warning" :
+                                  "is-danger"
+                                }`}>
+                                  Q: {item.quality}
+                                </span>
+                                <span className="tag is-small">
+                                  P{item.priority}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </td>
-                        <td className="is-hidden-mobile has-text-right">
+                        <td className="is-hidden-tablet">
+                          <span className="tag">{item.region}</span>
+                        </td>
+                        <td className="is-hidden-tablet">
+                          <span className={`tag ${
+                            item.status === "active" ? "is-success" :
+                            item.status === "completed" ? "is-info" :
+                            item.status === "pending" ? "is-warning" :
+                            "is-danger"
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="is-hidden-tablet has-text-centered">
+                          <span className={`tag ${
+                            item.priority >= 4 ? "is-danger" :
+                            item.priority >= 3 ? "is-warning" :
+                            "is-light"
+                          }`}>
+                            P{item.priority}
+                          </span>
+                        </td>
+                        <td className="is-hidden-tablet has-text-centered">
+                          <span className={`tag ${
+                            item.quality > 80 ? "is-success" :
+                            item.quality > 60 ? "is-warning" :
+                            "is-danger"
+                          }`}>
+                            {item.quality}
+                          </span>
+                        </td>
+                        <td className="is-hidden-tablet has-text-right">
+                          <span className="has-text-success">${item.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        </td>
+                        <td className="is-hidden-tablet has-text-right">
+                          <span className="has-text-grey">${item.cost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                        </td>
+                        <td className="is-hidden-tablet has-text-centered">
+                          <span className={`tag ${
+                            item.efficiency > 80 ? "is-success" :
+                            item.efficiency > 60 ? "is-warning" :
+                            "is-danger"
+                          }`}>
+                            {item.efficiency}%
+                          </span>
+                        </td>
+                        <td className="is-hidden-tablet has-text-centered">
+                          <span className={`tag ${
+                            item.errorRate < 2 ? "is-success" :
+                            item.errorRate < 5 ? "is-warning" :
+                            "is-danger"
+                          }`}>
+                            {item.errorRate.toFixed(2)}%
+                          </span>
+                        </td>
+                        <td className="has-text-right">
                           <small className="has-text-grey">
-                            {new Date(item.timestamp).toLocaleDateString()}
+                            {new Date(item.timestamp).toLocaleString()}
                           </small>
                         </td>
                       </motion.tr>
@@ -3593,13 +3795,21 @@ export default function BigDataDemo() {
                 </div>
               ) : (
                 <div>
-                  <table className="table is-fullwidth is-hoverable" role="table" aria-label="Data items">
-                    <thead className="is-sr-only">
+                  <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
+                    <thead>
                       <tr>
-                        <th>Item Name</th>
-                        <th>Category</th>
+                        <th>ID / Name</th>
+                        <th className="is-hidden-mobile">Category Hierarchy</th>
                         <th>Value</th>
-                        <th>Date</th>
+                        <th className="is-hidden-tablet">Region</th>
+                        <th className="is-hidden-tablet">Status</th>
+                        <th className="is-hidden-tablet">Priority</th>
+                        <th className="is-hidden-tablet">Quality</th>
+                        <th className="is-hidden-tablet">Revenue</th>
+                        <th className="is-hidden-tablet">Cost</th>
+                        <th className="is-hidden-tablet">Efficiency</th>
+                        <th className="is-hidden-tablet">Error Rate</th>
+                        <th>Timestamp</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3613,25 +3823,113 @@ export default function BigDataDemo() {
                         >
                           <td>
                             <div className={isMobile ? "is-flex is-flex-direction-column" : ""}>
-                              <strong>{item.name}</strong>
-                              <br />
-                              <small className="has-text-grey">{item.category}</small>
+                              <strong className="is-size-7">{item.name}</strong>
+                              {isMobile && (
+                                <>
+                                  <div className="tags mt-1">
+                                    <span className="tag is-small">{item.mainCategory}</span>
+                                    <span className="tag is-small is-light">{item.subCategory}</span>
+                                  </div>
+                                  <div className="mt-1">
+                                    <span className={`tag is-small ${
+                                      item.status === "active" ? "is-success" :
+                                      item.status === "completed" ? "is-info" :
+                                      item.status === "pending" ? "is-warning" :
+                                      "is-danger"
+                                    }`}>
+                                      {item.status}
+                                    </span>
+                                    <span className="tag is-small ml-1">{item.region}</span>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </td>
                           <td className="is-hidden-mobile">
-                            <span className="tag">{item.category}</span>
+                            <div className="is-flex is-flex-direction-column">
+                              <span className="tag is-primary is-light mb-1">{item.mainCategory}</span>
+                              <span className="tag is-info is-light mb-1">{item.subCategory}</span>
+                              <span className="tag is-link is-light mb-1">{item.categoryLevel3}</span>
+                              <span className="tag is-light">{item.categoryLevel4}</span>
+                            </div>
                           </td>
                           <td className="has-text-right">
                             <div className={isMobile ? "is-flex is-flex-direction-column is-align-items-flex-end" : ""}>
-                              <div className="title is-5">{item.value.toLocaleString()}</div>
-                              <small className="has-text-grey">
-                                {new Date(item.timestamp).toLocaleDateString()}
-                              </small>
+                              <div className="title is-6 mb-1">${item.value.toLocaleString()}</div>
+                              {isMobile && (
+                                <div className="is-flex is-align-items-center mt-1">
+                                  <span className={`tag is-small mr-1 ${
+                                    item.quality > 80 ? "is-success" :
+                                    item.quality > 60 ? "is-warning" :
+                                    "is-danger"
+                                  }`}>
+                                    Q: {item.quality}
+                                  </span>
+                                  <span className="tag is-small">
+                                    P{item.priority}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </td>
-                          <td className="is-hidden-mobile has-text-right">
+                          <td className="is-hidden-tablet">
+                            <span className="tag">{item.region}</span>
+                          </td>
+                          <td className="is-hidden-tablet">
+                            <span className={`tag ${
+                              item.status === "active" ? "is-success" :
+                              item.status === "completed" ? "is-info" :
+                              item.status === "pending" ? "is-warning" :
+                              "is-danger"
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="is-hidden-tablet has-text-centered">
+                            <span className={`tag ${
+                              item.priority >= 4 ? "is-danger" :
+                              item.priority >= 3 ? "is-warning" :
+                              "is-light"
+                            }`}>
+                              P{item.priority}
+                            </span>
+                          </td>
+                          <td className="is-hidden-tablet has-text-centered">
+                            <span className={`tag ${
+                              item.quality > 80 ? "is-success" :
+                              item.quality > 60 ? "is-warning" :
+                              "is-danger"
+                            }`}>
+                              {item.quality}
+                            </span>
+                          </td>
+                          <td className="is-hidden-tablet has-text-right">
+                            <span className="has-text-success">${item.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                          </td>
+                          <td className="is-hidden-tablet has-text-right">
+                            <span className="has-text-grey">${item.cost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                          </td>
+                          <td className="is-hidden-tablet has-text-centered">
+                            <span className={`tag ${
+                              item.efficiency > 80 ? "is-success" :
+                              item.efficiency > 60 ? "is-warning" :
+                              "is-danger"
+                            }`}>
+                              {item.efficiency}%
+                            </span>
+                          </td>
+                          <td className="is-hidden-tablet has-text-centered">
+                            <span className={`tag ${
+                              item.errorRate < 2 ? "is-success" :
+                              item.errorRate < 5 ? "is-warning" :
+                              "is-danger"
+                            }`}>
+                              {item.errorRate.toFixed(2)}%
+                            </span>
+                          </td>
+                          <td className="has-text-right">
                             <small className="has-text-grey">
-                              {new Date(item.timestamp).toLocaleDateString()}
+                              {new Date(item.timestamp).toLocaleString()}
                             </small>
                           </td>
                         </motion.tr>
