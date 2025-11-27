@@ -46,6 +46,12 @@ export default function Home() {
       href: "/demos/aws",
       icon: "☁️",
     },
+    {
+      title: "Azure Integration",
+      description: "Blob Storage, Functions, Cognitive Services, AI Services",
+      href: "/demos/azure",
+      icon: "🔷",
+    },
   ];
 
   return (
