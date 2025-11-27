@@ -429,12 +429,35 @@ export default function NetworkTrafficDemo() {
       .nice()
       .range([height - margin.bottom, margin.top]);
 
-    // Draw bars
-    svg
-      .selectAll("rect")
-      .data(data)
-      .enter()
+    // Update bars with smooth transitions to prevent flashing
+    const bars = svg.selectAll("rect").data(data, (d: NetworkTrafficData) => d.serverId);
+    
+    // Remove old bars
+    bars.exit()
+      .transition()
+      .duration(150)
+      .attr("opacity", 0)
+      .remove();
+    
+    // Add new bars
+    const barsEnter = bars.enter()
       .append("rect")
+      .attr("x", (d) => xScale(d.serverId) || 0)
+      .attr("y", height - margin.bottom)
+      .attr("width", xScale.bandwidth())
+      .attr("height", 0)
+      .attr("fill", (d) => {
+        if (d.errorRate > 3) return "#f14668";
+        if (d.latency > 150) return "#ffa500";
+        return "#48c78e";
+      })
+      .attr("opacity", 0);
+    
+    // Update existing bars with smooth transition
+    barsEnter.merge(bars as any)
+      .transition()
+      .duration(150)
+      .ease(d3.easeCubicOut)
       .attr("x", (d) => xScale(d.serverId) || 0)
       .attr("y", (d) => yScale(d.requests))
       .attr("width", xScale.bandwidth())
