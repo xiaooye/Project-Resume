@@ -174,15 +174,15 @@ export default function GlobalAgent() {
               </div>
             )}
 
-            {/* Messages Area - Liquid Glass Style */}
+            {/* Messages Area - Clean Liquid Glass Background */}
             <div
-              className="liquid-glass mb-2"
+              className="mb-2"
               style={{
                 flex: 1,
                 overflowY: "auto",
                 minHeight: isMobile ? "200px" : "280px",
                 maxHeight: isMobile ? "320px" : "400px",
-                padding: "0.75rem",
+                padding: "0.5rem",
               }}
               role="log"
               aria-live="polite"
@@ -204,34 +204,43 @@ export default function GlobalAgent() {
                       initial={prefersReducedMotion ? {} : { opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.15 }}
-                      className={`mb-2 ${message.role === "user" ? "has-text-right" : ""}`}
+                      className={`mb-3 ${message.role === "user" ? "has-text-right" : ""}`}
                     >
                       <div
-                        className={`message ${message.role === "user" ? "is-primary" : "is-info"}`}
+                        className={`liquid-glass ${message.role === "user" ? "has-background-primary has-text-white" : "has-background-info has-text-white"}`}
                         style={{
                           maxWidth: isMobile ? "92%" : "88%",
                           marginLeft: message.role === "user" ? "auto" : "0",
                           marginRight: message.role === "user" ? "0" : "auto",
+                          padding: "0.75rem",
+                          borderRadius: "12px",
                         }}
                       >
-                        <div className="message-header is-small">
-                          <span className="is-size-7">
-                            {message.role === "user" ? "You" : "Assistant"}
-                          </span>
+                        <div className="level is-mobile mb-1">
+                          <div className="level-left">
+                            <div className="level-item">
+                              <span className="is-size-7 has-text-weight-semibold">
+                                {message.role === "user" ? "You" : "Assistant"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="level-right">
+                            <div className="level-item">
+                              <time 
+                                className="is-size-7 has-opacity-7"
+                                dateTime={new Date(message.timestamp).toISOString()}
+                              >
+                                {new Date(message.timestamp).toLocaleTimeString()}
+                              </time>
+                            </div>
+                          </div>
                         </div>
-                        <div className="message-body py-2 px-3">
-                          <p
-                            className="is-size-7 mb-1"
-                            style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                          >
-                            {message.content}
-                          </p>
-                          <p className="is-size-7 has-text-grey">
-                            <time dateTime={new Date(message.timestamp).toISOString()}>
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </time>
-                          </p>
-                        </div>
+                        <p
+                          className="is-size-7 mb-0 liquid-glass-text"
+                          style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                        >
+                          {message.content}
+                        </p>
                       </div>
                     </motion.div>
                   ))}
