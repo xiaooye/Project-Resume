@@ -9,32 +9,66 @@ import * as THREE from "three";
 function ParticleField() {
   const meshRef = useRef<THREE.Points>(null);
   const [particles, setParticles] = useState<Float32Array | null>(null);
+  const frameRef = useRef<number>();
 
   useEffect(() => {
-    const count = 2000;
+    const count = 3000;
     const positions = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
 
-    for (let i = 0; i < count * 3; i++) {
-      positions[i] = (Math.random() - 0.5) * 20;
+    for (let i = 0; i < count * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 30; // x
+      positions[i + 1] = (Math.random() - 0.5) * 30; // y
+      positions[i + 2] = (Math.random() - 0.5) * 30; // z
+      velocities[i] = (Math.random() - 0.5) * 0.02; // vx
+      velocities[i + 1] = Math.random() * 0.02 + 0.01; // vy (upward)
+      velocities[i + 2] = (Math.random() - 0.5) * 0.02; // vz
     }
 
     setParticles(positions);
+
+    return () => {
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (!meshRef.current || !particles) return;
 
     const animate = () => {
-      const positions = meshRef.current!.geometry.attributes.position.array as Float32Array;
-      for (let i = 1; i < positions.length; i += 3) {
-        positions[i] += 0.01;
-        if (positions[i] > 10) positions[i] = -10;
+      if (!meshRef.current) return;
+      
+      const positions = meshRef.current.geometry.attributes.position.array as Float32Array;
+      const count = positions.length / 3;
+      
+      for (let i = 0; i < count; i++) {
+        const idx = i * 3;
+        // Update position
+        positions[idx] += (Math.random() - 0.5) * 0.01;
+        positions[idx + 1] += 0.015;
+        positions[idx + 2] += (Math.random() - 0.5) * 0.01;
+        
+        // Reset if out of bounds
+        if (positions[idx + 1] > 15) {
+          positions[idx + 1] = -15;
+          positions[idx] = (Math.random() - 0.5) * 30;
+          positions[idx + 2] = (Math.random() - 0.5) * 30;
+        }
       }
-      meshRef.current!.geometry.attributes.position.needsUpdate = true;
-      requestAnimationFrame(animate);
+      
+      meshRef.current.geometry.attributes.position.needsUpdate = true;
+      frameRef.current = requestAnimationFrame(animate);
     };
 
-    animate();
+    frameRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    };
   }, [particles]);
 
   if (!particles) return null;
@@ -49,19 +83,36 @@ function ParticleField() {
           itemSize={3}
         />
       </bufferGeometry>
-      <pointsMaterial size={0.05} color="#3b82f6" transparent opacity={0.6} />
+      <pointsMaterial 
+        size={0.08} 
+        color="#3b82f6" 
+        transparent 
+        opacity={0.7}
+        sizeAttenuation={true}
+      />
     </points>
   );
 }
 
 function Scene3D() {
   return (
-    <Canvas camera={{ position: [0, 0, 5] }}>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} />
+    <Canvas 
+      camera={{ position: [0, 0, 5], fov: 75 }} 
+      gl={{ alpha: true, antialias: true }}
+    >
+      <ambientLight intensity={0.4} />
+      <pointLight position={[10, 10, 10]} intensity={1} />
+      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#6366f1" />
       <ParticleField />
-      <Stars radius={300} depth={50} count={5000} factor={4} fade speed={1} />
-      <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
+      <Stars radius={300} depth={60} count={5000} factor={4} fade speed={1} />
+      <OrbitControls 
+        enableZoom={false} 
+        enablePan={false} 
+        autoRotate 
+        autoRotateSpeed={0.3}
+        enableDamping={true}
+        dampingFactor={0.05}
+      />
     </Canvas>
   );
 }
@@ -78,9 +129,20 @@ export default function HeroSection() {
   const [currentRole, setCurrentRole] = useState(0);
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
 
+  // Cursor blinking animation
   useEffect(() => {
-    const typeSpeed = isDeleting ? 50 : 100;
+    const cursorInterval = setInterval(() => {
+      setShowCursor((prev) => !prev);
+    }, 530);
+    return () => clearInterval(cursorInterval);
+  }, []);
+
+  // Typing animation
+  useEffect(() => {
+    const typeSpeed = isDeleting ? 30 : 80;
+    const pauseTime = isDeleting ? 50 : 2000;
     const current = roles[currentRole];
 
     if (!isDeleting && displayText.length < current.length) {
@@ -91,7 +153,7 @@ export default function HeroSection() {
     } else if (!isDeleting && displayText.length === current.length) {
       const timeout = setTimeout(() => {
         setIsDeleting(true);
-      }, 2000);
+      }, pauseTime);
       return () => clearTimeout(timeout);
     } else if (isDeleting && displayText.length > 0) {
       const timeout = setTimeout(() => {
@@ -133,9 +195,16 @@ export default function HeroSection() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
+              style={{ minHeight: "4rem" }}
             >
-              {displayText}
-              <span>|</span>
+              <span className="has-text-primary">{displayText}</span>
+              <motion.span
+                animate={{ opacity: showCursor ? 1 : 0 }}
+                transition={{ duration: 0.1 }}
+                style={{ marginLeft: "4px", color: "var(--bulma-primary)" }}
+              >
+                |
+              </motion.span>
             </motion.div>
 
             <motion.p
