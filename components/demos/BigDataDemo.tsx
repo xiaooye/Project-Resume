@@ -687,77 +687,92 @@ export default function BigDataDemo() {
     return () => clearTimeout(timeoutId);
   }, [filteredData, isStreaming]);
 
-  // Advanced Analysis: Time Series Analysis
+  // Advanced Analysis: Time Series Analysis using WebAssembly
   useEffect(() => {
     if (analysisType !== "time-series" || filteredData.length < 50) return;
     
-    const calculateTimeSeries = () => {
+    const calculateTimeSeries = async () => {
       // Sort by timestamp
       const sorted = [...filteredData].sort((a, b) => a.timestamp - b.timestamp);
-      const timeValues = sorted.map(item => ({
-        time: item.timestamp,
-        value: item.value,
-      }));
+      const timestamps = sorted.map(item => item.timestamp);
+      const values = sorted.map(item => item.value);
       
-      // Calculate trend using linear regression
-      const n = timeValues.length;
-      const sumX = timeValues.reduce((sum, d) => sum + d.time, 0);
-      const sumY = timeValues.reduce((sum, d) => sum + d.value, 0);
-      const sumXY = timeValues.reduce((sum, d) => sum + d.time * d.value, 0);
-      const sumX2 = timeValues.reduce((sum, d) => sum + d.time * d.time, 0);
-      
-      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-      const intercept = (sumY - slope * sumX) / n;
-      
-      // Determine trend
-      let trend: "increasing" | "decreasing" | "stable" | "volatile";
-      const trendStrength = Math.abs(slope);
-      if (trendStrength < 0.001) {
-        trend = "stable";
-      } else if (slope > 0) {
-        trend = trendStrength > 0.01 ? "increasing" : "stable";
-      } else {
-        trend = trendStrength > 0.01 ? "decreasing" : "stable";
+      try {
+        // Use WebAssembly for high-performance time series analysis
+        const result = await wasmCalculations.timeSeriesAnalysis(
+          timestamps,
+          values,
+          analysisConfig.trendWindow
+        );
+        
+        // Generate forecast with user-configured periods
+        const forecast = result.forecast.slice(0, analysisConfig.forecastPeriods).map(f => ({
+          date: new Date(f.timestamp).toLocaleDateString(),
+          predicted: f.predicted,
+          confidence: f.confidence,
+        }));
+        
+        setTimeSeriesAnalysis({
+          trend: result.trend,
+          trendStrength: result.trendStrength,
+          seasonality: analysisConfig.seasonalityDetection ? result.seasonality : false,
+          forecast,
+        });
+      } catch (error) {
+        console.error("WASM time series error:", error);
+        // Fallback to JS (same as before but using config)
+        const n = sorted.length;
+        const sumX = timestamps.reduce((sum, t) => sum + t, 0);
+        const sumY = values.reduce((sum, v) => sum + v, 0);
+        const sumXY = timestamps.reduce((sum, t, i) => sum + t * values[i], 0);
+        const sumX2 = timestamps.reduce((sum, t) => sum + t * t, 0);
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const intercept = (sumY - slope * sumX) / n;
+        
+        let trend: "increasing" | "decreasing" | "stable" | "volatile";
+        const trendStrength = Math.abs(slope);
+        if (trendStrength < 0.001) {
+          trend = "stable";
+        } else if (slope > 0) {
+          trend = trendStrength > 0.01 ? "increasing" : "stable";
+        } else {
+          trend = trendStrength > 0.01 ? "decreasing" : "stable";
+        }
+        
+        const variance = values.reduce((sum, v, i) => {
+          const predicted = slope * timestamps[i] + intercept;
+          return sum + Math.pow(v - predicted, 2);
+        }, 0) / n;
+        if (variance > 1000000) {
+          trend = "volatile";
+        }
+        
+        const lastTime = timestamps[n - 1];
+        const timeStep = (lastTime - timestamps[0]) / n;
+        const forecast = Array.from({ length: analysisConfig.forecastPeriods }, (_, i) => {
+          const futureTime = lastTime + timeStep * (i + 1);
+          const predicted = slope * futureTime + intercept;
+          const confidence = Math.max(0.5, 1 - (i + 1) * 0.05);
+          return {
+            date: new Date(futureTime).toLocaleDateString(),
+            predicted: Math.max(0, predicted),
+            confidence,
+          };
+        });
+        
+        setTimeSeriesAnalysis({
+          trend,
+          trendStrength,
+          seasonality: analysisConfig.seasonalityDetection && variance > 500000 && n > 100,
+          forecast,
+        });
       }
-      
-      // Check for volatility (high variance)
-      const variance = timeValues.reduce((sum, d) => {
-        const predicted = slope * d.time + intercept;
-        return sum + Math.pow(d.value - predicted, 2);
-      }, 0) / n;
-      if (variance > 1000000) {
-        trend = "volatile";
-      }
-      
-      // Simple forecast (next 10 points)
-      const lastTime = timeValues[timeValues.length - 1].time;
-      const timeStep = (lastTime - timeValues[0].time) / n;
-      const forecast = Array.from({ length: 10 }, (_, i) => {
-        const futureTime = lastTime + timeStep * (i + 1);
-        const predicted = slope * futureTime + intercept;
-        // Confidence decreases over time
-        const confidence = Math.max(0.5, 1 - (i + 1) * 0.05);
-        return {
-          date: new Date(futureTime).toLocaleDateString(),
-          predicted: Math.max(0, predicted),
-          confidence,
-        };
-      });
-      
-      // Check for seasonality (simplified - look for patterns)
-      const seasonality = variance > 500000 && n > 100;
-      
-      setTimeSeriesAnalysis({
-        trend,
-        trendStrength,
-        seasonality,
-        forecast,
-      });
     };
     
     const timeoutId = setTimeout(calculateTimeSeries, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType]);
+  }, [filteredData, analysisType, analysisConfig.trendWindow, analysisConfig.forecastPeriods, analysisConfig.seasonalityDetection]);
 
   // Advanced Analysis: Correlation Analysis using WebAssembly
   useEffect(() => {
@@ -825,7 +840,7 @@ export default function BigDataDemo() {
     
     const timeoutId = setTimeout(calculateCorrelation, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, analysisConfig.minCorrelation]);
+  }, [filteredData, analysisType, analysisConfig.minCorrelation, analysisConfig.correlationMethod]);
 
   // Advanced Analysis: Anomaly Detection using WebAssembly
   useEffect(() => {
@@ -837,6 +852,7 @@ export default function BigDataDemo() {
       
       try {
         // Use WebAssembly for high-performance anomaly detection
+        // Note: Currently only Z-score is implemented in WASM, other methods would need additional implementation
         const wasmAnomalies = await wasmCalculations.detectAnomalies(values, threshold);
         
         const anomalies: Array<{ item: BigDataItem; score: number; reason: string }> = wasmAnomalies
@@ -854,22 +870,48 @@ export default function BigDataDemo() {
         });
       } catch (error) {
         console.error("WASM anomaly detection error:", error);
-        // Fallback to JS
+        // Fallback to JS with method selection
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
         const stdDev = Math.sqrt(
           values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
         );
         const anomalies: Array<{ item: BigDataItem; score: number; reason: string }> = [];
-        filteredData.forEach(item => {
-          const zScore = Math.abs((item.value - mean) / stdDev);
-          if (zScore > threshold) {
-            anomalies.push({
-              item,
-              score: zScore,
-              reason: zScore > 3 ? "Extreme outlier" : "Statistical anomaly",
-            });
-          }
-        });
+        
+        if (analysisConfig.anomalyMethod === "zscore") {
+          filteredData.forEach(item => {
+            const zScore = Math.abs((item.value - mean) / stdDev);
+            if (zScore > threshold) {
+              anomalies.push({
+                item,
+                score: zScore,
+                reason: zScore > 3 ? "Extreme outlier" : "Statistical anomaly",
+              });
+            }
+          });
+        } else if (analysisConfig.anomalyMethod === "iqr") {
+          const sorted = [...values].sort((a, b) => a - b);
+          const q1Index = Math.floor(sorted.length * 0.25);
+          const q3Index = Math.floor(sorted.length * 0.75);
+          const q1 = sorted[q1Index];
+          const q3 = sorted[q3Index];
+          const iqr = q3 - q1;
+          const lowerBound = q1 - threshold * iqr;
+          const upperBound = q3 + threshold * iqr;
+          
+          filteredData.forEach(item => {
+            if (item.value < lowerBound || item.value > upperBound) {
+              const score = item.value < lowerBound 
+                ? (lowerBound - item.value) / iqr 
+                : (item.value - upperBound) / iqr;
+              anomalies.push({
+                item,
+                score: score + threshold,
+                reason: "IQR outlier",
+              });
+            }
+          });
+        }
+        
         setAnomalyDetection({
           anomalies: anomalies.sort((a, b) => b.score - a.score).slice(0, 20),
           threshold,
@@ -880,7 +922,7 @@ export default function BigDataDemo() {
     
     const timeoutId = setTimeout(detectAnomalies, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, analysisConfig.anomalyThreshold]);
+  }, [filteredData, analysisType, analysisConfig.anomalyThreshold, analysisConfig.anomalyMethod]);
 
   // Advanced Analysis: Capacity Planning using WebAssembly
   useEffect(() => {
