@@ -45,6 +45,13 @@ export default function NetworkTrafficDemo() {
   const requestCounterRef = useRef(0);
   const serverStatesRef = useRef<Map<string, ServerState>>(new Map());
   const sessionIdRef = useRef<string | null>(null);
+  
+  // Responsive design: detect mobile/tablet
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  
+  // WCAG 2.2 AAA: Track reduced motion preference
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // Initialize server states
   const initializeServerStates = useCallback(() => {
@@ -70,6 +77,30 @@ export default function NetworkTrafficDemo() {
   useEffect(() => {
     setIsMounted(true);
     initializeServerStates();
+    
+    // Detect screen size for responsive design
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width >= 768 && width < 1024);
+    };
+    
+    // Check reduced motion preference (WCAG 2.2 AAA)
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mediaQuery.matches);
+    
+    const handleReducedMotion = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    mediaQuery.addEventListener("change", handleReducedMotion);
+    
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+      mediaQuery.removeEventListener("change", handleReducedMotion);
+    };
   }, [initializeServerStates]);
 
   // Simulate load balancing logic
@@ -466,21 +497,39 @@ export default function NetworkTrafficDemo() {
       })
       .attr("opacity", 0);
     
-    // Update existing bars with smooth transition
-    barsEnter.merge(bars as any)
-      .transition()
-      .duration(150)
-      .ease(d3.easeCubicOut)
-      .attr("x", (d) => xScale(d.serverId) || 0)
-      .attr("y", (d) => yScale(d.requests))
-      .attr("width", xScale.bandwidth())
-      .attr("height", (d) => height - margin.bottom - yScale(d.requests))
-      .attr("fill", (d) => {
-        if (d.errorRate > 3) return "#f14668";
-        if (d.latency > 150) return "#ffa500";
-        return "#48c78e";
-      })
-      .attr("opacity", 0.8);
+    // Update existing bars with smooth transition (respect reduced motion)
+    const transitionDuration = prefersReducedMotion ? 0 : 150;
+    const barsUpdate = barsEnter.merge(bars as any);
+    
+    if (prefersReducedMotion) {
+      // No transition for reduced motion preference
+      barsUpdate
+        .attr("x", (d) => xScale(d.serverId) || 0)
+        .attr("y", (d) => yScale(d.requests))
+        .attr("width", xScale.bandwidth())
+        .attr("height", (d) => height - margin.bottom - yScale(d.requests))
+        .attr("fill", (d) => {
+          if (d.errorRate > 3) return "#f14668";
+          if (d.latency > 150) return "#ffa500";
+          return "#48c78e";
+        })
+        .attr("opacity", 0.8);
+    } else {
+      barsUpdate
+        .transition()
+        .duration(transitionDuration)
+        .ease(d3.easeCubicOut)
+        .attr("x", (d) => xScale(d.serverId) || 0)
+        .attr("y", (d) => yScale(d.requests))
+        .attr("width", xScale.bandwidth())
+        .attr("height", (d) => height - margin.bottom - yScale(d.requests))
+        .attr("fill", (d) => {
+          if (d.errorRate > 3) return "#f14668";
+          if (d.latency > 150) return "#ffa500";
+          return "#48c78e";
+        })
+        .attr("opacity", 0.8);
+    }
 
     // Update labels with smooth transitions
     const labels = svg.selectAll<SVGTextElement, NetworkTrafficData>("text.label").data(data, (d) => d.serverId);
@@ -504,8 +553,18 @@ export default function NetworkTrafficDemo() {
       .attr("y", (d) => yScale(d.requests) - 5)
       .text((d) => d.requests);
 
-    // Add axes - use formatted Y-axis for better readability
-    const xAxis = d3.axisBottom(xScale);
+    // Add axes - use formatted Y-axis for better readability with responsive design
+    const xAxis = d3.axisBottom(xScale)
+      .tickSize(isMobile ? 4 : 6)
+      .tickFormat((d) => {
+        // Mobile: show abbreviated server names
+        if (isMobile) {
+          const serverId = d as string;
+          const parts = serverId.split("-");
+          return parts.length >= 3 ? `${parts[0]}-${parts[2]}` : serverId.substring(0, 8);
+        }
+        return d as string;
+      });
 
     // Remove existing axes if they exist (for updates)
     svg.selectAll("g.x-axis").remove();
@@ -515,21 +574,33 @@ export default function NetworkTrafficDemo() {
       .append("g")
       .attr("class", "x-axis")
       .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(xAxis);
+      .attr("aria-label", "Server IDs")
+      .call(xAxis)
+      .selectAll("text")
+      .style("font-size", isMobile ? "8px" : "9px")
+      .attr("transform", isMobile ? "rotate(-90)" : "rotate(-45)")
+      .attr("text-anchor", "end")
+      .attr("dx", "-0.5em")
+      .attr("dy", "0.5em");
 
     svg
       .append("g")
       .attr("class", "y-axis")
       .attr("transform", `translate(${margin.left},0)`)
-      .call(yAxisFormatter); // Use formatted Y-axis with k notation
+      .attr("aria-label", "Requests per second")
+      .call(yAxisFormatter)
+      .selectAll("text")
+      .style("font-size", isMobile ? "10px" : "11px");
 
-    // Add axis labels
+    // Add axis labels with ARIA support (WCAG 2.2 AAA)
     svg
       .append("text")
       .attr("transform", "rotate(-90)")
       .attr("y", margin.left - 40)
       .attr("x", -(height / 2))
       .attr("text-anchor", "middle")
+      .attr("aria-label", "Y-axis: Requests per second")
+      .style("font-size", isMobile ? "11px" : "12px")
       .text("Requests/sec");
 
     svg
@@ -537,8 +608,9 @@ export default function NetworkTrafficDemo() {
       .attr("x", width / 2)
       .attr("y", height - 10)
       .attr("text-anchor", "middle")
-      .text("Server ID")
-      .style("font-size", "10px");
+      .attr("aria-label", "X-axis: Server ID")
+      .style("font-size", isMobile ? "9px" : "10px")
+      .text("Server ID");
     
     // Rotate x-axis labels for better readability with many servers
     svg
@@ -1212,53 +1284,88 @@ export default function NetworkTrafficDemo() {
           </div>
         )}
 
-        {/* Key Metrics Dashboard */}
-        <div className="box mb-6">
-          <div className="level">
-            <div className="level-item has-text-centered">
-              <div>
-                <p className="heading">Connection Status</p>
-                <p className={`title ${isConnected ? "has-text-success" : "has-text-danger"}`}>
-                  {isConnected ? "Connected" : "Disconnected"}
-                </p>
+        {/* Key Metrics Dashboard - Responsive design */}
+        <div className="box mb-6" role="region" aria-label="Key performance metrics dashboard">
+          {isMobile ? (
+            // Mobile: Stack metrics vertically
+            <div className="columns is-mobile is-multiline">
+              <div className="column is-half">
+                <div className="has-text-centered">
+                  <p className="heading">Connection</p>
+                  <p className={`title is-5 ${isConnected ? "has-text-success" : "has-text-danger"}`}>
+                    {isConnected ? "Connected" : "Disconnected"}
+                  </p>
+                </div>
+              </div>
+              <div className="column is-half">
+                <div className="has-text-centered">
+                  <p className="heading">Requests/sec</p>
+                  <p className="title is-5">{totalRequests.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="column is-half">
+                <div className="has-text-centered">
+                  <p className="heading">Avg Latency</p>
+                  <p className="title is-5">{avgLatency.toFixed(0)}ms</p>
+                </div>
+              </div>
+              <div className="column is-half">
+                <div className="has-text-centered">
+                  <p className="heading">Health</p>
+                  <p className={`title is-5 ${healthPercentage > 90 ? "has-text-success" : healthPercentage > 70 ? "has-text-warning" : "has-text-danger"}`}>
+                    {healthPercentage.toFixed(0)}%
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="level-item has-text-centered">
-              <div>
-                <p className="heading">Total Requests/sec</p>
-                <p className="title">{totalRequests.toLocaleString()}</p>
-                <p className="heading">Capacity Utilization</p>
-                <p className={`subtitle ${needsScaling ? "has-text-danger" : "has-text-success"}`}>
-                  {utilization.toFixed(1)}% {needsScaling && "⚠️"}
-                </p>
+          ) : (
+            // Desktop: Horizontal layout
+            <div className="level">
+              <div className="level-item has-text-centered">
+                <div>
+                  <p className="heading">Connection Status</p>
+                  <p className={`title ${isConnected ? "has-text-success" : "has-text-danger"}`}>
+                    {isConnected ? "Connected" : "Disconnected"}
+                  </p>
+                </div>
+              </div>
+              <div className="level-item has-text-centered">
+                <div>
+                  <p className="heading">Total Requests/sec</p>
+                  <p className="title">{totalRequests.toLocaleString()}</p>
+                  <p className="heading">Capacity Utilization</p>
+                  <p className={`subtitle ${needsScaling ? "has-text-danger" : "has-text-success"}`}>
+                    {utilization.toFixed(1)}% {needsScaling && "⚠️"}
+                  </p>
+                </div>
+              </div>
+              <div className="level-item has-text-centered">
+                <div>
+                  <p className="heading">Avg Latency</p>
+                  <p className="title">{avgLatency.toFixed(2)}ms</p>
+                  <p className="heading">P95: {p95Latency.toFixed(2)}ms | P99: {p99Latency.toFixed(2)}ms</p>
+                </div>
+              </div>
+              <div className="level-item has-text-centered">
+                <div>
+                  <p className="heading">System Health</p>
+                  <p className={`title ${healthPercentage > 90 ? "has-text-success" : healthPercentage > 70 ? "has-text-warning" : "has-text-danger"}`}>
+                    {healthPercentage.toFixed(1)}%
+                  </p>
+                  <p className="heading">{healthyServers}/{data.length} Healthy</p>
+                </div>
+              </div>
+              <div className="level-item has-text-centered">
+                <div>
+                  <p className="heading">Error Rate</p>
+                  <p className={`title ${totalErrors < 1 ? "has-text-success" : totalErrors < 3 ? "has-text-warning" : "has-text-danger"}`}>
+                    {totalErrors.toFixed(2)}%
+                  </p>
+                  <p className="heading">{anomalies.length} Anomalies</p>
+                </div>
               </div>
             </div>
-            <div className="level-item has-text-centered">
-              <div>
-                <p className="heading">Avg Latency</p>
-                <p className="title">{avgLatency.toFixed(2)}ms</p>
-                <p className="heading">P95: {p95Latency.toFixed(2)}ms | P99: {p99Latency.toFixed(2)}ms</p>
-              </div>
-            </div>
-            <div className="level-item has-text-centered">
-              <div>
-                <p className="heading">System Health</p>
-                <p className={`title ${healthPercentage > 90 ? "has-text-success" : healthPercentage > 70 ? "has-text-warning" : "has-text-danger"}`}>
-                  {healthPercentage.toFixed(1)}%
-                </p>
-                <p className="heading">{healthyServers}/{data.length} Healthy</p>
-              </div>
-            </div>
-            <div className="level-item has-text-centered">
-              <div>
-                <p className="heading">Error Rate</p>
-                <p className={`title ${totalErrors < 1 ? "has-text-success" : totalErrors < 3 ? "has-text-warning" : "has-text-danger"}`}>
-                  {totalErrors.toFixed(2)}%
-                </p>
-                <p className="heading">{anomalies.length} Anomalies</p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Load Balancing Info - Fixed height to prevent layout shift */}
@@ -1690,9 +1797,9 @@ export default function NetworkTrafficDemo() {
 
           <div className="field mt-4">
             <label className="label">Scenario Simulation</label>
-            <div className="buttons">
+            <div className={`buttons ${isMobile ? "is-mobile" : ""}`}>
               <button
-                className={`button ${scenarios.some(s => s.type === "traffic-spike" && s.enabled) ? "is-warning" : "is-light"}`}
+                className={`button ${scenarios.some(s => s.type === "traffic-spike" && s.enabled) ? "is-warning" : "is-light"} ${isMobile ? "is-small" : ""}`}
                 onClick={() => {
                   const existing = scenarios.find(s => s.type === "traffic-spike");
                   if (existing) {
@@ -1707,6 +1814,25 @@ export default function NetworkTrafficDemo() {
                     }]);
                   }
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    const existing = scenarios.find(s => s.type === "traffic-spike");
+                    if (existing) {
+                      setScenarios(scenarios.map(s => 
+                        s.type === "traffic-spike" ? { ...s, enabled: !s.enabled } : s
+                      ));
+                    } else {
+                      setScenarios([...scenarios, {
+                        type: "traffic-spike",
+                        enabled: true,
+                        trafficMultiplier: 3.0,
+                      }]);
+                    }
+                  }
+                }}
+                aria-label={scenarios.some(s => s.type === "traffic-spike" && s.enabled) ? "Disable traffic spike scenario" : "Enable traffic spike scenario"}
+                aria-pressed={scenarios.some(s => s.type === "traffic-spike" && s.enabled)}
               >
                 {scenarios.some(s => s.type === "traffic-spike" && s.enabled) ? "✓ Traffic Spike" : "Traffic Spike"}
               </button>
@@ -1868,8 +1994,17 @@ export default function NetworkTrafficDemo() {
 
         <div className="buttons is-centered mb-6">
           <button
-            className={`button ${isConnected ? "is-danger" : "is-success"} is-large`}
+            className={`button ${isConnected ? "is-danger" : "is-success"} ${isMobile ? "is-medium" : "is-large"}`}
             onClick={() => setIsConnected(!isConnected)}
+            onKeyDown={(e) => {
+              // WCAG 2.2 AAA: Keyboard navigation support
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsConnected(!isConnected);
+              }
+            }}
+            aria-label={isConnected ? "Disconnect from data stream" : "Connect to data stream"}
+            aria-pressed={isConnected}
           >
             {isConnected ? "Disconnect" : "Connect"}
           </button>
@@ -1877,9 +2012,80 @@ export default function NetworkTrafficDemo() {
 
         <div className="box">
           <h3 className="title is-4 mb-4">Request Distribution Across {data.length} Servers</h3>
-          <div className="table-container">
-            <svg ref={svgRef} width="100%" height="500" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid meet"></svg>
+          
+          {/* WCAG 2.2 AAA: Data table for screen readers */}
+          <div className="is-sr-only" role="region" aria-label="Server request distribution data table">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Server ID</th>
+                  <th>Region</th>
+                  <th>Requests per Second</th>
+                  <th>Latency (ms)</th>
+                  <th>Error Rate (%)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((server) => (
+                  <tr key={server.serverId}>
+                    <td>{server.serverId}</td>
+                    <td>{server.region || "unknown"}</td>
+                    <td>{server.requests.toLocaleString()}</td>
+                    <td>{server.latency.toFixed(2)}</td>
+                    <td>{server.errorRate.toFixed(2)}</td>
+                    <td>
+                      {server.isDown ? "Down" :
+                       server.errorRate > 3 ? "Critical" :
+                       server.latency > 150 ? "Warning" :
+                       "Healthy"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+          
+          <div 
+            className="table-container" 
+            role="img" 
+            aria-label={`Bar chart showing request distribution across ${data.length} servers. Use the data table below for detailed information.`}
+          >
+            <svg 
+              ref={svgRef} 
+              width="100%" 
+              height={isMobile ? "300" : isTablet ? "400" : "500"} 
+              viewBox={`0 0 1200 ${isMobile ? 300 : isTablet ? 400 : 500}`} 
+              preserveAspectRatio="xMidYMid meet"
+              aria-hidden="true"
+            >
+              <title>Request Distribution Chart</title>
+              <desc>Bar chart visualizing request distribution across all servers. Green bars indicate healthy servers, orange indicates warnings, red indicates critical issues.</desc>
+            </svg>
+          </div>
+          
+          {/* Mobile: Show simplified summary */}
+          {isMobile && (
+            <div className="box mt-4">
+              <h4 className="title is-5 mb-3">Summary</h4>
+              <div className="columns is-mobile">
+                <div className="column">
+                  <p className="heading">Total Requests</p>
+                  <p className="title is-5">{totalRequests.toLocaleString()}</p>
+                </div>
+                <div className="column">
+                  <p className="heading">Avg Latency</p>
+                  <p className="title is-5">{avgLatency.toFixed(0)}ms</p>
+                </div>
+                <div className="column">
+                  <p className="heading">Health</p>
+                  <p className={`title is-5 ${healthPercentage > 90 ? "has-text-success" : healthPercentage > 70 ? "has-text-warning" : "has-text-danger"}`}>
+                    {healthPercentage.toFixed(0)}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="box mt-6">
