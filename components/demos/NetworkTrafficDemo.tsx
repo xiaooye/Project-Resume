@@ -256,9 +256,49 @@ export default function NetworkTrafficDemo() {
       .text("Latency (ms)");
   }, [data, isMounted]);
 
+  // Calculate comprehensive metrics
   const totalRequests = data.length > 0 ? data.reduce((sum, d) => sum + d.requests, 0) : 0;
   const avgLatency = data.length > 0 ? data.reduce((sum, d) => sum + d.latency, 0) / data.length : 0;
   const totalErrors = data.length > 0 ? data.reduce((sum, d) => sum + d.errorRate, 0) : 0;
+  
+  // P95 and P99 latency (critical for CTO)
+  const latencies = data.map(d => d.latency).sort((a, b) => a - b);
+  const p95Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : 0;
+  const p99Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.99)] : 0;
+  
+  // Anomaly detection
+  const anomalies = data.filter(d => 
+    d.errorRate > 5 || 
+    d.latency > 200 || 
+    d.requests > 8000
+  );
+  
+  // Load balancing analysis
+  const regionStats = data.reduce((acc, d) => {
+    const region = d.region || "unknown";
+    if (!acc[region]) {
+      acc[region] = { totalRequests: 0, servers: 0, avgLatency: 0, totalLatency: 0 };
+    }
+    acc[region].totalRequests += d.requests;
+    acc[region].servers += 1;
+    acc[region].totalLatency += d.latency;
+    return acc;
+  }, {} as Record<string, { totalRequests: number; servers: number; avgLatency: number; totalLatency: number }>);
+  
+  Object.keys(regionStats).forEach(region => {
+    regionStats[region].avgLatency = regionStats[region].totalLatency / regionStats[region].servers;
+  });
+  
+  // Capacity analysis
+  const maxCapacity = 10000; // per server
+  const utilization = data.length > 0 
+    ? (data.reduce((sum, d) => sum + d.requests, 0) / (data.length * maxCapacity)) * 100 
+    : 0;
+  const needsScaling = utilization > 80;
+  
+  // Health check
+  const healthyServers = data.filter(d => d.errorRate < 3 && d.latency < 150).length;
+  const healthPercentage = data.length > 0 ? (healthyServers / data.length) * 100 : 0;
 
   return (
     <div className="container">
@@ -307,11 +347,24 @@ export default function NetworkTrafficDemo() {
           </div>
         </div>
 
+        {/* Critical Alerts */}
+        {anomalies.length > 0 && (
+          <div className="notification is-danger mb-6">
+            <button className="delete" onClick={() => {}}></button>
+            <strong>⚠️ {anomalies.length} Anomaly{anomalies.length > 1 ? "ies" : ""} Detected</strong>
+            <p className="mt-2">
+              {anomalies.slice(0, 3).map(a => a.serverId).join(", ")}
+              {anomalies.length > 3 && ` and ${anomalies.length - 3} more`}
+            </p>
+          </div>
+        )}
+
+        {/* Key Metrics Dashboard */}
         <div className="box mb-6">
           <div className="level">
             <div className="level-item has-text-centered">
               <div>
-                <p className="heading">Status</p>
+                <p className="heading">Connection Status</p>
                 <p className={`title ${isConnected ? "has-text-success" : "has-text-danger"}`}>
                   {isConnected ? "Connected" : "Disconnected"}
                 </p>
@@ -321,20 +374,85 @@ export default function NetworkTrafficDemo() {
               <div>
                 <p className="heading">Total Requests/sec</p>
                 <p className="title">{totalRequests.toLocaleString()}</p>
+                <p className="heading">Capacity Utilization</p>
+                <p className={`subtitle ${needsScaling ? "has-text-danger" : "has-text-success"}`}>
+                  {utilization.toFixed(1)}% {needsScaling && "⚠️"}
+                </p>
               </div>
             </div>
             <div className="level-item has-text-centered">
               <div>
                 <p className="heading">Avg Latency</p>
                 <p className="title">{avgLatency.toFixed(2)}ms</p>
+                <p className="heading">P95: {p95Latency.toFixed(2)}ms | P99: {p99Latency.toFixed(2)}ms</p>
+              </div>
+            </div>
+            <div className="level-item has-text-centered">
+              <div>
+                <p className="heading">System Health</p>
+                <p className={`title ${healthPercentage > 90 ? "has-text-success" : healthPercentage > 70 ? "has-text-warning" : "has-text-danger"}`}>
+                  {healthPercentage.toFixed(1)}%
+                </p>
+                <p className="heading">{healthyServers}/{data.length} Healthy</p>
               </div>
             </div>
             <div className="level-item has-text-centered">
               <div>
                 <p className="heading">Error Rate</p>
-                <p className="title">{totalErrors.toFixed(2)}%</p>
+                <p className={`title ${totalErrors < 1 ? "has-text-success" : totalErrors < 3 ? "has-text-warning" : "has-text-danger"}`}>
+                  {totalErrors.toFixed(2)}%
+                </p>
+                <p className="heading">{anomalies.length} Anomalies</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Load Balancing Analysis */}
+        <div className="box mb-6">
+          <h3 className="title is-4 mb-4">Load Balancing Analysis by Region</h3>
+          <div className="table-container">
+            <table className="table is-fullwidth is-striped">
+              <thead>
+                <tr>
+                  <th>Region</th>
+                  <th>Servers</th>
+                  <th>Total Requests/sec</th>
+                  <th>Avg Latency</th>
+                  <th>Load Distribution</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(regionStats).map(([region, stats]) => {
+                  const loadBalance = stats.totalRequests / stats.servers;
+                  const isBalanced = loadBalance > totalRequests / data.length * 0.8 && 
+                                   loadBalance < totalRequests / data.length * 1.2;
+                  return (
+                    <tr key={region}>
+                      <td><strong>{region}</strong></td>
+                      <td>{stats.servers}</td>
+                      <td>{stats.totalRequests.toLocaleString()}</td>
+                      <td>{stats.avgLatency.toFixed(2)}ms</td>
+                      <td>
+                        <progress 
+                          className={`progress ${isBalanced ? "is-success" : "is-warning"}`}
+                          value={loadBalance}
+                          max={totalRequests / data.length * 1.5}
+                        >
+                          {loadBalance.toFixed(0)}
+                        </progress>
+                      </td>
+                      <td>
+                        <span className={`tag ${isBalanced ? "is-success" : "is-warning"}`}>
+                          {isBalanced ? "Balanced" : "Unbalanced"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -358,6 +476,69 @@ export default function NetworkTrafficDemo() {
           <h3 className="title is-4 mb-4">Latency Trends Over Time (Last 50 Updates)</h3>
           <div className="table-container">
             <svg ref={chartRef} width="100%" height="400" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+        </div>
+
+        {/* Capacity Planning & Recommendations */}
+        <div className="box mt-6">
+          <h3 className="title is-4 mb-4">Capacity Planning & Recommendations</h3>
+          <div className="columns">
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Current State</h5>
+                <ul>
+                  <li>Total Capacity: {(data.length * maxCapacity).toLocaleString()} req/sec</li>
+                  <li>Current Load: {totalRequests.toLocaleString()} req/sec</li>
+                  <li>Utilization: <strong className={needsScaling ? "has-text-danger" : "has-text-success"}>{utilization.toFixed(1)}%</strong></li>
+                  <li>Headroom: {((data.length * maxCapacity) - totalRequests).toLocaleString()} req/sec</li>
+                </ul>
+              </div>
+            </div>
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Recommendations</h5>
+                {needsScaling ? (
+                  <div className="notification is-warning">
+                    <strong>⚠️ Scaling Recommended</strong>
+                    <p className="mt-2">
+                      Current utilization ({utilization.toFixed(1)}%) exceeds 80% threshold.
+                      Consider adding {Math.ceil((totalRequests / maxCapacity) - data.length)} more servers.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="notification is-success">
+                    <strong>✓ Capacity Healthy</strong>
+                    <p className="mt-2">
+                      Current utilization is within acceptable range. No immediate scaling needed.
+                    </p>
+                  </div>
+                )}
+                {p99Latency > 200 && (
+                  <div className="notification is-danger mt-3">
+                    <strong>⚠️ High P99 Latency</strong>
+                    <p className="mt-2">
+                      P99 latency ({p99Latency.toFixed(2)}ms) exceeds SLA threshold (200ms).
+                      Investigate performance bottlenecks.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Cost Analysis</h5>
+                <ul>
+                  <li>Estimated Cost: ${(data.length * 50).toFixed(2)}/hour</li>
+                  <li>Monthly Projection: ${(data.length * 50 * 730).toLocaleString()}</li>
+                  <li>Cost per Request: ${((data.length * 50) / totalRequests * 1000).toFixed(4)}/1K</li>
+                  {needsScaling && (
+                    <li className="has-text-warning">
+                      Scaling Cost: +${(Math.ceil((totalRequests / maxCapacity) - data.length) * 50).toFixed(2)}/hour
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
