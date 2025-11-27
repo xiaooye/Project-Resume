@@ -237,19 +237,26 @@ export default function OnnxAIDemo() {
   const runLLMInference = useCallback(
     async (
       message: string,
-      conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+      conversationHistory: Array<{ role: "user" | "assistant"; content: string; id?: string; timestamp?: number }>
     ): Promise<InferenceResult> => {
       if (!isModelLoaded || !currentModel) {
         throw new Error("Please load the model first");
       }
 
       try {
+        // Convert conversation history to the format expected by model manager
+        // Extract only role and content, ignore id and timestamp
+        const history = conversationHistory.map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        }));
+        
         const result = await modelManager.runTextGeneration(message, {
           maxLength: 200,
           temperature: 0.7,
           topK: 50,
           topP: 0.9,
-          conversationHistory: conversationHistory,
+          conversationHistory: history,
         });
 
         return result;

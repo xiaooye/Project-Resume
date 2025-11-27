@@ -50,12 +50,15 @@ export default function LLMChatInterface({
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setIsGenerating(true);
 
     try {
-      const result = await onSendMessage(userMessage.content, [...messages, userMessage]);
+      // Convert messages to the format expected by the model manager
+      // The onSendMessage expects Message[] but model manager only needs role and content
+      const result = await onSendMessage(userMessage.content, updatedMessages);
       
       const assistantMessage: Message = {
         id: `msg-${Date.now()}-assistant`,

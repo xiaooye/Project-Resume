@@ -347,8 +347,11 @@ export class ModelManager {
       
       if (options?.conversationHistory && options.conversationHistory.length > 0) {
         // Format conversation history for the model
-        // Most models expect a specific format, adjust based on model type
-        const historyText = options.conversationHistory
+        // Limit history to last 10 messages to avoid context overflow
+        const recentHistory = options.conversationHistory.slice(-10);
+        
+        // Format conversation history - use a cleaner format
+        const historyText = recentHistory
           .map((msg) => {
             if (msg.role === "user") {
               return `User: ${msg.content}`;
@@ -358,7 +361,11 @@ export class ModelManager {
           })
           .join("\n");
         
+        // Build prompt with history
         fullPrompt = `${historyText}\nUser: ${prompt}\nAssistant:`;
+      } else {
+        // No history, just use the prompt with assistant prefix
+        fullPrompt = `User: ${prompt}\nAssistant:`;
       }
 
       const result = await this.transformersPipeline(fullPrompt, {
@@ -372,15 +379,62 @@ export class ModelManager {
       const inferenceTime = performance.now() - startTime;
 
       // Extract generated text
+      // Transformers.js text-generation pipeline returns an array of objects
+      // Each object has a 'generated_text' field containing the full text (prompt + generated)
       let generatedText = "";
-      if (Array.isArray(result)) {
-        generatedText = result[0]?.generated_text || "";
-      } else if (result?.generated_text) {
-        generatedText = result.generated_text;
-        // Remove the prompt from generated text if it's included
-        if (generatedText.startsWith(fullPrompt)) {
-          generatedText = generatedText.slice(fullPrompt.length).trim();
+      
+      try {
+        if (Array.isArray(result)) {
+          // If result is an array, get the first item
+          const firstResult = result[0];
+          if (firstResult?.generated_text) {
+            generatedText = firstResult.generated_text;
+          } else if (typeof firstResult === "string") {
+            generatedText = firstResult;
+          }
+        } else if (result?.generated_text) {
+          // If result is an object with generated_text
+          generatedText = result.generated_text;
+        } else if (typeof result === "string") {
+          // If result is directly a string
+          generatedText = result;
         }
+        
+        // Remove the prompt from generated text if it's included
+        // The generated_text might include the full prompt, we only want the new part
+        if (generatedText && fullPrompt && generatedText.includes(fullPrompt)) {
+          // Find where the prompt ends and extract only the new generated part
+          const promptIndex = generatedText.indexOf(fullPrompt);
+          if (promptIndex === 0) {
+            // Prompt is at the start, remove it
+            generatedText = generatedText.slice(fullPrompt.length).trim();
+          } else {
+            // Prompt is somewhere in the middle, extract everything after it
+            const afterPrompt = generatedText.slice(promptIndex + fullPrompt.length);
+            generatedText = afterPrompt.trim();
+          }
+        }
+        
+        // If still empty, try to extract from the end (sometimes the format is different)
+        if (!generatedText && typeof result === "object") {
+          // Try to find any text field
+          const textFields = ["text", "output", "response", "content"];
+          for (const field of textFields) {
+            if (result[field]) {
+              generatedText = String(result[field]);
+              break;
+            }
+          }
+        }
+        
+        // Fallback: if we still don't have text, log the result for debugging
+        if (!generatedText) {
+          console.warn("Could not extract generated text from result:", result);
+          generatedText = "No response generated. Please check the console for details.";
+        }
+      } catch (error) {
+        console.error("Error extracting generated text:", error, result);
+        generatedText = "Error generating response. Please check the console.";
       }
 
       return {
