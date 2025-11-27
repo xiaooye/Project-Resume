@@ -493,15 +493,50 @@ html.dark .liquid-glass-button.is-primary:hover {
   color: #000000;
   text-shadow: none;
   /* 确保 WCAG 2.2 AAA 对比度 7:1 */
-  font-weight: 500;
+  font-weight: 600;
 }
 
 html.dark .liquid-glass-text {
   color: #ffffff;
   text-shadow: none;
   /* 确保 WCAG 2.2 AAA 对比度 7:1 - Apple Dark Mode */
-  font-weight: 500;
+  font-weight: 600;
   opacity: 1;
+}
+
+/* 确保 strong 标签在 liquid-glass-text 中有足够的对比度 */
+.liquid-glass-text strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+html.dark .liquid-glass-text strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+/* 确保 help 文本在 liquid-glass-card 中有足够的对比度 */
+.liquid-glass-card .help {
+  color: #000000;
+  font-weight: 500;
+}
+
+html.dark .liquid-glass-card .help {
+  color: #ffffff;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* 确保 help 文本在 liquid-glass-text 中有足够的对比度 */
+.help.liquid-glass-text {
+  color: #000000;
+  font-weight: 500;
+}
+
+html.dark .help.liquid-glass-text {
+  color: #ffffff;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 /* 表格主题支持 */
@@ -673,6 +708,7 @@ html.dark *:focus-visible {
 
 .liquid-glass-card .help {
   color: #000000;
+  font-weight: 600;
 }
 
 .liquid-glass-card .help.is-danger {
@@ -702,8 +738,9 @@ html.dark .liquid-glass-card .label {
 }
 
 html.dark .liquid-glass-card .help {
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 400;
+  color: #ffffff;
+  font-weight: 600;
+  opacity: 1;
 }
 
 html.dark .liquid-glass-card .help.is-danger {
