@@ -115,55 +115,75 @@ export default function GlobalAgent() {
       {/* Chat Interface */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            className={`box ${isMobile ? "is-mobile" : ""}`}
-            style={{
-              position: "fixed",
-              bottom: isMobile ? "80px" : "100px",
-              right: isMobile ? "16px" : "24px",
-              width: isMobile ? "calc(100vw - 32px)" : "400px",
-              maxWidth: "calc(100vw - 32px)",
-              maxHeight: "calc(100vh - 120px)",
-              zIndex: 999,
-              display: "flex",
-              flexDirection: "column",
-            }}
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            ref={chatContainerRef}
-            role="dialog"
-            aria-label="AI Assistant Chat"
-            aria-modal="true"
-          >
-            {/* Header */}
-            <div className="level mb-4">
-              <div className="level-left">
-                <div className="level-item">
-                  <h3 className="title is-5">
-                    <span className="icon">
-                      <i className="fas fa-robot"></i>
-                    </span>
-                    <span>AI Assistant</span>
-                  </h3>
+          <>
+            {/* Backdrop */}
+            <motion.div
+              className="is-overlay"
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.3)",
+                zIndex: 998,
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={toggleAgent}
+              aria-hidden="true"
+            />
+            
+            {/* Chat Dialog */}
+            <motion.div
+              className={`box ${isMobile ? "is-mobile" : ""} is-flex is-flex-direction-column`}
+              style={{
+                position: "fixed",
+                bottom: isMobile ? "80px" : "100px",
+                right: isMobile ? "16px" : "24px",
+                width: isMobile ? "calc(100vw - 32px)" : "420px",
+                maxWidth: isMobile ? "calc(100vw - 32px)" : "420px",
+                maxHeight: "calc(100vh - 120px)",
+                zIndex: 999,
+              }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              ref={chatContainerRef}
+              role="dialog"
+              aria-label="AI Assistant Chat"
+              aria-modal="true"
+            >
+              {/* Header */}
+              <div className="level mb-4">
+                <div className="level-left">
+                  <div className="level-item">
+                    <h3 className="title is-5 mb-0">
+                      <span className="icon mr-2">
+                        <i className="fas fa-robot"></i>
+                      </span>
+                      <span>AI Assistant</span>
+                    </h3>
+                  </div>
+                </div>
+                <div className="level-right">
+                  <div className="level-item">
+                    <button
+                      className="button is-small is-light"
+                      onClick={clearMessages}
+                      disabled={messages.length <= 1}
+                      aria-label="Clear chat history"
+                    >
+                      <span className="icon is-small">
+                        <i className="fas fa-trash"></i>
+                      </span>
+                      {!isMobile && <span className="ml-1">Clear</span>}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="level-right">
-                <div className="level-item">
-                  <button
-                    className="button is-small is-light"
-                    onClick={clearMessages}
-                    disabled={messages.length <= 1}
-                    aria-label="Clear chat history"
-                  >
-                    <span className="icon is-small">
-                      <i className="fas fa-trash"></i>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Current Context Info */}
             {currentContext && (
@@ -176,20 +196,24 @@ export default function GlobalAgent() {
 
             {/* Messages Area */}
             <div
-              className="box has-background-light"
+              className="box has-background-light mb-4"
               style={{
                 flex: 1,
                 overflowY: "auto",
-                minHeight: "300px",
-                maxHeight: "400px",
+                minHeight: isMobile ? "250px" : "350px",
+                maxHeight: isMobile ? "400px" : "500px",
               }}
               role="log"
               aria-live="polite"
               aria-label="Chat messages"
             >
               {messages.length === 0 ? (
-                <div className="has-text-centered has-text-grey">
-                  <p className="mb-4">Start a conversation with your AI assistant</p>
+                <div className="has-text-centered has-text-grey py-6">
+                  <span className="icon is-large mb-4">
+                    <i className="fas fa-comments"></i>
+                  </span>
+                  <p className="mb-2">Start a conversation with your AI assistant</p>
+                  <p className="is-size-7">I can help you navigate and interact with this app</p>
                 </div>
               ) : (
                 <div className="content">
@@ -199,12 +223,12 @@ export default function GlobalAgent() {
                       initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
-                      className={`mb-4 ${message.role === "user" ? "has-text-right" : ""}`}
+                      className={`mb-3 ${message.role === "user" ? "has-text-right" : ""}`}
                     >
                       <div
                         className={`message ${message.role === "user" ? "is-primary" : "is-info"}`}
                         style={{
-                          maxWidth: "85%",
+                          maxWidth: isMobile ? "90%" : "85%",
                           marginLeft: message.role === "user" ? "auto" : "0",
                           marginRight: message.role === "user" ? "0" : "auto",
                         }}
@@ -216,12 +240,12 @@ export default function GlobalAgent() {
                         </div>
                         <div className="message-body">
                           <p
-                            className="is-size-6"
+                            className="is-size-6 mb-2"
                             style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
                           >
                             {message.content}
                           </p>
-                          <p className="is-size-7 has-text-grey mt-2">
+                          <p className="is-size-7 has-text-grey">
                             <time dateTime={new Date(message.timestamp).toISOString()}>
                               {new Date(message.timestamp).toLocaleTimeString()}
                             </time>
@@ -231,7 +255,7 @@ export default function GlobalAgent() {
                     </motion.div>
                   ))}
                   {isProcessing && (
-                    <div className="has-text-centered" role="status" aria-live="polite">
+                    <div className="has-text-centered py-4" role="status" aria-live="polite">
                       <span className="loader"></span>
                       <p className="is-size-7 has-text-grey mt-2">Thinking...</p>
                     </div>
@@ -242,7 +266,7 @@ export default function GlobalAgent() {
             </div>
 
             {/* Input Area */}
-            <div className="field mt-4">
+            <div className="field">
               <div className="control">
                 <textarea
                   ref={textareaRef}
@@ -256,10 +280,10 @@ export default function GlobalAgent() {
                   aria-label="Chat input"
                 />
               </div>
-              <div className="field is-grouped mt-2">
+              <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-2`}>
                 <div className="control">
                   <button
-                    className="button is-primary"
+                    className={`button is-primary ${isMobile ? "is-fullwidth" : ""}`}
                     onClick={handleSend}
                     disabled={!input.trim() || isProcessing}
                     aria-label="Send message"
@@ -279,6 +303,7 @@ export default function GlobalAgent() {
               </p>
             </div>
           </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
