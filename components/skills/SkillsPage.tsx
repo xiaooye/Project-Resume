@@ -1,38 +1,71 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import * as d3 from "d3";
 import { Skill } from "@/types";
+import { skillsData, getSkillIcon, skillCategories } from "@/data/skills";
 
-// Sample skills data
-const skillsData: Skill[] = [
-  { name: "TypeScript", level: 95, category: "Languages", yearsOfExperience: 8 },
-  { name: "JavaScript", level: 98, category: "Languages", yearsOfExperience: 10 },
-  { name: "Python", level: 85, category: "Languages", yearsOfExperience: 6 },
-  { name: "React", level: 95, category: "Frontend", yearsOfExperience: 8 },
-  { name: "Next.js", level: 90, category: "Frontend", yearsOfExperience: 5 },
-  { name: "Node.js", level: 92, category: "Backend", yearsOfExperience: 8 },
-  { name: "GraphQL", level: 85, category: "Backend", yearsOfExperience: 4 },
-  { name: "AWS", level: 88, category: "Cloud", yearsOfExperience: 6 },
-  { name: "Azure", level: 82, category: "Cloud", yearsOfExperience: 4 },
-  { name: "Docker", level: 90, category: "DevOps", yearsOfExperience: 5 },
-  { name: "Kubernetes", level: 80, category: "DevOps", yearsOfExperience: 3 },
-  { name: "WebAssembly", level: 75, category: "Advanced", yearsOfExperience: 2 },
-  { name: "WebRTC", level: 78, category: "Advanced", yearsOfExperience: 3 },
-  { name: "Machine Learning", level: 70, category: "AI/ML", yearsOfExperience: 3 },
-];
+type SortOption = "name" | "level" | "years" | "category";
+type SortOrder = "asc" | "desc";
 
 export default function SkillsPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("level");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const radarChartRef = useRef<SVGSVGElement>(null);
   const timelineRef = useRef<SVGSVGElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const categories = Array.from(new Set(skillsData.map((s) => s.category)));
-  const filteredSkills = selectedCategory === "all" ? skillsData : skillsData.filter((s) => s.category === selectedCategory);
+
+  // Filter and sort skills
+  const filteredAndSortedSkills = useMemo(() => {
+    let filtered = skillsData;
+
+    // Filter by category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((s) => s.category === selectedCategory);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.name.toLowerCase().includes(query) ||
+          s.category.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "level":
+          comparison = a.level - b.level;
+          break;
+        case "years":
+          comparison = a.yearsOfExperience - b.yearsOfExperience;
+          break;
+        case "category":
+          comparison = a.category.localeCompare(b.category);
+          break;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [selectedCategory, searchQuery, sortBy, sortOrder]);
 
   // Initialize
   useEffect(() => {
@@ -59,7 +92,21 @@ export default function SkillsPage() {
     };
   }, []);
 
-  // Render radar chart
+  // Handle keyboard navigation for modal
+  useEffect(() => {
+    if (!selectedSkill) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedSkill(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedSkill]);
+
+  // Render radar chart with interactivity
   useEffect(() => {
     if (!radarChartRef.current || !isMounted) return;
 
@@ -95,19 +142,42 @@ export default function SkillsPage() {
         .attr("y1", centerY)
         .attr("x2", x)
         .attr("y2", y)
-        .attr("stroke", "#ccc")
-        .attr("stroke-width", 1);
+        .attr("stroke", "currentColor")
+        .attr("stroke-width", 1)
+        .attr("opacity", hoveredCategory === item.category ? 0.8 : 0.3);
 
       // Category label
+      const labelX = centerX + Math.cos(angle) * (radius + 20);
+      const labelY = centerY + Math.sin(angle) * (radius + 20);
+      
       svg
         .append("text")
-        .attr("x", centerX + Math.cos(angle) * (radius + 20))
-        .attr("y", centerY + Math.sin(angle) * (radius + 20))
+        .attr("x", labelX)
+        .attr("y", labelY)
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
         .text(item.category)
         .style("font-size", isMobile ? "12px" : "14px")
-        .style("fill", "currentColor");
+        .style("fill", "currentColor")
+        .style("cursor", "pointer")
+        .style("font-weight", hoveredCategory === item.category ? "bold" : "normal")
+        .on("mouseenter", () => setHoveredCategory(item.category))
+        .on("mouseleave", () => setHoveredCategory(null))
+        .on("click", () => {
+          setSelectedCategory(item.category === selectedCategory ? "all" : item.category);
+        });
+
+      // Level value
+      svg
+        .append("text")
+        .attr("x", centerX + Math.cos(angle) * (radius / 2))
+        .attr("y", centerY + Math.sin(angle) * (radius / 2))
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .text(`${item.level.toFixed(0)}%`)
+        .style("font-size", isMobile ? "10px" : "12px")
+        .style("fill", "currentColor")
+        .style("opacity", 0.7);
     });
 
     // Draw concentric circles
@@ -119,9 +189,9 @@ export default function SkillsPage() {
         .attr("cy", centerY)
         .attr("r", r)
         .attr("fill", "none")
-        .attr("stroke", "#ccc")
+        .attr("stroke", "currentColor")
         .attr("stroke-width", 1)
-        .attr("opacity", 0.3);
+        .attr("opacity", 0.2);
     }
 
     // Draw data polygon
@@ -138,13 +208,7 @@ export default function SkillsPage() {
       .attr("fill-opacity", 0.3)
       .attr("stroke", "#00d4aa")
       .attr("stroke-width", 2);
-
-    // Add data table for accessibility
-    const tableData = categoryLevels.map((item) => ({
-      category: item.category,
-      level: item.level,
-    }));
-  }, [isMounted, isMobile, categories]);
+  }, [isMounted, isMobile, categories, hoveredCategory, selectedCategory]);
 
   // Render timeline
   useEffect(() => {
@@ -174,22 +238,30 @@ export default function SkillsPage() {
     });
 
     const xScale = d3.scaleBand().domain(groups.map((g) => g[0])).range([margin.left, width - margin.right]).padding(0.2);
-    const yScale = d3.scaleLinear().domain([0, groups.length * 5]).nice().range([height - margin.bottom, margin.top]);
+    const yScale = d3.scaleLinear().domain([0, Math.max(...groups.map((g) => g[1].length)) + 1]).nice().range([height - margin.bottom, margin.top]);
 
     // Draw bars
     groups.forEach((group, i) => {
       const x = xScale(group[0]) || 0;
       const barWidth = xScale.bandwidth();
-      const barHeight = yScale(group.length);
+      const barHeight = yScale(group[1].length);
+      const barActualHeight = height - margin.bottom - barHeight;
 
       svg
         .append("rect")
         .attr("x", x)
         .attr("y", barHeight)
         .attr("width", barWidth)
-        .attr("height", height - margin.bottom - barHeight)
+        .attr("height", barActualHeight)
         .attr("fill", "#00d4aa")
-        .attr("opacity", 0.7);
+        .attr("opacity", 0.7)
+        .style("cursor", "pointer")
+        .on("mouseenter", function () {
+          d3.select(this).attr("opacity", 1);
+        })
+        .on("mouseleave", function () {
+          d3.select(this).attr("opacity", 0.7);
+        });
 
       svg
         .append("text")
@@ -197,15 +269,17 @@ export default function SkillsPage() {
         .attr("y", height - margin.bottom + 20)
         .attr("text-anchor", "middle")
         .text(group[0])
-        .style("font-size", isMobile ? "10px" : "12px");
+        .style("font-size", isMobile ? "10px" : "12px")
+        .style("fill", "currentColor");
 
       svg
         .append("text")
         .attr("x", x + barWidth / 2)
         .attr("y", barHeight - 5)
         .attr("text-anchor", "middle")
-        .text(`${group.length} skills`)
-        .style("font-size", isMobile ? "10px" : "12px");
+        .text(`${group[1].length} ${group[1].length === 1 ? "skill" : "skills"}`)
+        .style("font-size", isMobile ? "10px" : "12px")
+        .style("fill", "currentColor");
     });
   }, [isMounted, isMobile]);
 
@@ -221,8 +295,63 @@ export default function SkillsPage() {
           Technical competencies and years of experience across full-stack development, cloud services, and advanced technologies
         </p>
 
+        {/* Search and Sort Controls */}
+        <div className="box liquid-glass-card mb-6">
+          <div className="columns is-mobile is-vcentered">
+            <div className="column">
+              <div className="field">
+                <div className="control has-icons-left">
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="搜索技能..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search skills"
+                  />
+                  <span className="icon is-small is-left">
+                    <span aria-hidden="true">🔍</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="column is-narrow">
+              <div className="field">
+                <div className="control">
+                  <div className="select">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortOption)}
+                      aria-label="Sort by"
+                    >
+                      <option value="level">按熟练度</option>
+                      <option value="name">按名称</option>
+                      <option value="years">按经验</option>
+                      <option value="category">按分类</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="column is-narrow">
+              <div className="field">
+                <div className="control">
+                  <button
+                    className="button"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    aria-label={`Sort order: ${sortOrder === "asc" ? "ascending" : "descending"}`}
+                  >
+                    {sortOrder === "asc" ? "↑" : "↓"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Category Filter */}
         <div className="box liquid-glass-card mb-6">
+          <h2 className="title is-5 mb-4 liquid-glass-text">分类筛选</h2>
           <div className="field is-grouped is-grouped-multiline">
             <div className="control">
               <button
@@ -231,29 +360,38 @@ export default function SkillsPage() {
                 aria-label="Show all skills"
                 aria-pressed={selectedCategory === "all"}
               >
-                全部
+                全部 ({skillsData.length})
               </button>
             </div>
-            {categories.map((category) => (
-              <div key={category} className="control">
-                <button
-                  className={`button ${selectedCategory === category ? "is-primary" : "is-light"}`}
-                  onClick={() => setSelectedCategory(category)}
-                  aria-label={`Filter by ${category}`}
-                  aria-pressed={selectedCategory === category}
-                >
-                  {category}
-                </button>
-              </div>
-            ))}
+            {categories.map((category) => {
+              const count = skillsData.filter((s) => s.category === category).length;
+              return (
+                <div key={category} className="control">
+                  <button
+                    className={`button ${selectedCategory === category ? "is-primary" : "is-light"}`}
+                    onClick={() => setSelectedCategory(category)}
+                    aria-label={`Filter by ${category}`}
+                    aria-pressed={selectedCategory === category}
+                  >
+                    {category} ({count})
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Radar Chart */}
         <div className="box liquid-glass-card mb-6">
-          <h2 className="title is-4 mb-4 liquid-glass-text">Skills Radar Chart</h2>
-          <p className="subtitle is-6 mb-4 liquid-glass-text">Proficiency levels across different technology categories</p>
-          <svg ref={radarChartRef} width="100%" height={isMobile ? 450 : 550} role="img" aria-label="Skills radar chart" />
+          <h2 className="title is-4 mb-4 liquid-glass-text">技能雷达图</h2>
+          <p className="subtitle is-6 mb-4 liquid-glass-text">不同技术类别的熟练度水平</p>
+          <svg
+            ref={radarChartRef}
+            width="100%"
+            height={isMobile ? 450 : 550}
+            role="img"
+            aria-label="Skills radar chart"
+          />
           <div className="is-sr-only" role="region" aria-label="Skills radar chart data table">
             <table>
               <caption>Skills by Category</caption>
@@ -281,48 +419,183 @@ export default function SkillsPage() {
 
         {/* Experience Timeline */}
         <div className="box liquid-glass-card mb-6">
-          <h2 className="title is-4 mb-4 liquid-glass-text">Experience Timeline</h2>
-          <p className="subtitle is-6 mb-4 liquid-glass-text">Skills distribution by years of experience</p>
-          <svg ref={timelineRef} width="100%" height={isMobile ? 350 : 450} role="img" aria-label="Experience timeline chart" />
+          <h2 className="title is-4 mb-4 liquid-glass-text">经验时间线</h2>
+          <p className="subtitle is-6 mb-4 liquid-glass-text">按经验年限分布的技能</p>
+          <svg
+            ref={timelineRef}
+            width="100%"
+            height={isMobile ? 350 : 450}
+            role="img"
+            aria-label="Experience timeline chart"
+          />
         </div>
 
         {/* Skills Grid */}
         <div className="box liquid-glass-card">
-          <h2 className="title is-4 mb-4 liquid-glass-text">Skills Details ({filteredSkills.length})</h2>
-          <div className={`columns is-multiline ${isMobile ? "is-mobile" : ""}`}>
-            {filteredSkills.map((skill, index) => (
-              <motion.div
-                key={skill.name}
-                className={`column ${isMobile ? "is-half" : "is-one-third"}`}
-                initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={prefersReducedMotion ? {} : { duration: 0.3, delay: index * 0.05 }}
-              >
-                <div className="box liquid-glass-card">
-                  <div className="is-flex is-justify-content-space-between is-align-items-center mb-3">
-                    <h3 className="title is-5 liquid-glass-text">{skill.name}</h3>
-                    <span className="tag is-info">{skill.category}</span>
-                  </div>
-                  <div className="mb-2">
-                    <div className="is-flex is-justify-content-space-between mb-1">
-                      <span className="liquid-glass-text is-size-7">熟练度</span>
-                      <span className="liquid-glass-text is-size-7">{skill.level}%</span>
+          <h2 className="title is-4 mb-4 liquid-glass-text">
+            技能详情 ({filteredAndSortedSkills.length})
+          </h2>
+          {filteredAndSortedSkills.length === 0 ? (
+            <div className="notification is-info">
+              <p>没有找到匹配的技能。请尝试其他搜索条件。</p>
+            </div>
+          ) : (
+            <div className={`columns is-multiline ${isMobile ? "is-mobile" : ""}`}>
+              <AnimatePresence>
+                {filteredAndSortedSkills.map((skill, index) => (
+                  <motion.div
+                    key={skill.name}
+                    className={`column ${isMobile ? "is-half" : "is-one-third"}`}
+                    initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={prefersReducedMotion ? {} : { duration: 0.3, delay: index * 0.02 }}
+                  >
+                    <div
+                      className="box liquid-glass-card"
+                      style={{ cursor: "pointer", height: "100%" }}
+                      onClick={() => setSelectedSkill(skill)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedSkill(skill);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`View details for ${skill.name}`}
+                    >
+                      <div className="is-flex is-justify-content-space-between is-align-items-center mb-3">
+                        <div className="is-flex is-align-items-center">
+                          <span className="mr-2" style={{ fontSize: "1.5rem" }} aria-hidden="true">
+                            {getSkillIcon(skill.name)}
+                          </span>
+                          <h3 className="title is-5 liquid-glass-text">{skill.name}</h3>
+                        </div>
+                        <span className="tag is-info">{skill.category}</span>
+                      </div>
+                      <div className="mb-2">
+                        <div className="is-flex is-justify-content-space-between mb-1">
+                          <span className="liquid-glass-text is-size-7">熟练度</span>
+                          <span className="liquid-glass-text is-size-7">{skill.level}%</span>
+                        </div>
+                        <progress
+                          className="progress is-primary"
+                          value={skill.level}
+                          max="100"
+                          aria-label={`${skill.name} proficiency: ${skill.level}%`}
+                        >
+                          {skill.level}%
+                        </progress>
+                      </div>
+                      <div className="is-flex is-justify-content-space-between">
+                        <span className="liquid-glass-text is-size-7">经验年限</span>
+                        <span className="liquid-glass-text is-size-7">{skill.yearsOfExperience} 年</span>
+                      </div>
                     </div>
-                    <progress className="progress is-primary" value={skill.level} max="100" aria-label={`${skill.name} proficiency: ${skill.level}%`}>
-                      {skill.level}%
-                    </progress>
-                  </div>
-                  <div className="is-flex is-justify-content-space-between">
-                    <span className="liquid-glass-text is-size-7">经验年限</span>
-                    <span className="liquid-glass-text is-size-7">{skill.yearsOfExperience} 年</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Skill Detail Modal */}
+      <AnimatePresence>
+        {selectedSkill && (
+          <>
+            <div
+              className="modal is-active"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="skill-modal-title"
+            >
+              <div
+                className="modal-background"
+                onClick={() => setSelectedSkill(null)}
+                aria-label="Close modal"
+              />
+              <motion.div
+                className="modal-card"
+                initial={prefersReducedMotion ? {} : { opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={prefersReducedMotion ? {} : { duration: 0.2 }}
+              >
+                <header className="modal-card-head">
+                  <div className="is-flex is-align-items-center">
+                    <span className="mr-3" style={{ fontSize: "2rem" }} aria-hidden="true">
+                      {getSkillIcon(selectedSkill.name)}
+                    </span>
+                    <p className="modal-card-title" id="skill-modal-title">
+                      {selectedSkill.name}
+                    </p>
+                  </div>
+                  <button
+                    className="delete"
+                    aria-label="Close modal"
+                    onClick={() => setSelectedSkill(null)}
+                  />
+                </header>
+                <section className="modal-card-body">
+                  <div className="content">
+                    <div className="field">
+                      <label className="label">分类</label>
+                      <div className="control">
+                        <span className="tag is-info is-large">{selectedSkill.category}</span>
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label className="label">熟练度</label>
+                      <div className="control">
+                        <progress
+                          className="progress is-primary is-large"
+                          value={selectedSkill.level}
+                          max="100"
+                          aria-label={`Proficiency: ${selectedSkill.level}%`}
+                        >
+                          {selectedSkill.level}%
+                        </progress>
+                        <p className="help">{selectedSkill.level}%</p>
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label className="label">经验年限</label>
+                      <div className="control">
+                        <p className="is-size-5">{selectedSkill.yearsOfExperience} 年</p>
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label className="label">技能等级</label>
+                      <div className="control">
+                        <span className="tag is-success is-large">
+                          {selectedSkill.level >= 90
+                            ? "专家"
+                            : selectedSkill.level >= 75
+                            ? "高级"
+                            : selectedSkill.level >= 60
+                            ? "中级"
+                            : "初级"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                <footer className="modal-card-foot">
+                  <button
+                    className="button is-primary"
+                    onClick={() => setSelectedSkill(null)}
+                    aria-label="Close modal"
+                  >
+                    关闭
+                  </button>
+                </footer>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
