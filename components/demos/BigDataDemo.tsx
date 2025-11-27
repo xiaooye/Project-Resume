@@ -3738,36 +3738,33 @@ export default function BigDataDemo() {
         {/* Data Table - Only show in table view */}
         {viewMode === "table" && (
           <div className="box">
-            <div
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
-              onTouchStart={handleTouchStart}
-              className="has-background-white"
-              style={{
-                maxHeight: isMobile ? "400px" : "600px",
-                overflowY: "auto",
-                overflowX: "hidden",
-              }}
-              role="region"
-              aria-label="Data items list"
-              aria-live="polite"
-              tabIndex={0}
-            >
-              {!isMounted ? (
-                <div className="has-text-centered py-6" role="status" aria-live="polite">
-                  <p className="subtitle">Loading...</p>
-                </div>
-              ) : Array.isArray(processedData) ? (
-                renderMethod === "virtual" ? (
-                <div style={{ position: "relative", minHeight: totalHeight }}>
-                  {/* Top spacer to maintain scroll position */}
-                  {visibleRange.start > 0 && (
-                    <div style={{ height: visibleRange.start * itemHeight }} aria-hidden="true" />
-                  )}
-                  
-                  {/* Visible items table */}
-                  <div style={{ position: "relative" }}>
-                    <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
+            {!isMounted ? (
+              <div className="has-text-centered py-6" role="status" aria-live="polite">
+                <p className="subtitle">Loading...</p>
+              </div>
+            ) : Array.isArray(processedData) ? (
+              renderMethod === "virtual" ? (
+              <>
+                {/* Scrollable container with fixed header */}
+                <div
+                  ref={scrollContainerRef}
+                  onScroll={handleScroll}
+                  onTouchStart={handleTouchStart}
+                  className="has-background-white"
+                  style={{
+                    maxHeight: isMobile ? "400px" : "600px",
+                    overflowY: "auto",
+                    overflowX: "auto",
+                    position: "relative",
+                  }}
+                  role="region"
+                  aria-label="Data items list"
+                  aria-live="polite"
+                  tabIndex={0}
+                >
+                  {/* Fixed table header inside scroll container */}
+                  <div style={{ position: "sticky", top: 0, zIndex: 20, backgroundColor: "white" }}>
+                    <table className="table is-fullwidth is-striped" role="table" aria-label="Data items header">
                       <thead>
                         <tr>
                           <th>ID / Name</th>
@@ -3784,7 +3781,20 @@ export default function BigDataDemo() {
                           <th>Timestamp</th>
                         </tr>
                       </thead>
-                      <tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Virtual scrolling content */}
+                  <div style={{ position: "relative", minHeight: totalHeight }}>
+                    {/* Top spacer to maintain scroll position */}
+                    {visibleRange.start > 0 && (
+                      <div style={{ height: visibleRange.start * itemHeight }} aria-hidden="true" />
+                    )}
+                    
+                    {/* Visible items table */}
+                    <div style={{ position: "relative" }}>
+                      <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
+                        <tbody>
                         {virtualItems.map((item, index) => (
                         <tr
                           key={item.id}
@@ -3904,17 +3914,19 @@ export default function BigDataDemo() {
                             {new Date(item.timestamp).toLocaleString()}
                           </small>
                         </td>
-                      </tr>
-                    ))}
-                      </tbody>
-                    </table>
+                        </tr>
+                      ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* Bottom spacer to maintain correct scroll position */}
+                    {visibleRange.end < totalItems && (
+                      <div style={{ height: Math.max(0, (totalItems - visibleRange.end) * itemHeight) }} aria-hidden="true" />
+                    )}
                   </div>
-                  
-                  {/* Bottom spacer to maintain correct scroll position */}
-                  {visibleRange.end < totalItems && (
-                    <div style={{ height: Math.max(0, (totalItems - visibleRange.end) * itemHeight) }} aria-hidden="true" />
-                  )}
                 </div>
+              </>
               ) : (
                 <div>
                   <table className="table is-fullwidth is-hoverable is-striped" role="table" aria-label="Data items">
