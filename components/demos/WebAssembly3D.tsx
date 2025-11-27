@@ -566,7 +566,9 @@ export default function WebAssembly3D() {
                   )}
 
                   {cameraMode === "first-person" && (
-                    <PointerLockControls />
+                    <PointerLockControls
+                      selector="canvas"
+                    />
                   )}
                 </Canvas>
               )}
@@ -728,6 +730,69 @@ function GameScene3D({
   const playerPosRef = useRef<Float32Array>(new Float32Array([0, 1, 0]));
   const playerVelRef = useRef<Float32Array>(new Float32Array([0, 0, 0]));
   const onGroundRef = useRef<boolean>(true);
+  const playerRotationRef = useRef<number>(0); // Player rotation for first-person
+
+  // Mouse controls for first-person
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const isPointerLockedRef = useRef(false);
+
+  // Mouse controls setup
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isPointerLockedRef.current && cameraMode === "first-person") {
+        mouseRef.current.x += e.movementX * 0.002;
+        mouseRef.current.y += e.movementY * 0.002;
+        mouseRef.current.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, mouseRef.current.y));
+        playerRotationRef.current = mouseRef.current.x;
+      }
+    };
+
+    const handlePointerLockChange = () => {
+      isPointerLockedRef.current = document.pointerLockElement !== null;
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("pointerlockchange", handlePointerLockChange);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("pointerlockchange", handlePointerLockChange);
+    };
+  }, [cameraMode]);
+
+  // Shooting
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0 && cameraMode === "first-person") {
+        // Request pointer lock if not already locked
+        const canvas = document.querySelector("canvas");
+        if (canvas && !isPointerLockedRef.current) {
+          canvas.requestPointerLock();
+          return;
+        }
+        
+        if (isPointerLockedRef.current) {
+          // Calculate shooting direction using WASM
+          const forwardX = Math.sin(playerRotationRef.current) * Math.cos(mouseRef.current.y);
+          const forwardY = Math.sin(mouseRef.current.y);
+          const forwardZ = Math.cos(playerRotationRef.current) * Math.cos(mouseRef.current.y);
+          
+          const forward = new Float32Array([forwardX, forwardY, forwardZ]);
+          wasmGame.normalizeVector(forward).then((dir) => {
+            const origin = new Float32Array([
+              playerPosRef.current[0],
+              playerPosRef.current[1] + 1.6,
+              playerPosRef.current[2],
+            ]);
+            onShoot(origin, dir);
+          });
+        }
+      }
+    };
+
+    window.addEventListener("mousedown", handleMouseDown);
+    return () => window.removeEventListener("mousedown", handleMouseDown);
+  }, [cameraMode, onShoot]);
 
   // Player movement - ALL calculations via WASM
   useFrame((state, delta) => {
@@ -737,68 +802,121 @@ function GameScene3D({
 
     // Prepare input for WASM (forward, right, jump)
     const input = new Float32Array(3);
-    if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
-      input[0] = 1; // Forward
+    
+    // Calculate movement direction based on camera rotation for first-person
+    if (cameraMode === "first-person") {
+      const forward = Math.sin(playerRotationRef.current);
+      const right = Math.cos(playerRotationRef.current);
+      
+      if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
+        input[0] = forward;
+        input[1] = right;
+      }
+      if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
+        input[0] = -forward;
+        input[1] = -right;
+      }
+      if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
+        input[0] = -right;
+        input[1] = forward;
+      }
+      if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
+        input[0] = right;
+        input[1] = -forward;
+      }
+    } else if (cameraMode === "third-person") {
+      // Third-person - simple movement
+      if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
+        input[0] = 1; // Forward
+      }
+      if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
+        input[0] = -1; // Backward
+      }
+      if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
+        input[1] = -1; // Left
+      }
+      if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
+        input[1] = 1; // Right
+      }
     }
-    if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
-      input[0] = -1; // Backward
-    }
-    if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
-      input[1] = -1; // Left
-    }
-    if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
-      input[1] = 1; // Right
-    }
+    // Free camera mode - no player movement, only camera movement via OrbitControls
+    
     if (keysRef.current.has(" ") || keysRef.current.has("space")) {
       input[2] = 1; // Jump
     }
 
-    // ALL physics calculations via WASM (synchronous call)
-    wasmGame.updatePlayerPhysics(
-      playerPosRef.current,
-      playerVelRef.current,
-      input,
-      delta,
-      onGroundRef.current
-    ).then((physicsResult) => {
-      // Update from WASM results
-      playerPosRef.current = physicsResult.position;
-      playerVelRef.current = physicsResult.velocity;
-      onGroundRef.current = physicsResult.onGround;
+    // Only update physics if not in free camera mode
+    if (cameraMode !== "free") {
+      // ALL physics calculations via WASM
+      wasmGame.updatePlayerPhysics(
+        playerPosRef.current,
+        playerVelRef.current,
+        input,
+        delta,
+        onGroundRef.current
+      ).then((physicsResult) => {
+        // Update from WASM results
+        playerPosRef.current = physicsResult.position;
+        playerVelRef.current = physicsResult.velocity;
+        onGroundRef.current = physicsResult.onGround;
 
-      // Update player position in Three.js
-      if (playerRef.current) {
-        playerRef.current.position.set(
+        // Update player position in Three.js
+        if (playerRef.current) {
+          playerRef.current.position.set(
+            playerPosRef.current[0],
+            playerPosRef.current[1],
+            playerPosRef.current[2]
+          );
+          // Update player rotation for first-person
+          if (cameraMode === "first-person") {
+            playerRef.current.rotation.y = playerRotationRef.current;
+          }
+        }
+      });
+    }
+
+    // Update camera based on mode
+    if (state.camera) {
+      const camera = state.camera;
+      
+      if (cameraMode === "first-person") {
+        // First-person: camera at player position, looking in direction of mouse
+        const eyeHeight = 1.6; // Eye level
+        camera.position.set(
           playerPosRef.current[0],
-          playerPosRef.current[1],
+          playerPosRef.current[1] + eyeHeight,
+          playerPosRef.current[2]
+        );
+        
+        const forward = new THREE.Vector3(
+          Math.sin(playerRotationRef.current) * Math.cos(mouseRef.current.y),
+          Math.sin(mouseRef.current.y),
+          Math.cos(playerRotationRef.current) * Math.cos(mouseRef.current.y)
+        );
+        camera.lookAt(
+          camera.position.x + forward.x,
+          camera.position.y + forward.y,
+          camera.position.z + forward.z
+        );
+      } else if (cameraMode === "third-person") {
+        // Third-person: camera behind player, looking at player
+        const offset = new THREE.Vector3(
+          Math.sin(playerRotationRef.current) * 5,
+          3,
+          Math.cos(playerRotationRef.current) * 5
+        );
+        camera.position.set(
+          playerPosRef.current[0] - offset.x,
+          playerPosRef.current[1] + offset.y,
+          playerPosRef.current[2] - offset.z
+        );
+        camera.lookAt(
+          playerPosRef.current[0],
+          playerPosRef.current[1] + 1,
           playerPosRef.current[2]
         );
       }
-    });
-
-    // Update camera for third-person view
-    if (cameraMode === "third-person" && state.camera) {
-      const camera = state.camera;
-      const target = new THREE.Vector3(
-        playerPosRef.current[0],
-        playerPosRef.current[1] + 1,
-        playerPosRef.current[2]
-      );
-      const eye = new THREE.Vector3(
-        playerPosRef.current[0],
-        playerPosRef.current[1] + 5,
-        playerPosRef.current[2] + 10
-      );
-      
-      // Use WASM for camera calculations
-      const up = new Float32Array([0, 1, 0]);
-      const targetWasm = new Float32Array([target.x, target.y, target.z]);
-      const eyeWasm = new Float32Array([eye.x, eye.y, eye.z]);
-      
-      wasmGame.calculateCameraMatrix(eyeWasm, targetWasm, up).then(() => {
-        camera.position.set(eye.x, eye.y, eye.z);
-        camera.lookAt(target.x, target.y, target.z);
-      });
+      // Free camera uses OrbitControls (handled in Canvas)
     }
 
     // Update performance metrics
@@ -937,27 +1055,30 @@ function Terrain({ sceneConfig }: { sceneConfig: SceneConfig }) {
 
 // Buildings Component
 function Buildings({ sceneConfig }: { sceneConfig: SceneConfig }) {
-  const buildingPositions = useMemo(() => {
-    const positions: [number, number, number][] = [];
+  const buildings = useMemo(() => {
+    const buildingData: Array<{ position: [number, number, number]; height: number }> = [];
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2;
       const radius = 8 + Math.random() * 5;
-      positions.push([
-        Math.cos(angle) * radius,
-        0,
-        Math.sin(angle) * radius,
-      ]);
+      buildingData.push({
+        position: [
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius,
+        ],
+        height: 2 + Math.random() * 4, // Fixed height per building
+      });
     }
-    return positions;
+    return buildingData;
   }, []);
 
   return (
     <>
-      {buildingPositions.map((position, index) => (
+      {buildings.map((building, index) => (
         <Building
           key={index}
-          position={position}
-          height={2 + Math.random() * 4}
+          position={building.position}
+          height={building.height}
           sceneConfig={sceneConfig}
         />
       ))}
