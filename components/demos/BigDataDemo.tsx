@@ -672,12 +672,83 @@ export default function BigDataDemo() {
   }, [dataSource, searchTerm]);
 
   // Calculate advanced statistics - optimized for streaming
+  // Recalculates when analysisType is 'descriptive' and config changes
   useEffect(() => {
-    if (filteredData.length === 0) return;
+    console.log("[Descriptive Stats] Effect triggered", {
+      analysisType,
+      dataLength: filteredData.length,
+      outlierRemoval: analysisConfig.outlierRemoval,
+      outlierMethod: analysisConfig.outlierMethod,
+      outlierThreshold: analysisConfig.outlierThreshold,
+      configHash: configHash.substring(0, 50),
+    });
+    
+    if (filteredData.length === 0) {
+      console.log("[Descriptive Stats] Skipping: no data");
+      return;
+    }
+    
+    // Only recalculate if analysisType is 'descriptive' or if it's the default (first load)
+    // This allows config changes to trigger recalculation when viewing descriptive stats
+    const shouldRecalculate = analysisType === "descriptive" || analysisType === "descriptive";
+    
+    if (!shouldRecalculate && analysisType !== "descriptive") {
+      console.log("[Descriptive Stats] Skipping: analysisType is not 'descriptive', current:", analysisType);
+      return;
+    }
     
     // Use requestIdleCallback for non-blocking calculation
     const calculateStats = () => {
-      const values = filteredData.map(item => item.value).sort((a, b) => a - b);
+      console.log("[Descriptive Stats] Starting calculation", {
+        outlierRemoval: analysisConfig.outlierRemoval,
+        outlierMethod: analysisConfig.outlierMethod,
+        outlierThreshold: analysisConfig.outlierThreshold,
+        dataCount: filteredData.length,
+      });
+      
+      // Apply outlier removal if configured
+      let dataToAnalyze = filteredData;
+      if (analysisConfig.outlierRemoval) {
+        const values = filteredData.map(item => item.value);
+        let filtered: BigDataItem[];
+        
+        if (analysisConfig.outlierMethod === "zscore") {
+          const mean = values.reduce((a, b) => a + b, 0) / values.length;
+          const stdDev = Math.sqrt(
+            values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
+          );
+          filtered = filteredData.filter(item => {
+            const zScore = Math.abs((item.value - mean) / stdDev);
+            return zScore <= analysisConfig.outlierThreshold;
+          });
+        } else {
+          // IQR method
+          const sorted = [...values].sort((a, b) => a - b);
+          const q1Index = Math.floor(sorted.length * 0.25);
+          const q3Index = Math.floor(sorted.length * 0.75);
+          const q1 = sorted[q1Index];
+          const q3 = sorted[q3Index];
+          const iqr = q3 - q1;
+          const lowerBound = q1 - analysisConfig.outlierThreshold * iqr;
+          const upperBound = q3 + analysisConfig.outlierThreshold * iqr;
+          filtered = filteredData.filter(item => 
+            item.value >= lowerBound && item.value <= upperBound
+          );
+        }
+        dataToAnalyze = filtered;
+        console.log("[Descriptive Stats] Outlier removal applied:", {
+          originalCount: filteredData.length,
+          filteredCount: filtered.length,
+          removed: filteredData.length - filtered.length,
+        });
+      }
+      
+      const values = dataToAnalyze.map(item => item.value).sort((a, b) => a - b);
+      if (values.length === 0) {
+        console.log("[Descriptive Stats] Skipping: no data after filtering");
+        return;
+      }
+      
       const totalValue = values.reduce((sum, val) => sum + val, 0);
       const averageValue = totalValue / values.length;
       const minValue = values[0];
@@ -701,11 +772,11 @@ export default function BigDataDemo() {
       const standardDeviation = Math.sqrt(variance);
       
       const categoryCounts: Record<string, number> = {};
-      filteredData.forEach(item => {
+      dataToAnalyze.forEach(item => {
         categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
       });
       
-      setStats({
+      const result = {
         totalValue,
         averageValue,
         minValue,
@@ -714,13 +785,22 @@ export default function BigDataDemo() {
         median,
         standardDeviation,
         quartiles: { q1, q2, q3 },
+      };
+      
+      console.log("[Descriptive Stats] Calculation complete", {
+        totalValue: result.totalValue.toFixed(2),
+        averageValue: result.averageValue.toFixed(2),
+        median: result.median.toFixed(2),
+        stdDev: result.standardDeviation.toFixed(2),
       });
+      
+      setStats(result);
     };
     
     // Use setTimeout to avoid blocking UI during streaming
     const timeoutId = setTimeout(calculateStats, isStreaming ? 100 : 0);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, isStreaming]);
+  }, [filteredData, isStreaming, analysisType, configHash, analysisConfig.outlierRemoval, analysisConfig.outlierMethod, analysisConfig.outlierThreshold]);
 
   // Advanced Analysis: Time Series Analysis using WebAssembly
   useEffect(() => {
@@ -736,10 +816,10 @@ export default function BigDataDemo() {
     if (analysisType !== "time-series" || filteredData.length < 50) {
       // Clear results when switching away or not enough data
       if (analysisType !== "time-series") {
-        console.log("[Time Series] Clearing - wrong analysis type");
+        console.log("[Time Series] Skipping: analysisType is not 'time-series', current:", analysisType);
         setTimeSeriesAnalysis(null);
       } else {
-        console.log("[Time Series] Clearing - not enough data");
+        console.log("[Time Series] Skipping: not enough data, have:", filteredData.length);
       }
       return;
     }
@@ -859,10 +939,10 @@ export default function BigDataDemo() {
     if (analysisType !== "correlation" || filteredData.length < 100) {
       // Clear results when switching away or not enough data
       if (analysisType !== "correlation") {
-        console.log("[Correlation] Clearing - wrong analysis type");
+        console.log("[Correlation] Skipping: analysisType is not 'correlation', current:", analysisType);
         setCorrelationAnalysis(null);
       } else {
-        console.log("[Correlation] Clearing - not enough data");
+        console.log("[Correlation] Skipping: not enough data, have:", filteredData.length);
       }
       return;
     }
@@ -958,10 +1038,10 @@ export default function BigDataDemo() {
     if (analysisType !== "anomaly" || filteredData.length < 50) {
       // Clear results when switching away or not enough data
       if (analysisType !== "anomaly") {
-        console.log("[Anomaly Detection] Clearing - wrong analysis type");
+        console.log("[Anomaly Detection] Skipping: analysisType is not 'anomaly', current:", analysisType);
         setAnomalyDetection(null);
       } else {
-        console.log("[Anomaly Detection] Clearing - not enough data");
+        console.log("[Anomaly Detection] Skipping: not enough data, have:", filteredData.length);
       }
       return;
     }
@@ -1076,10 +1156,10 @@ export default function BigDataDemo() {
     if (analysisType !== "capacity" || filteredData.length < 100) {
       // Clear results when switching away or not enough data
       if (analysisType !== "capacity") {
-        console.log("[Capacity Planning] Clearing - wrong analysis type");
+        console.log("[Capacity Planning] Skipping: analysisType is not 'capacity', current:", analysisType);
         setCapacityPlanning(null);
       } else {
-        console.log("[Capacity Planning] Clearing - not enough data");
+        console.log("[Capacity Planning] Skipping: not enough data, have:", filteredData.length);
       }
       return;
     }
@@ -1832,7 +1912,11 @@ export default function BigDataDemo() {
                         <div className="select">
                           <select
                             value={analysisType}
-                            onChange={(e) => setAnalysisType(e.target.value as AnalysisType)}
+                            onChange={(e) => {
+                              const newType = e.target.value as AnalysisType;
+                              console.log("[Analysis Type] Changing from", analysisType, "to", newType);
+                              setAnalysisType(newType);
+                            }}
                             aria-label="Analysis type"
                           >
                             <option value="descriptive">Descriptive Statistics</option>
