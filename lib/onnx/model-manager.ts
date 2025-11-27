@@ -474,56 +474,67 @@ export class ModelManager {
         if (generatedText && fullPrompt) {
           const originalText = generatedText;
           
-          // Strategy 1: Check if the full prompt is at the start
+          // Strategy 1: Check if the full prompt is at the start (exact match)
           if (generatedText.startsWith(fullPrompt)) {
             generatedText = generatedText.slice(fullPrompt.length).trim();
             console.log("[LLM Debug] Removed full prompt from start");
           } 
-          // Strategy 2: Try to find where the prompt ends and extract only after "Assistant:"
+          // Strategy 2: Find where the prompt ends (after last "Assistant:")
           else {
-            // Find the last occurrence of "Assistant:" in the prompt
             const assistantMarker = "Assistant:";
             const lastAssistantIndex = fullPrompt.lastIndexOf(assistantMarker);
             
             if (lastAssistantIndex !== -1) {
-              // Everything after "Assistant:" in the prompt should be removed
-              const promptAfterAssistant = fullPrompt.slice(lastAssistantIndex + assistantMarker.length).trim();
+              // The prompt ends with "Assistant:", so everything after that in the prompt is empty
+              // We want to find where "Assistant:" appears in the generated text and extract everything after it
+              const promptUpToAssistant = fullPrompt.slice(0, lastAssistantIndex + assistantMarker.length);
               
-              // Find where this appears in the generated text
-              const promptEndIndex = generatedText.indexOf(promptAfterAssistant, lastAssistantIndex);
-              
-              if (promptEndIndex !== -1) {
-                // Extract everything after the prompt
-                generatedText = generatedText.slice(promptEndIndex + promptAfterAssistant.length).trim();
-                console.log("[LLM Debug] Removed prompt after Assistant marker");
+              // Check if generated text starts with the prompt up to "Assistant:"
+              if (generatedText.startsWith(promptUpToAssistant)) {
+                // Simple case: just remove the prompt prefix
+                generatedText = generatedText.slice(promptUpToAssistant.length).trim();
+                console.log("[LLM Debug] Removed prompt up to Assistant marker");
               } else {
-                // Fallback: just remove everything up to and including the last "Assistant:" in the prompt
-                const promptUpToAssistant = fullPrompt.slice(0, lastAssistantIndex + assistantMarker.length);
-                if (generatedText.startsWith(promptUpToAssistant)) {
-                  generatedText = generatedText.slice(promptUpToAssistant.length).trim();
-                  console.log("[LLM Debug] Removed prompt up to Assistant marker");
+                // Try to find "Assistant:" in the generated text
+                const assistantIndex = generatedText.indexOf(assistantMarker);
+                if (assistantIndex !== -1) {
+                  // Check if this "Assistant:" is part of the prompt or part of the generated text
+                  const beforeAssistant = generatedText.slice(0, assistantIndex);
+                  
+                  // If what comes before "Assistant:" matches the prompt up to that point, remove it
+                  if (beforeAssistant.trim() === promptUpToAssistant.slice(0, -assistantMarker.length).trim()) {
+                    generatedText = generatedText.slice(assistantIndex + assistantMarker.length).trim();
+                    console.log("[LLM Debug] Found and removed prompt Assistant marker");
+                  } else {
+                    // The "Assistant:" might be in the generated text itself, not part of prompt
+                    // In this case, we should keep everything from the start
+                    console.log("[LLM Debug] Assistant marker found but not part of prompt, keeping all text");
+                  }
+                } else {
+                  // No "Assistant:" found, the generated text might not include the prompt
+                  // Just clean up any leading whitespace
+                  generatedText = generatedText.trim();
+                  console.log("[LLM Debug] No Assistant marker found, keeping all generated text");
                 }
               }
-            }
-            
-            // Strategy 3: If still contains the prompt, try to find the first "Assistant:" after the prompt
-            if (generatedText.includes(fullPrompt)) {
-              const promptIndex = generatedText.indexOf(fullPrompt);
-              const afterPrompt = generatedText.slice(promptIndex + fullPrompt.length);
-              // Find the next "Assistant:" after the prompt
-              const nextAssistantIndex = afterPrompt.indexOf("Assistant:");
-              if (nextAssistantIndex !== -1) {
-                generatedText = afterPrompt.slice(nextAssistantIndex + "Assistant:".length).trim();
-                console.log("[LLM Debug] Extracted text after next Assistant marker");
-              } else {
-                generatedText = afterPrompt.trim();
-                console.log("[LLM Debug] Extracted text after prompt");
+            } else {
+              // No "Assistant:" in prompt, just check if prompt is at the start
+              if (generatedText.startsWith(fullPrompt)) {
+                generatedText = generatedText.slice(fullPrompt.length).trim();
+                console.log("[LLM Debug] Removed prompt (no Assistant marker)");
               }
             }
             
-            // Strategy 4: Clean up any remaining "Assistant:" prefixes at the start
-            while (generatedText.startsWith("Assistant:")) {
-              generatedText = generatedText.slice("Assistant:".length).trim();
+            // Strategy 3: Clean up any remaining "Assistant:" prefixes at the start (but be careful)
+            // Only remove if it's clearly a leftover from prompt extraction
+            if (generatedText.startsWith("Assistant:")) {
+              const afterAssistant = generatedText.slice("Assistant:".length).trim();
+              // Only remove if what follows looks like it might be part of the prompt
+              // Otherwise, it might be legitimate generated text
+              if (afterAssistant.length > 0 && !afterAssistant.toLowerCase().startsWith("what") && !afterAssistant.toLowerCase().startsWith("i'm")) {
+                generatedText = afterAssistant;
+                console.log("[LLM Debug] Removed leading Assistant marker");
+              }
             }
             
             // Strategy 5: Remove repetitive patterns (model got stuck in a loop)
