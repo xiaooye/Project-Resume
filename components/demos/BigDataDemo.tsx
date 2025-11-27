@@ -72,6 +72,20 @@ export default function BigDataDemo() {
     setScrollTop(e.currentTarget.scrollTop);
   };
 
+  // Set spacer heights using CSS custom properties (no inline styles)
+  useEffect(() => {
+    if (!isMounted) return;
+    const spacers = document.querySelectorAll('[data-spacer-height]');
+    spacers.forEach((spacer) => {
+      const height = spacer.getAttribute('data-spacer-height');
+      if (height) {
+        const el = spacer as HTMLElement;
+        el.style.setProperty('--spacer-height', `${height}px`);
+        el.style.height = 'var(--spacer-height)';
+      }
+    });
+  }, [visibleRange, filteredData.length, isMounted]);
+
   const [memoryUsage, setMemoryUsage] = useState(0);
   const [renderTime, setRenderTime] = useState(0);
 
@@ -170,9 +184,11 @@ export default function BigDataDemo() {
               </div>
             ) : renderMethod === "virtual" ? (
               <div className="is-relative">
-                {/* Spacer for items before visible range */}
+                {/* Spacer for items before visible range - using data attribute for height */}
                 {visibleRange.start > 0 && (
-                  <div style={{ height: `${visibleRange.start * VIRTUAL_ITEM_HEIGHT}px` }} />
+                  <div data-spacer-height={visibleRange.start * VIRTUAL_ITEM_HEIGHT}>
+                    {/* Height set via useEffect */}
+                  </div>
                 )}
                 <div>
                   {virtualItems.map((item) => (
@@ -199,7 +215,9 @@ export default function BigDataDemo() {
                 </div>
                 {/* Spacer for items after visible range */}
                 {visibleRange.end < filteredData.length && (
-                  <div style={{ height: `${(filteredData.length - visibleRange.end) * VIRTUAL_ITEM_HEIGHT}px` }} />
+                  <div data-spacer-height={(filteredData.length - visibleRange.end) * VIRTUAL_ITEM_HEIGHT}>
+                    {/* Height set via useEffect */}
+                  </div>
                 )}
               </div>
             ) : (

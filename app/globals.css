@@ -8,3 +8,9 @@
 body {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
+
+/* Virtual scrolling spacer - height set via data attribute */
+[data-spacer-height] {
+  display: block;
+  width: 100%;
+}
