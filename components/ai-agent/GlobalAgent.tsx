@@ -2,8 +2,9 @@
 
 /**
  * Global AI Agent Component
- * Compact, high-contrast floating chat interface
- * Uses ONLY Bulma CSS classes - no inline styles except for dynamic calculations
+ * Eye-friendly Apple Liquid Glass Style
+ * Standalone attachment - no backdrop, click outside won't close
+ * Uses ONLY Bulma CSS classes with liquid-glass styles
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -53,7 +54,7 @@ export default function GlobalAgent() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 100);
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [input]);
@@ -84,9 +85,9 @@ export default function GlobalAgent() {
 
   return (
     <>
-      {/* Floating Action Button - Smaller, more compact */}
+      {/* Floating Action Button - Liquid Glass Style */}
       <motion.button
-        className="button is-primary is-rounded"
+        className="button is-primary is-rounded liquid-glass-button"
         style={{
           position: "fixed",
           bottom: isMobile ? "16px" : "20px",
@@ -112,199 +113,177 @@ export default function GlobalAgent() {
         </span>
       </motion.button>
 
-      {/* Chat Interface */}
+      {/* Chat Interface - Liquid Glass Style, No Backdrop */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Backdrop - Lighter for better contrast */}
-            <motion.div
-              className="is-overlay"
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                zIndex: 998,
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={toggleAgent}
-              aria-hidden="true"
-            />
-            
-            {/* Chat Dialog - Compact, better contrast */}
-            <motion.div
-              className="box is-flex is-flex-direction-column"
-              style={{
-                position: "fixed",
-                bottom: isMobile ? "70px" : "80px",
-                right: isMobile ? "12px" : "20px",
-                width: isMobile ? "calc(100vw - 24px)" : "340px",
-                maxWidth: isMobile ? "calc(100vw - 24px)" : "340px",
-                maxHeight: "calc(100vh - 100px)",
-                zIndex: 999,
-                padding: isMobile ? "0.75rem" : "1rem",
-              }}
-              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              ref={chatContainerRef}
-              role="dialog"
-              aria-label="AI Assistant Chat"
-              aria-modal="true"
-            >
-              {/* Header - Compact */}
-              <div className="level mb-2">
-                <div className="level-left">
-                  <div className="level-item">
-                    <h4 className="title is-6 mb-0">
-                      <span className="icon mr-1">
-                        <i className="fas fa-robot"></i>
-                      </span>
-                      <span>AI Assistant</span>
-                    </h4>
-                  </div>
-                </div>
-                <div className="level-right">
-                  <div className="level-item">
-                    <button
-                      className="button is-small is-text"
-                      onClick={clearMessages}
-                      disabled={messages.length <= 1}
-                      aria-label="Clear chat history"
-                    >
-                      <span className="icon is-small">
-                        <i className="fas fa-trash"></i>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Current Context Info - Compact */}
-              {currentContext && (
-                <div className="notification is-info is-small mb-2 py-2 px-3">
-                  <p className="is-size-7 mb-0">
-                    <strong>Page:</strong> {currentContext.title || currentContext.pathname}
-                  </p>
-                </div>
-              )}
-
-              {/* Messages Area - Compact with better contrast */}
-              <div
-                className="box has-background-white-ter mb-2"
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  minHeight: isMobile ? "200px" : "280px",
-                  maxHeight: isMobile ? "320px" : "400px",
-                  padding: "0.75rem",
-                }}
-                role="log"
-                aria-live="polite"
-                aria-label="Chat messages"
-              >
-                {messages.length === 0 ? (
-                  <div className="has-text-centered has-text-grey-dark py-4">
-                    <span className="icon mb-2">
-                      <i className="fas fa-comments"></i>
+          <motion.div
+            className="liquid-glass-card is-flex is-flex-direction-column"
+            style={{
+              position: "fixed",
+              bottom: isMobile ? "70px" : "80px",
+              right: isMobile ? "12px" : "20px",
+              width: isMobile ? "calc(100vw - 24px)" : "360px",
+              maxWidth: isMobile ? "calc(100vw - 24px)" : "360px",
+              maxHeight: "calc(100vh - 100px)",
+              zIndex: 999,
+              padding: isMobile ? "0.75rem" : "1rem",
+            }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            ref={chatContainerRef}
+            role="dialog"
+            aria-label="AI Assistant Chat"
+            aria-modal="false"
+          >
+            {/* Header - Compact, Liquid Glass Text */}
+            <div className="level mb-2">
+              <div className="level-left">
+                <div className="level-item">
+                  <h4 className="title is-6 mb-0 liquid-glass-text">
+                    <span className="icon mr-1">
+                      <i className="fas fa-robot"></i>
                     </span>
-                    <p className="is-size-7 mb-1">Start a conversation</p>
-                    <p className="is-size-7">I can help you navigate and interact</p>
-                  </div>
-                ) : (
-                  <div className="content is-small">
-                    {messages.map((message) => (
-                      <motion.div
-                        key={message.id}
-                        initial={prefersReducedMotion ? {} : { opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className={`mb-2 ${message.role === "user" ? "has-text-right" : ""}`}
-                      >
-                        <div
-                          className={`message ${message.role === "user" ? "is-primary" : "is-info"}`}
-                          style={{
-                            maxWidth: isMobile ? "92%" : "88%",
-                            marginLeft: message.role === "user" ? "auto" : "0",
-                            marginRight: message.role === "user" ? "0" : "auto",
-                          }}
-                        >
-                          <div className="message-header is-small">
-                            <span className="is-size-7">
-                              {message.role === "user" ? "You" : "Assistant"}
-                            </span>
-                          </div>
-                          <div className="message-body py-2 px-3">
-                            <p
-                              className="is-size-7 mb-1"
-                              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                            >
-                              {message.content}
-                            </p>
-                            <p className="is-size-7 has-text-grey">
-                              <time dateTime={new Date(message.timestamp).toISOString()}>
-                                {new Date(message.timestamp).toLocaleTimeString()}
-                              </time>
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                    {isProcessing && (
-                      <div className="has-text-centered py-2" role="status" aria-live="polite">
-                        <span className="loader is-small"></span>
-                        <p className="is-size-7 has-text-grey mt-1">Thinking...</p>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
+                    <span>AI Assistant</span>
+                  </h4>
+                </div>
               </div>
+              <div className="level-right">
+                <div className="level-item">
+                  <button
+                    className="button is-small is-text"
+                    onClick={clearMessages}
+                    disabled={messages.length <= 1}
+                    aria-label="Clear chat history"
+                  >
+                    <span className="icon is-small">
+                      <i className="fas fa-trash"></i>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-              {/* Input Area - Compact */}
-              <div className="field mb-0">
-                <div className="control">
-                  <textarea
-                    ref={textareaRef}
-                    className="textarea is-small"
-                    rows={1}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask me anything..."
-                    disabled={isProcessing}
-                    aria-label="Chat input"
-                  />
-                </div>
-                <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-1 mb-0`}>
-                  <div className="control">
-                    <button
-                      className={`button is-primary is-small ${isMobile ? "is-fullwidth" : ""}`}
-                      onClick={handleSend}
-                      disabled={!input.trim() || isProcessing}
-                      aria-label="Send message"
-                    >
-                      <span className="icon is-small">
-                        <i className="fas fa-paper-plane"></i>
-                      </span>
-                      <span>Send</span>
-                    </button>
-                  </div>
-                </div>
-                <p className="help is-size-7 mt-1 mb-0">
-                  <span className="icon is-small">
-                    <i className="fas fa-info-circle"></i>
-                  </span>
-                  Press Enter to send, Shift+Enter for new line
+            {/* Current Context Info - Liquid Glass Style */}
+            {currentContext && (
+              <div className="notification is-info is-small mb-2 py-2 px-3 liquid-glass">
+                <p className="is-size-7 mb-0 liquid-glass-text">
+                  <strong>Page:</strong> {currentContext.title || currentContext.pathname}
                 </p>
               </div>
-            </motion.div>
-          </>
+            )}
+
+            {/* Messages Area - Liquid Glass Style */}
+            <div
+              className="liquid-glass mb-2"
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                minHeight: isMobile ? "200px" : "280px",
+                maxHeight: isMobile ? "320px" : "400px",
+                padding: "0.75rem",
+              }}
+              role="log"
+              aria-live="polite"
+              aria-label="Chat messages"
+            >
+              {messages.length === 0 ? (
+                <div className="has-text-centered py-4">
+                  <span className="icon mb-2 liquid-glass-text">
+                    <i className="fas fa-comments"></i>
+                  </span>
+                  <p className="is-size-7 mb-1 liquid-glass-text">Start a conversation</p>
+                  <p className="is-size-7 liquid-glass-text">I can help you navigate and interact</p>
+                </div>
+              ) : (
+                <div className="content is-small">
+                  {messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      initial={prefersReducedMotion ? {} : { opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className={`mb-2 ${message.role === "user" ? "has-text-right" : ""}`}
+                    >
+                      <div
+                        className={`message ${message.role === "user" ? "is-primary" : "is-info"}`}
+                        style={{
+                          maxWidth: isMobile ? "92%" : "88%",
+                          marginLeft: message.role === "user" ? "auto" : "0",
+                          marginRight: message.role === "user" ? "0" : "auto",
+                        }}
+                      >
+                        <div className="message-header is-small">
+                          <span className="is-size-7">
+                            {message.role === "user" ? "You" : "Assistant"}
+                          </span>
+                        </div>
+                        <div className="message-body py-2 px-3">
+                          <p
+                            className="is-size-7 mb-1"
+                            style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                          >
+                            {message.content}
+                          </p>
+                          <p className="is-size-7 has-text-grey">
+                            <time dateTime={new Date(message.timestamp).toISOString()}>
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </time>
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {isProcessing && (
+                    <div className="has-text-centered py-2" role="status" aria-live="polite">
+                      <span className="loader is-small"></span>
+                      <p className="is-size-7 has-text-grey mt-1">Thinking...</p>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* Input Area - Liquid Glass Style */}
+            <div className="field mb-0">
+              <div className="control">
+                <textarea
+                  ref={textareaRef}
+                  className="textarea is-small liquid-glass"
+                  rows={1}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask me anything..."
+                  disabled={isProcessing}
+                  aria-label="Chat input"
+                />
+              </div>
+              <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-1 mb-0`}>
+                <div className="control">
+                  <button
+                    className={`button is-primary is-small liquid-glass-button ${isMobile ? "is-fullwidth" : ""}`}
+                    onClick={handleSend}
+                    disabled={!input.trim() || isProcessing}
+                    aria-label="Send message"
+                  >
+                    <span className="icon is-small">
+                      <i className="fas fa-paper-plane"></i>
+                    </span>
+                    <span>Send</span>
+                  </button>
+                </div>
+              </div>
+              <p className="help is-size-7 mt-1 mb-0 liquid-glass-text">
+                <span className="icon is-small">
+                  <i className="fas fa-info-circle"></i>
+                </span>
+                Press Enter to send, Shift+Enter for new line
+              </p>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
