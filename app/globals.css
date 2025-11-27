@@ -79,3 +79,20 @@ body {
   position: relative;
   z-index: 10;
 }
+
+/* Spacing utilities for Bulma compatibility */
+.mb-6 {
+  margin-bottom: 3rem !important;
+}
+
+.mt-6 {
+  margin-top: 3rem !important;
+}
+
+.mb-4 {
+  margin-bottom: 2rem !important;
+}
+
+.mt-4 {
+  margin-top: 2rem !important;
+}
