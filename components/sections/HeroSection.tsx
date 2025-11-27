@@ -107,7 +107,7 @@ export default function HeroSection() {
   return (
     <section className="hero is-fullheight">
       {/* 3D Background */}
-      <div className="is-absolute" style={{ inset: 0, zIndex: 0 }}>
+      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <Scene3D />
       </div>
 
