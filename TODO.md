@@ -274,12 +274,12 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
   - [x] **性能监控** - 渲染时间，内存使用，FPS 监控
   - [x] **大数据分析** - 数据统计，过滤性能，搜索优化
 
-- [ ] **WebAssembly 3D 演示** (CTO Expectation: Performance Engineering)
-  - [ ] Three.js + WASM 加速 - 性能对比（WASM vs JS）
-  - [ ] 3D 渲染优化 - LOD，视锥剔除，实例化渲染
-  - [ ] 响应式 3D - 移动端性能优化，触摸控制
-  - [ ] 性能指标 - FPS，绘制调用，内存使用
-  - [ ] 无障碍 - 3D 场景描述，键盘控制，替代视图
+- [x] **WebAssembly 3D 演示** (CTO Expectation: Performance Engineering)
+  - [x] Three.js + WASM 加速 - 性能对比（WASM vs JS）
+  - [x] 3D 渲染优化 - LOD，视锥剔除，实例化渲染
+  - [x] 响应式 3D - 移动端性能优化，触摸控制
+  - [x] 性能指标 - FPS，绘制调用，内存使用
+  - [x] 无障碍 - 3D 场景描述，键盘控制，替代视图
 
 - [ ] **WebAssembly 视频编码演示** (Staff Level: Media Processing)
   - [ ] FFmpeg.wasm 视频处理 - 编码/解码，格式转换
