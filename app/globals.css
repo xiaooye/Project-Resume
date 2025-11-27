@@ -541,15 +541,21 @@ html.dark .help.liquid-glass-text {
 
 /* 表格主题支持 - 护眼配色 - Apple Design Guide - WCAG 2.2 AAA 对比度 */
 .liquid-glass-card table,
+.table-container table,
 .table-container table.liquid-glass-card,
-.table-container .liquid-glass-card table {
+.table-container .liquid-glass-card table,
+.box.liquid-glass-card table,
+.box.liquid-glass-card .table-container table {
   background-color: transparent;
   color: #000000;
 }
 
 .liquid-glass-card table thead th,
+.table-container table thead th,
 .table-container table.liquid-glass-card thead th,
-.table-container .liquid-glass-card table thead th {
+.table-container .liquid-glass-card table thead th,
+.box.liquid-glass-card table thead th,
+.box.liquid-glass-card .table-container table thead th {
   color: #000000 !important;
   font-weight: 700;
   border-bottom-color: rgba(0, 0, 0, 0.15);
@@ -557,62 +563,95 @@ html.dark .help.liquid-glass-text {
 }
 
 .liquid-glass-card table thead th.liquid-glass-text,
+.table-container table thead th.liquid-glass-text,
 .table-container table.liquid-glass-card thead th.liquid-glass-text,
-.table-container .liquid-glass-card table thead th.liquid-glass-text {
+.table-container .liquid-glass-card table thead th.liquid-glass-text,
+.box.liquid-glass-card table thead th.liquid-glass-text,
+.box.liquid-glass-card .table-container table thead th.liquid-glass-text {
   color: #000000 !important;
 }
 
 .liquid-glass-card table tbody td,
+.table-container table tbody td,
 .table-container table.liquid-glass-card tbody td,
-.table-container .liquid-glass-card table tbody td {
+.table-container .liquid-glass-card table tbody td,
+.box.liquid-glass-card table tbody td,
+.box.liquid-glass-card .table-container table tbody td {
   color: #000000 !important;
   border-bottom-color: rgba(0, 0, 0, 0.08);
   background-color: transparent;
 }
 
 .liquid-glass-card table tbody td.liquid-glass-text,
+.table-container table tbody td.liquid-glass-text,
 .table-container table.liquid-glass-card tbody td.liquid-glass-text,
-.table-container .liquid-glass-card table tbody td.liquid-glass-text {
+.table-container .liquid-glass-card table tbody td.liquid-glass-text,
+.box.liquid-glass-card table tbody td.liquid-glass-text,
+.box.liquid-glass-card .table-container table tbody td.liquid-glass-text {
   color: #000000 !important;
 }
 
 .liquid-glass-card table tbody td code,
 .liquid-glass-card table tbody td code.liquid-glass-text,
+.table-container table tbody td code,
+.table-container table tbody td code.liquid-glass-text,
 .table-container table.liquid-glass-card tbody td code,
 .table-container table.liquid-glass-card tbody td code.liquid-glass-text,
 .table-container .liquid-glass-card table tbody td code,
-.table-container .liquid-glass-card table tbody td code.liquid-glass-text {
+.table-container .liquid-glass-card table tbody td code.liquid-glass-text,
+.box.liquid-glass-card table tbody td code,
+.box.liquid-glass-card table tbody td code.liquid-glass-text,
+.box.liquid-glass-card .table-container table tbody td code,
+.box.liquid-glass-card .table-container table tbody td code.liquid-glass-text {
   color: #000000 !important;
   background-color: rgba(0, 0, 0, 0.05);
   font-weight: 600;
 }
 
-.liquid-glass-card table tbody tr:hover {
+.liquid-glass-card table tbody tr:hover,
+.table-container table tbody tr:hover,
+.box.liquid-glass-card table tbody tr:hover,
+.box.liquid-glass-card .table-container table tbody tr:hover {
   background-color: rgba(0, 0, 0, 0.03);
 }
 
-.liquid-glass-card table tbody tr:hover td {
+.liquid-glass-card table tbody tr:hover td,
+.table-container table tbody tr:hover td,
+.box.liquid-glass-card table tbody tr:hover td,
+.box.liquid-glass-card .table-container table tbody tr:hover td {
   color: #000000 !important;
 }
 
-.liquid-glass-card table.is-striped tbody tr:nth-child(even) {
+.liquid-glass-card table.is-striped tbody tr:nth-child(even),
+.table-container table.is-striped tbody tr:nth-child(even),
+.box.liquid-glass-card table.is-striped tbody tr:nth-child(even),
+.box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) {
   background-color: rgba(0, 0, 0, 0.02);
 }
 
-.liquid-glass-card table.is-striped tbody tr:nth-child(even) td {
+.liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
+.table-container table.is-striped tbody tr:nth-child(even) td,
+.box.liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
+.box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) td {
   color: #000000 !important;
 }
 
 /* 深色模式表格样式 */
 html.dark .liquid-glass-card table,
+html.dark .table-container table,
 html.dark .table-container table.liquid-glass-card,
-html.dark .table-container .liquid-glass-card table {
+html.dark .table-container .liquid-glass-card table,
+html.dark .box.liquid-glass-card table,
+html.dark .box.liquid-glass-card .table-container table {
   color: #ffffff;
 }
 
 html.dark .liquid-glass-card table thead th,
+html.dark .table-container table thead th,
 html.dark .table-container table.liquid-glass-card thead th,
-html.dark .table-container .liquid-glass-card table thead th {
+html.dark .table-container .liquid-glass-card table thead th,
+html.dark .box.liquid-glass-card table thead th,
+html.dark .box.liquid-glass-card .table-container table thead th {
   color: #ffffff !important;
   font-weight: 700;
   border-bottom-color: rgba(255, 255, 255, 0.15);
@@ -620,34 +659,77 @@ html.dark .table-container .liquid-glass-card table thead th {
 }
 
 html.dark .liquid-glass-card table thead th.liquid-glass-text,
+html.dark .table-container table thead th.liquid-glass-text,
 html.dark .table-container table.liquid-glass-card thead th.liquid-glass-text,
-html.dark .table-container .liquid-glass-card table thead th.liquid-glass-text {
+html.dark .table-container .liquid-glass-card table thead th.liquid-glass-text,
+html.dark .box.liquid-glass-card table thead th.liquid-glass-text,
+html.dark .box.liquid-glass-card .table-container table thead th.liquid-glass-text {
   color: #ffffff !important;
 }
 
 html.dark .liquid-glass-card table tbody td,
+html.dark .table-container table tbody td,
 html.dark .table-container table.liquid-glass-card tbody td,
-html.dark .table-container .liquid-glass-card table tbody td {
+html.dark .table-container .liquid-glass-card table tbody td,
+html.dark .box.liquid-glass-card table tbody td,
+html.dark .box.liquid-glass-card .table-container table tbody td {
   color: #ffffff !important;
   border-bottom-color: rgba(255, 255, 255, 0.08);
   background-color: transparent;
 }
 
 html.dark .liquid-glass-card table tbody td.liquid-glass-text,
+html.dark .table-container table tbody td.liquid-glass-text,
 html.dark .table-container table.liquid-glass-card tbody td.liquid-glass-text,
-html.dark .table-container .liquid-glass-card table tbody td.liquid-glass-text {
+html.dark .table-container .liquid-glass-card table tbody td.liquid-glass-text,
+html.dark .box.liquid-glass-card table tbody td.liquid-glass-text,
+html.dark .box.liquid-glass-card .table-container table tbody td.liquid-glass-text {
   color: #ffffff !important;
 }
 
 html.dark .liquid-glass-card table tbody td code,
 html.dark .liquid-glass-card table tbody td code.liquid-glass-text,
+html.dark .table-container table tbody td code,
+html.dark .table-container table tbody td code.liquid-glass-text,
 html.dark .table-container table.liquid-glass-card tbody td code,
 html.dark .table-container table.liquid-glass-card tbody td code.liquid-glass-text,
 html.dark .table-container .liquid-glass-card table tbody td code,
-html.dark .table-container .liquid-glass-card table tbody td code.liquid-glass-text {
+html.dark .table-container .liquid-glass-card table tbody td code.liquid-glass-text,
+html.dark .box.liquid-glass-card table tbody td code,
+html.dark .box.liquid-glass-card table tbody td code.liquid-glass-text,
+html.dark .box.liquid-glass-card .table-container table tbody td code,
+html.dark .box.liquid-glass-card .table-container table tbody td code.liquid-glass-text {
   color: #ffffff !important;
   background-color: rgba(255, 255, 255, 0.1);
   font-weight: 600;
+}
+
+html.dark .liquid-glass-card table tbody tr:hover,
+html.dark .table-container table tbody tr:hover,
+html.dark .box.liquid-glass-card table tbody tr:hover,
+html.dark .box.liquid-glass-card .table-container table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .liquid-glass-card table tbody tr:hover td,
+html.dark .table-container table tbody tr:hover td,
+html.dark .box.liquid-glass-card table tbody tr:hover td,
+html.dark .box.liquid-glass-card .table-container table tbody tr:hover td {
+  color: #ffffff !important;
+}
+
+html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even),
+html.dark .table-container table.is-striped tbody tr:nth-child(even),
+html.dark .box.liquid-glass-card table.is-striped tbody tr:nth-child(even),
+html.dark .box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
+html.dark .table-container table.is-striped tbody tr:nth-child(even) td,
+html.dark .box.liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
+html.dark .box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) td {
+  color: #ffffff !important;
 }
 
 html.dark .liquid-glass-card table tbody tr:hover {

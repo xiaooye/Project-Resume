@@ -1234,7 +1234,7 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
               <p className="liquid-glass-text">No requests yet. Use controls above to send requests.</p>
             ) : (
               <div className="table-container">
-                <table className="table is-fullwidth is-striped liquid-glass-card">
+                <table className="table is-fullwidth is-striped">
                   <thead>
                     <tr>
                       <th className="liquid-glass-text">Request ID</th>
@@ -1287,10 +1287,10 @@ export default function EnterpriseMicroservicesDemo({ project }: { project: Proj
                         {service.status}
                       </span>
                     </div>
-                    <div className="content is-small liquid-glass-text">
-                      <p><strong>Latency:</strong> {service.latency.toFixed(1)}ms</p>
-                      <p><strong>Requests:</strong> {Math.floor(service.requests).toLocaleString()}/min</p>
-                      <p><strong>Error Rate:</strong> {service.errorRate.toFixed(2)}%</p>
+                    <div className="content is-small">
+                      <p className="liquid-glass-text"><strong>Latency:</strong> {service.latency.toFixed(1)}ms</p>
+                      <p className="liquid-glass-text"><strong>Requests:</strong> {Math.floor(service.requests).toLocaleString()}/min</p>
+                      <p className="liquid-glass-text"><strong>Error Rate:</strong> {service.errorRate.toFixed(2)}%</p>
                       <progress
                         className="progress is-info"
                         value={100 - service.errorRate * 10}
