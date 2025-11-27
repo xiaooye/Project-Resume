@@ -107,12 +107,12 @@ export default function HeroSection() {
   return (
     <section className="hero is-fullheight">
       {/* 3D Background */}
-      <div className="hero-3d-background">
+      <div className="is-absolute" style={{ inset: 0, zIndex: 0 }}>
         <Scene3D />
       </div>
 
       {/* Content */}
-      <div className="hero-body hero-body-content">
+      <div className="hero-body" style={{ position: "relative", zIndex: 10 }}>
         <div className="container has-text-centered">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -120,7 +120,7 @@ export default function HeroSection() {
             transition={{ duration: 0.8 }}
           >
             <motion.h1
-              className="title is-1 has-gradient-text mb-6 hero-title-large"
+              className="title is-1 mb-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -129,19 +129,17 @@ export default function HeroSection() {
             </motion.h1>
 
             <motion.div
-              className="title is-1 mb-6 hero-title-medium"
+              className="title is-1 mb-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <span className="has-gradient-text">
-                {displayText}
-                <span className="typing-indicator">|</span>
-              </span>
+              {displayText}
+              <span>|</span>
             </motion.div>
 
             <motion.p
-              className="subtitle is-4 mb-6 hero-subtitle-container"
+              className="subtitle is-4 mb-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
@@ -180,14 +178,15 @@ export default function HeroSection() {
 
       {/* Scroll Indicator */}
       <motion.div
-        className="hero-foot hero-body-content"
+        className="hero-foot"
+        style={{ position: "relative", zIndex: 10 }}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, repeat: Infinity, repeatType: "reverse", duration: 1.5 }}
       >
         <div className="container has-text-centered">
           <svg
-            className="icon-size-medium"
+            style={{ width: "24px", height: "24px" }}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"

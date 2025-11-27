@@ -153,11 +153,12 @@ export default function BigDataDemo() {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="scroll-container"
+            className="has-background-white"
+            style={{ height: "600px", overflowY: "auto" }}
           >
             {renderMethod === "virtual" ? (
               <div
-                className="virtual-scroll-wrapper"
+                className="is-relative"
                 style={{
                   height: filteredData.length * VIRTUAL_ITEM_HEIGHT,
                 }}
@@ -173,7 +174,8 @@ export default function BigDataDemo() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="virtual-scroll-item"
+                      className="is-flex is-align-items-center is-justify-content-space-between"
+                      style={{ height: VIRTUAL_ITEM_HEIGHT, padding: "12px", borderBottom: "1px solid #dbdbdb" }}
                     >
                       <div>
                         <strong>{item.name}</strong>
@@ -197,7 +199,8 @@ export default function BigDataDemo() {
                     key={item.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="data-item-row"
+                    className="is-flex is-align-items-center is-justify-content-space-between"
+                    style={{ padding: "12px", borderBottom: "1px solid #dbdbdb" }}
                   >
                     <div>
                       <strong>{item.name}</strong>

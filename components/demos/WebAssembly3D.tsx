@@ -59,7 +59,7 @@ function Scene3D() {
   const [performance, setPerformance] = useState({ fps: 0, triangles: 0 });
 
   return (
-    <div className="canvas-container">
+    <div className="is-relative" style={{ width: "100%", height: "600px" }}>
       <Canvas>
         <PerspectiveCamera makeDefault position={[0, 0, 10]} />
         <ambientLight intensity={0.5} />
@@ -70,9 +70,11 @@ function Scene3D() {
         <Stars radius={300} depth={50} count={5000} factor={4} fade speed={1} />
         <OrbitControls enableZoom={true} enablePan={true} />
       </Canvas>
-      <div className="performance-overlay">
-        <div>FPS: {performance.fps}</div>
-        <div>Triangles: {performance.triangles}</div>
+      <div className="is-absolute" style={{ top: "10px", right: "10px" }}>
+        <div className="box">
+          <div>FPS: {performance.fps}</div>
+          <div>Triangles: {performance.triangles}</div>
+        </div>
       </div>
     </div>
   );

@@ -42,7 +42,7 @@ export default function Navbar() {
       animate={{ y: 0 }}
       className={`navbar is-fixed-top ${
         isScrolled
-          ? "has-background-white has-shadow navbar-backdrop"
+          ? "has-background-white has-shadow"
           : "is-transparent"
       }`}
       role="navigation"
