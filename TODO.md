@@ -408,10 +408,10 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
   - [x] **安全** - CSRF 保护，输入验证，XSS 防护
 
 #### Advanced Features (Continued)
-- [ ] 高级动画
-  - [ ] Lottie 动画
-  - [ ] GSAP 动画
-  - [ ] 粒子系统
+- [x] 高级动画
+  - [x] Lottie 动画
+  - [x] GSAP 动画
+  - [x] 粒子系统
 
 - [ ] 安全功能
   - [ ] OAuth 集成
