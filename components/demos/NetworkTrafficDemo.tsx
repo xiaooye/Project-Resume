@@ -6,7 +6,8 @@ import * as d3 from "d3";
 import { NetworkTrafficData } from "@/types";
 
 function generateMockData(): NetworkTrafficData[] {
-  return Array.from({ length: SERVER_COUNT }, (_, i) => ({
+  // Generate initial data for 50 servers (matches API)
+  return Array.from({ length: 50 }, (_, i) => ({
     timestamp: Date.now(),
     serverId: `server-${i + 1}`,
     requests: Math.floor(Math.random() * 1000) + 100,
