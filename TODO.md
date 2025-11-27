@@ -357,12 +357,12 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
   - [x] **响应式优化** - 移动端视频通话，触摸控制
   - [x] **性能优化** - 带宽自适应，质量降级
 
-- [ ] **Web3 集成** (CTO Expectation: Emerging Technology)
-  - [ ] MetaMask 连接 - 钱包集成，交易签名
-  - [ ] 智能合约交互 - 读取/写入，Gas 优化
-  - [ ] NFT 展示 - 元数据获取，图片优化
-  - [ ] **响应式优化** - 移动端钱包连接
-  - [ ] **安全** - 交易确认，错误处理
+- [x] **Web3 集成** (CTO Expectation: Emerging Technology)
+  - [x] MetaMask 连接 - 钱包集成，交易签名
+  - [x] 智能合约交互 - 读取/写入，Gas 优化
+  - [x] NFT 展示 - 元数据获取，图片优化
+  - [x] **响应式优化** - 移动端钱包连接
+  - [x] **安全** - 交易确认，错误处理
 
 - [ ] **GraphQL 集成** (Staff Level: API Architecture)
   - [ ] Apollo Server 设置 - Schema 设计，Resolver 优化
