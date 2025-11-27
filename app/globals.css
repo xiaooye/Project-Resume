@@ -270,12 +270,12 @@ body::after {
 }
 
 /* 深色模式背景 - 护眼配色 - WCAG 2.2 AAA 对比度 */
-.dark body {
+html.dark body {
   background: #0a0a0a;
   color: #ffffff;
 }
 
-.dark body::before {
+html.dark body::before {
   background: 
     radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
@@ -283,17 +283,17 @@ body::after {
     linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 25%, #171717 50%, #1a1a1a 75%, #0f0f0f 100%);
 }
 
-.dark body::after {
+html.dark body::after {
   background-image: 
     linear-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(99, 102, 241, 0.08) 1px, transparent 1px);
 }
 
-.dark .floating-shapes::before {
+html.dark .floating-shapes::before {
   background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
 }
 
-.dark .floating-shapes::after {
+html.dark .floating-shapes::after {
   background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
 }
 
@@ -353,13 +353,13 @@ body::after {
 }
 
 /* 深色模式下的液态玻璃 - 护眼配色 */
-.dark .liquid-glass {
+html.dark .liquid-glass {
   background: var(--glass-bg-dark);
   border: 1px solid var(--glass-border-dark);
   box-shadow: var(--glass-shadow-dark);
 }
 
-.dark .liquid-glass::before {
+html.dark .liquid-glass::before {
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.05) 0%,
@@ -368,7 +368,7 @@ body::after {
   );
 }
 
-.dark .liquid-glass:hover {
+html.dark .liquid-glass:hover {
   background: rgba(30, 30, 30, 0.9);
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 4px 12px 0 rgba(0, 0, 0, 0.35);
 }
@@ -391,17 +391,17 @@ body::after {
   color: #6366f1;
 }
 
-.dark .liquid-glass-nav {
+html.dark .liquid-glass-nav {
   background: rgba(18, 18, 18, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.4), 0 1px 4px 0 rgba(0, 0, 0, 0.3);
 }
 
-.dark .liquid-glass-nav .navbar-item {
+html.dark .liquid-glass-nav .navbar-item {
   color: #ffffff;
 }
 
-.dark .liquid-glass-nav .navbar-item:hover {
+html.dark .liquid-glass-nav .navbar-item:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: #818cf8;
 }
@@ -424,13 +424,13 @@ body::after {
   transform: translateY(-4px) scale(1.01);
 }
 
-.dark .liquid-glass-card {
+html.dark .liquid-glass-card {
   background: rgba(28, 28, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), 0 2px 8px 0 rgba(0, 0, 0, 0.3);
 }
 
-.dark .liquid-glass-card:hover {
+html.dark .liquid-glass-card:hover {
   background: rgba(32, 32, 34, 1);
   box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.5), 0 4px 12px 0 rgba(0, 0, 0, 0.35);
 }
@@ -465,25 +465,25 @@ body::after {
   color: white;
 }
 
-.dark .liquid-glass-button {
+html.dark .liquid-glass-button {
   background: rgba(30, 30, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
   color: #ffffff;
 }
 
-.dark .liquid-glass-button:hover {
+html.dark .liquid-glass-button:hover {
   background: rgba(40, 40, 40, 1);
   box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.5);
   color: #ffffff;
 }
 
-.dark .liquid-glass-button.is-primary {
+html.dark .liquid-glass-button.is-primary {
   background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
   color: white;
 }
 
-.dark .liquid-glass-button.is-primary:hover {
+html.dark .liquid-glass-button.is-primary:hover {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
 }
@@ -496,7 +496,7 @@ body::after {
   font-weight: 500;
 }
 
-.dark .liquid-glass-text {
+html.dark .liquid-glass-text {
   color: #ffffff;
   text-shadow: none;
   /* 确保 WCAG 2.2 AAA 对比度 7:1 - Apple Dark Mode */
@@ -584,7 +584,7 @@ html {
   border-radius: 2px;
 }
 
-.dark *:focus-visible {
+html.dark *:focus-visible {
   outline-color: #818cf8;
 }
 
@@ -641,33 +641,33 @@ html {
   font-weight: 600;
 }
 
-.dark .liquid-glass-card .input,
-.dark .liquid-glass-card .textarea,
-.dark .liquid-glass-card .select select {
+html.dark .liquid-glass-card .input,
+html.dark .liquid-glass-card .textarea,
+html.dark .liquid-glass-card .select select {
   background-color: rgba(36, 36, 38, 0.95);
   border-color: rgba(255, 255, 255, 0.3);
   color: #ffffff;
   font-weight: 500;
 }
 
-.dark .liquid-glass-card .input::placeholder,
-.dark .liquid-glass-card .textarea::placeholder {
+html.dark .liquid-glass-card .input::placeholder,
+html.dark .liquid-glass-card .textarea::placeholder {
   color: rgba(255, 255, 255, 0.6);
   opacity: 1;
 }
 
-.dark .liquid-glass-card .label {
+html.dark .liquid-glass-card .label {
   color: #ffffff;
   font-weight: 600;
   opacity: 1;
 }
 
-.dark .liquid-glass-card .help {
+html.dark .liquid-glass-card .help {
   color: rgba(255, 255, 255, 0.9);
   font-weight: 400;
 }
 
-.dark .liquid-glass-card .help.is-danger {
+html.dark .liquid-glass-card .help.is-danger {
   color: #ff6b6b;
   font-weight: 600;
 }
@@ -702,30 +702,30 @@ html {
   border-left-color: #dc3545;
 }
 
-.dark .liquid-glass-card .tag {
+html.dark .liquid-glass-card .tag {
   background-color: #6366f1;
   color: #ffffff;
   font-weight: 600;
 }
 
-.dark .liquid-glass-card .tag.is-info {
+html.dark .liquid-glass-card .tag.is-info {
   background-color: #3b82f6;
   color: #ffffff;
 }
 
-.dark .liquid-glass-card .notification {
+html.dark .liquid-glass-card .notification {
   background-color: #1a1a1a;
   color: #ffffff;
   border-left: 4px solid;
 }
 
-.dark .liquid-glass-card .notification.is-success {
+html.dark .liquid-glass-card .notification.is-success {
   background-color: #1e3a1e;
   color: #90ee90;
   border-left-color: #28a745;
 }
 
-.dark .liquid-glass-card .notification.is-danger {
+html.dark .liquid-glass-card .notification.is-danger {
   background-color: #3a1e1e;
   color: #ff6b6b;
   border-left-color: #dc3545;
@@ -740,7 +740,7 @@ html {
   box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.15), 0 8px 24px 0 rgba(0, 0, 0, 0.1);
 }
 
-.dark .modal-card {
+html.dark .modal-card {
   background: rgba(28, 28, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.6), 0 8px 24px 0 rgba(0, 0, 0, 0.4);
@@ -752,8 +752,8 @@ html {
   border-color: rgba(0, 0, 0, 0.1);
 }
 
-.dark .modal-card-head,
-.dark .modal-card-foot {
+html.dark .modal-card-head,
+html.dark .modal-card-foot {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -762,7 +762,7 @@ html {
   font-weight: 600;
 }
 
-.dark .modal-card-title {
+html.dark .modal-card-title {
   color: #ffffff;
   font-weight: 600;
 }
@@ -775,7 +775,7 @@ html {
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-.dark .modal-background {
+html.dark .modal-background {
   background-color: rgba(0, 0, 0, 0.7);
 }
 
@@ -786,8 +786,8 @@ html {
   font-weight: 600;
 }
 
-.dark .liquid-glass-card .title,
-.dark .liquid-glass-card .subtitle {
+html.dark .liquid-glass-card .title,
+html.dark .liquid-glass-card .subtitle {
   color: #ffffff;
   font-weight: 600;
   opacity: 1;
@@ -798,7 +798,7 @@ html {
   background-color: rgba(0, 0, 0, 0.1);
 }
 
-.dark .progress {
+html.dark .progress {
   background-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -809,7 +809,7 @@ html {
     border: 2px solid rgba(0, 0, 0, 0.2);
   }
   
-  .dark .liquid-glass {
+  html.dark .liquid-glass {
     background: rgba(32, 32, 34, 0.98);
     border: 2px solid rgba(255, 255, 255, 0.3);
   }
@@ -819,7 +819,7 @@ html {
     font-weight: 600;
   }
   
-  .dark .liquid-glass-text {
+  html.dark .liquid-glass-text {
     color: #ffffff;
     font-weight: 600;
   }
