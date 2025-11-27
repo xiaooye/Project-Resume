@@ -254,6 +254,59 @@ export default function ProjectsPage() {
           </div>
         </div>
 
+        {/* Project Statistics */}
+        <div className="box liquid-glass-card mb-6">
+          <h2 className="title is-4 mb-4 liquid-glass-text">Project Statistics</h2>
+          <div className="columns is-mobile is-multiline">
+            <div className="column is-half-mobile is-one-third-tablet">
+              <div className="has-text-centered">
+                <p className="title is-3 liquid-glass-text">{projectsData.length}</p>
+                <p className="subtitle is-6 liquid-glass-text">Total Projects</p>
+              </div>
+            </div>
+            <div className="column is-half-mobile is-one-third-tablet">
+              <div className="has-text-centered">
+                <p className="title is-3 liquid-glass-text">
+                  {projectsData.filter((p) => p.status === "completed").length}
+                </p>
+                <p className="subtitle is-6 liquid-glass-text">Completed</p>
+              </div>
+            </div>
+            <div className="column is-half-mobile is-one-third-tablet">
+              <div className="has-text-centered">
+                <p className="title is-3 liquid-glass-text">
+                  {projectsData.filter((p) => p.status === "in-progress").length}
+                </p>
+                <p className="subtitle is-6 liquid-glass-text">In Progress</p>
+              </div>
+            </div>
+            <div className="column is-half-mobile is-one-third-tablet">
+              <div className="has-text-centered">
+                <p className="title is-3 liquid-glass-text">
+                  {projectsData.filter((p) => p.status === "planned").length}
+                </p>
+                <p className="subtitle is-6 liquid-glass-text">Planned</p>
+              </div>
+            </div>
+            <div className="column is-half-mobile is-one-third-tablet">
+              <div className="has-text-centered">
+                <p className="title is-3 liquid-glass-text">
+                  {projectsData.filter((p) => p.featured).length}
+                </p>
+                <p className="subtitle is-6 liquid-glass-text">Featured</p>
+              </div>
+            </div>
+            <div className="column is-half-mobile is-one-third-tablet">
+              <div className="has-text-centered">
+                <p className="title is-3 liquid-glass-text">
+                  {categories.length}
+                </p>
+                <p className="subtitle is-6 liquid-glass-text">Categories</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Category Filter */}
         <div className="box liquid-glass-card mb-6">
           <h2 className="title is-5 mb-4 liquid-glass-text">Category Filter</h2>
