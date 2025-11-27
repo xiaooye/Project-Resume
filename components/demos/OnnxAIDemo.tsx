@@ -14,7 +14,6 @@ import ImageClassificationInterface from "./onnx-ai/ImageClassificationInterface
 import TextClassificationInterface from "./onnx-ai/TextClassificationInterface";
 import PerformanceComparison, { BackendPerformance } from "./onnx-ai/PerformanceComparison";
 import { agentService } from "@/lib/ai-agent/agent-service";
-import { useEffect } from "react";
 
 type InputSource = "camera" | "upload" | "url" | "text";
 
@@ -137,7 +136,8 @@ export default function OnnxAIDemo() {
       }
       return "No input provided";
     });
-  }, [isMounted, availableModels, isModelLoaded, currentModel, loadModel, runInference]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted, availableModels, isModelLoaded, currentModel]);
 
   // Initialize models list
   useEffect(() => {

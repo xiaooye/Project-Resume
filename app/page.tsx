@@ -40,6 +40,12 @@ export default function Home() {
       href: "/demos/ai-agent",
       icon: "💬",
     },
+    {
+      title: "AWS Integration",
+      description: "S3, Lambda, API Gateway, CloudWatch, DynamoDB",
+      href: "/demos/aws",
+      icon: "☁️",
+    },
   ];
 
   return (
