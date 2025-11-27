@@ -19,6 +19,7 @@ export interface Skill {
 export interface NetworkTrafficData {
   timestamp: number;
   serverId: string;
+  region?: string;
   requests: number;
   latency: number;
   throughput: number;

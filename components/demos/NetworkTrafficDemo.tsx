@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import * as d3 from "d3";
 import { NetworkTrafficData } from "@/types";
 
-const SERVER_COUNT = 5;
-
 function generateMockData(): NetworkTrafficData[] {
   return Array.from({ length: SERVER_COUNT }, (_, i) => ({
     timestamp: Date.now(),
@@ -20,6 +18,7 @@ function generateMockData(): NetworkTrafficData[] {
 
 export default function NetworkTrafficDemo() {
   const [data, setData] = useState<NetworkTrafficData[]>([]);
+  const [dataHistory, setDataHistory] = useState<NetworkTrafficData[][]>([]); // Store last 50 updates
   const [isConnected, setIsConnected] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -46,6 +45,11 @@ export default function NetworkTrafficDemo() {
         try {
           const newData = JSON.parse(event.data) as NetworkTrafficData[];
           setData(newData);
+          // Maintain history for latency trend chart (last 50 updates)
+          setDataHistory((prev) => {
+            const updated = [...prev, newData];
+            return updated.slice(-50); // Keep only last 50 updates
+          });
         } catch (error) {
           console.error("Error parsing network traffic data:", error);
         }
@@ -76,9 +80,11 @@ export default function NetworkTrafficDemo() {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 800;
-    const height = 400;
-    const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+    // Scale up for 50 servers - use responsive width
+    const containerWidth = svgRef.current.clientWidth || 1200;
+    const width = Math.max(containerWidth, data.length * 25);
+    const height = 500;
+    const margin = { top: 20, right: 30, bottom: 60, left: 60 };
 
     const xScale = d3
       .scaleBand()
@@ -150,25 +156,41 @@ export default function NetworkTrafficDemo() {
       .attr("x", width / 2)
       .attr("y", height - 10)
       .attr("text-anchor", "middle")
-      .text("Server ID");
+      .text("Server ID")
+      .style("font-size", "10px");
+    
+    // Rotate x-axis labels for better readability with many servers
+    svg
+      .selectAll(".tick text")
+      .style("font-size", "9px")
+      .attr("transform", "rotate(-45)")
+      .attr("text-anchor", "end")
+      .attr("dx", "-0.5em")
+      .attr("dy", "0.5em");
   }, [data, isMounted]);
 
   useEffect(() => {
-    if (!isMounted || !chartRef.current || !data.length) return;
+    if (!isMounted || !chartRef.current || !dataHistory.length) return;
 
     const svg = d3.select(chartRef.current);
     svg.selectAll("*").remove();
 
-    const width = 800;
-    const height = 300;
-    const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+    const containerWidth = chartRef.current.clientWidth || 1200;
+    const width = containerWidth;
+    const height = 400;
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
 
-    // Line chart for latency over time
-    const timeData = data.map((d, i) => ({
-      time: i,
-      latency: d.latency,
-      serverId: d.serverId,
-    }));
+    // Flatten history data for line chart (show trends over time)
+    const timeData: Array<{ time: number; latency: number; serverId: string }> = [];
+    dataHistory.forEach((snapshot, timeIndex) => {
+      snapshot.forEach((server) => {
+        timeData.push({
+          time: timeIndex,
+          latency: server.latency,
+          serverId: server.serverId,
+        });
+      });
+    });
 
     const xScale = d3
       .scaleLinear()
@@ -188,18 +210,26 @@ export default function NetworkTrafficDemo() {
       .curve(d3.curveMonotoneX);
 
     const colors = d3.schemeCategory10;
-
-    Array.from({ length: SERVER_COUNT }).forEach((_, serverIndex) => {
-      const serverData = timeData.filter((d) => d.serverId === `server-${serverIndex + 1}`);
-      if (serverData.length > 0) {
-        svg
-          .append("path")
-          .datum(serverData)
-          .attr("fill", "none")
-          .attr("stroke", colors[serverIndex % colors.length] as string)
-          .attr("stroke-width", 2)
-          .attr("d", line as any);
-      }
+    
+    // Group by region and show representative servers from each region
+    const regions = Array.from(new Set(data.map(d => d.region || "unknown")));
+    const serversPerRegion = Math.ceil(50 / regions.length);
+    
+    regions.forEach((region, regionIndex) => {
+      const regionServers = data.filter(d => (d.region || "unknown") === region).slice(0, serversPerRegion);
+      regionServers.forEach((server, serverIndex) => {
+        const serverData = timeData.filter((d) => d.serverId === server.serverId);
+        if (serverData.length > 0) {
+          svg
+            .append("path")
+            .datum(serverData)
+            .attr("fill", "none")
+            .attr("stroke", colors[(regionIndex * serversPerRegion + serverIndex) % colors.length] as string)
+            .attr("stroke-width", 1.5)
+            .attr("opacity", 0.7)
+            .attr("d", line as any);
+        }
+      });
     });
 
     // Add axes
@@ -233,8 +263,48 @@ export default function NetworkTrafficDemo() {
     <div className="container">
       <div className="section">
         <h2 className="title is-2 has-text-centered mb-6">
-          Real-time Network Traffic Balance Demo
+          Real-time Network Traffic & Load Balancing Monitor
         </h2>
+        
+        <div className="box mb-6">
+          <div className="content">
+            <h3 className="title is-4 mb-4">About This Demo</h3>
+            <p className="mb-4">
+              This demonstration showcases <strong>real-time network traffic monitoring</strong> and 
+              <strong> load balancing visualization</strong> at stock market-level scale. The system 
+              monitors <strong>50 servers</strong> across 6 global regions, receiving data updates 
+              every <strong>200ms</strong> (5 updates per second) via Server-Sent Events (SSE).
+            </p>
+            <div className="columns">
+              <div className="column">
+                <h4 className="title is-5 mb-3">Key Features:</h4>
+                <ul>
+                  <li>Real-time data streaming (SSE/WebSocket-like)</li>
+                  <li>50 servers across 6 regions (us-east, us-west, eu-west, eu-central, ap-southeast, ap-northeast)</li>
+                  <li>High-frequency updates (200ms intervals)</li>
+                  <li>Realistic data patterns with trends and volatility</li>
+                  <li>D3.js visualizations for traffic distribution and latency</li>
+                  <li>Load balancing insights and anomaly detection</li>
+                </ul>
+              </div>
+              <div className="column">
+                <h4 className="title is-5 mb-3">Use Cases:</h4>
+                <ul>
+                  <li>Production traffic monitoring</li>
+                  <li>Load balancer performance analysis</li>
+                  <li>Real-time system health dashboards</li>
+                  <li>Anomaly detection and alerting</li>
+                  <li>Capacity planning and optimization</li>
+                </ul>
+              </div>
+            </div>
+            <p className="mt-4">
+              <strong>Note:</strong> This demo uses simulated data with realistic patterns (trends, 
+              volatility, correlations) to demonstrate real-world scenarios. In production, this would 
+              connect to actual monitoring systems like Prometheus, Datadog, or CloudWatch.
+            </p>
+          </div>
+        </div>
 
         <div className="box mb-6">
           <div className="level">
@@ -277,21 +347,26 @@ export default function NetworkTrafficDemo() {
         </div>
 
         <div className="box">
-          <h3 className="title is-4 mb-4">Request Distribution</h3>
-          <svg ref={svgRef} width="800" height="400"></svg>
+          <h3 className="title is-4 mb-4">Request Distribution Across {data.length} Servers</h3>
+          <div className="table-container">
+            <svg ref={svgRef} width="100%" height="500" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
         </div>
 
         <div className="box mt-6">
-          <h3 className="title is-4 mb-4">Latency Over Time</h3>
-          <svg ref={chartRef} width="800" height="300"></svg>
+          <h3 className="title is-4 mb-4">Latency Trends Over Time (Last 50 Updates)</h3>
+          <div className="table-container">
+            <svg ref={chartRef} width="100%" height="400" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
         </div>
 
         <div className="box mt-6">
-          <h3 className="title is-4 mb-4">Server Details</h3>
+          <h3 className="title is-4 mb-4">Server Details ({data.length} servers)</h3>
           <div className="table-container">
             <table className="table is-fullwidth is-striped">
               <thead>
                 <tr>
+                  <th>Region</th>
                   <th>Server ID</th>
                   <th>Requests/sec</th>
                   <th>Latency (ms)</th>
@@ -308,8 +383,11 @@ export default function NetworkTrafficDemo() {
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
+                    <td>
+                      <span className="tag is-info">{server.region || "unknown"}</span>
+                    </td>
                     <td>{server.serverId}</td>
-                    <td>{server.requests}</td>
+                    <td>{server.requests.toLocaleString()}</td>
                     <td>{server.latency.toFixed(2)}</td>
                     <td>{server.throughput.toFixed(2)}</td>
                     <td>{server.errorRate.toFixed(2)}</td>
