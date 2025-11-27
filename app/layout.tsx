@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import Navbar from "@/components/layout/Navbar";
-import ThemeToggle from "@/components/layout/ThemeToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,9 +42,6 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <Navbar />
-          <div className="is-fixed mt-6 mr-4" style={{ top: "64px" }}>
-            <ThemeToggle />
-          </div>
           <main className="is-fullheight pt-6">{children}</main>
         </ThemeProvider>
       </body>

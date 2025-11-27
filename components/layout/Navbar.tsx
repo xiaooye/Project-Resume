@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import ThemeToggle from "./ThemeToggle";
 
 const navItems = [
   { name: "Home", href: "/" },
@@ -97,6 +98,9 @@ export default function Navbar() {
                 {item.name}
               </Link>
             ))}
+            <div className="navbar-item">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </div>
