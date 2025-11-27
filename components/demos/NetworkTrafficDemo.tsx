@@ -20,12 +20,21 @@ function generateMockData(): NetworkTrafficData[] {
 }
 
 export default function NetworkTrafficDemo() {
-  const [data, setData] = useState<NetworkTrafficData[]>(generateMockData());
+  const [data, setData] = useState<NetworkTrafficData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
 
+  // Initialize data only on client side to avoid hydration mismatch
   useEffect(() => {
+    setIsMounted(true);
+    setData(generateMockData());
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    
     // Simulate WebSocket connection
     const interval = setInterval(() => {
       if (isConnected) {
@@ -34,10 +43,10 @@ export default function NetworkTrafficDemo() {
     }, UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isConnected]);
+  }, [isConnected, isMounted]);
 
   useEffect(() => {
-    if (!svgRef.current || !data.length) return;
+    if (!isMounted || !svgRef.current || !data.length) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
@@ -117,10 +126,10 @@ export default function NetworkTrafficDemo() {
       .attr("y", height - 10)
       .attr("text-anchor", "middle")
       .text("Server ID");
-  }, [data]);
+  }, [data, isMounted]);
 
   useEffect(() => {
-    if (!chartRef.current || !data.length) return;
+    if (!isMounted || !chartRef.current || !data.length) return;
 
     const svg = d3.select(chartRef.current);
     svg.selectAll("*").remove();
@@ -189,11 +198,11 @@ export default function NetworkTrafficDemo() {
       .attr("x", -(height / 2))
       .attr("text-anchor", "middle")
       .text("Latency (ms)");
-  }, [data]);
+  }, [data, isMounted]);
 
-  const totalRequests = data.reduce((sum, d) => sum + d.requests, 0);
-  const avgLatency = data.reduce((sum, d) => sum + d.latency, 0) / data.length;
-  const totalErrors = data.reduce((sum, d) => sum + d.errorRate, 0);
+  const totalRequests = data.length > 0 ? data.reduce((sum, d) => sum + d.requests, 0) : 0;
+  const avgLatency = data.length > 0 ? data.reduce((sum, d) => sum + d.latency, 0) / data.length : 0;
+  const totalErrors = data.length > 0 ? data.reduce((sum, d) => sum + d.errorRate, 0) : 0;
 
   return (
     <div className="container">
