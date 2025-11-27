@@ -20,8 +20,9 @@ export async function initWasm(): Promise<void> {
   try {
     // WASM module with all game calculations
     wasmModule = {
-      // Player physics
-      updatePlayerPhysics: updatePlayerPhysicsWASM,
+      // Player physics (with collision)
+      updatePlayerPhysics: (pos: Float32Array, vel: Float32Array, input: Float32Array, dt: number, onGround: boolean, buildings?: any) => 
+        updatePlayerPhysicsWASM(pos, vel, input, dt, onGround, buildings),
       calculateMovement: calculateMovementWASM,
       applyGravity: applyGravityWASM,
       
@@ -57,13 +58,14 @@ export async function initWasm(): Promise<void> {
   }
 }
 
-// Player Physics - WASM implementation
+// Player Physics - WASM implementation with collision detection
 function updatePlayerPhysicsWASM(
   position: Float32Array,
   velocity: Float32Array,
   input: Float32Array, // [forward, right, jump]
   deltaTime: number,
-  onGround: boolean
+  onGround: boolean,
+  buildings?: Array<{ position: [number, number, number]; size: [number, number, number] }>
 ): { position: Float32Array; velocity: Float32Array; onGround: boolean } {
   const start = performance.now();
   performanceStats.wasmCalls++;
@@ -76,10 +78,12 @@ function updatePlayerPhysicsWASM(
   const jumpForce = 10.0;
   const gravity = -20.0;
   const groundY = 1.0;
+  const playerRadius = 0.5;
+  const playerHeight = 1.8;
   
   // Apply input
-  newVelocity[0] = input[1] * moveSpeed; // Right/Left
-  newVelocity[2] = input[0] * moveSpeed; // Forward/Back
+  newVelocity[0] = input[1] * moveSpeed; // Right/Left (X)
+  newVelocity[2] = input[0] * moveSpeed; // Forward/Back (Z)
   
   // Apply gravity
   if (!onGround) {
@@ -92,10 +96,79 @@ function updatePlayerPhysicsWASM(
     }
   }
   
+  // Calculate new position
+  const testPosition = new Float32Array([
+    newPosition[0] + newVelocity[0] * deltaTime,
+    newPosition[1] + newVelocity[1] * deltaTime,
+    newPosition[2] + newVelocity[2] * deltaTime,
+  ]);
+  
+  // Check building collisions using WASM
+  let collisionX = false;
+  let collisionZ = false;
+  
+  if (buildings) {
+    for (const building of buildings) {
+      const buildingCenter = building.position;
+      const buildingSize = building.size;
+      
+      // Check collision using sphere-box collision (player is capsule, simplified to sphere)
+      const playerCenter = [
+        testPosition[0],
+        testPosition[1] + playerHeight / 2,
+        testPosition[2],
+      ];
+      
+      // AABB collision check
+      const minX = buildingCenter[0] - buildingSize[0] / 2 - playerRadius;
+      const maxX = buildingCenter[0] + buildingSize[0] / 2 + playerRadius;
+      const minY = buildingCenter[1] - buildingSize[1] / 2;
+      const maxY = buildingCenter[1] + buildingSize[1] / 2 + playerHeight;
+      const minZ = buildingCenter[2] - buildingSize[2] / 2 - playerRadius;
+      const maxZ = buildingCenter[2] + buildingSize[2] / 2 + playerRadius;
+      
+      if (
+        playerCenter[0] >= minX && playerCenter[0] <= maxX &&
+        playerCenter[1] >= minY && playerCenter[1] <= maxY &&
+        playerCenter[2] >= minZ && playerCenter[2] <= maxZ
+      ) {
+        // Collision detected - resolve by pushing player out
+        const distX = Math.abs(playerCenter[0] - buildingCenter[0]);
+        const distZ = Math.abs(playerCenter[2] - buildingCenter[2]);
+        
+        if (distX < distZ) {
+          // Push out on X axis
+          if (playerCenter[0] < buildingCenter[0]) {
+            testPosition[0] = buildingCenter[0] - buildingSize[0] / 2 - playerRadius;
+          } else {
+            testPosition[0] = buildingCenter[0] + buildingSize[0] / 2 + playerRadius;
+          }
+          collisionX = true;
+        } else {
+          // Push out on Z axis
+          if (playerCenter[2] < buildingCenter[2]) {
+            testPosition[2] = buildingCenter[2] - buildingSize[2] / 2 - playerRadius;
+          } else {
+            testPosition[2] = buildingCenter[2] + buildingSize[2] / 2 + playerRadius;
+          }
+          collisionZ = true;
+        }
+      }
+    }
+  }
+  
   // Update position
-  newPosition[0] += newVelocity[0] * deltaTime;
-  newPosition[1] += newVelocity[1] * deltaTime;
-  newPosition[2] += newVelocity[2] * deltaTime;
+  newPosition[0] = testPosition[0];
+  newPosition[1] = testPosition[1];
+  newPosition[2] = testPosition[2];
+  
+  // Stop velocity on collision
+  if (collisionX) {
+    newVelocity[0] = 0;
+  }
+  if (collisionZ) {
+    newVelocity[2] = 0;
+  }
   
   // Ground collision
   let newOnGround = onGround;
@@ -502,14 +575,22 @@ function lookAtMatrixWASM(
 
 // Export functions
 export async function updatePlayerPhysics(
-  position: Float32Array,
-  velocity: Float32Array,
-  input: Float32Array,
+  position: number[],
+  velocity: number[],
+  input: number[],
   deltaTime: number,
-  onGround: boolean
+  onGround: boolean,
+  buildings?: Array<{ position: [number, number, number]; size: [number, number, number] }>
 ): Promise<ReturnType<typeof updatePlayerPhysicsWASM>> {
   await initWasm();
-  return wasmModule.updatePlayerPhysics(position, velocity, input, deltaTime, onGround);
+  return wasmModule.updatePlayerPhysics(
+    new Float32Array(position),
+    new Float32Array(velocity),
+    new Float32Array(input),
+    deltaTime,
+    onGround,
+    buildings
+  );
 }
 
 export async function calculateMovement(

@@ -711,6 +711,11 @@ function GameScene3D({
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default behavior for game controls (space, arrow keys, WASD)
+      const gameKeys = [" ", "w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"];
+      if (gameKeys.includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
       keysRef.current.add(e.key.toLowerCase());
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -735,6 +740,12 @@ function GameScene3D({
   // Mouse controls for first-person
   const mouseRef = useRef({ x: 0, y: 0 });
   const isPointerLockedRef = useRef(false);
+
+  // Real-time enemy positions for bullet collision detection
+  const enemyPositionsRef = useRef<Map<string, Float32Array>>(new Map());
+  
+  // Building positions for collision detection
+  const buildingPositionsRef = useRef<Array<{ position: [number, number, number]; size: [number, number, number] }>>([]);
 
   // Mouse controls setup
   useEffect(() => {
@@ -842,22 +853,38 @@ function GameScene3D({
     }
     
     // Calculate movement direction based on camera view for both first-person and third-person
+    // WASM expects: input[0] = forward/back (Z axis), input[1] = left/right (X axis)
     if (cameraMode === "first-person" || cameraMode === "third-person") {
+      let forward = 0;
+      let right = 0;
+      
       if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
-        input[0] = -cameraForward.z; // Forward in Z (negative because camera looks in -Z)
-        input[1] = cameraForward.x;  // Right in X
+        forward = 1;
       }
       if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
-        input[0] = cameraForward.z;  // Backward
-        input[1] = -cameraForward.x;  // Left
+        forward = -1;
       }
       if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
-        input[0] = cameraRight.z;     // Strafe left
-        input[1] = -cameraRight.x;
+        right = -1;
       }
       if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
-        input[0] = -cameraRight.z;    // Strafe right
-        input[1] = cameraRight.x;
+        right = 1;
+      }
+      
+      // Transform movement direction based on camera orientation
+      if (state.camera && (forward !== 0 || right !== 0)) {
+        const moveDir = new THREE.Vector3();
+        if (forward !== 0) {
+          moveDir.addScaledVector(cameraForward, forward);
+        }
+        if (right !== 0) {
+          moveDir.addScaledVector(cameraRight, right);
+        }
+        moveDir.normalize();
+        
+        // Convert to WASM input format: [forward Z, right X, jump]
+        input[0] = moveDir.z;  // Forward/back in Z
+        input[1] = moveDir.x;  // Left/right in X
       }
     }
     // Free camera mode - no player movement, only camera movement via OrbitControls
@@ -868,13 +895,22 @@ function GameScene3D({
 
     // Only update physics if not in free camera mode
     if (cameraMode !== "free") {
-      // ALL physics calculations via WASM
+      // Get building positions for collision detection
+      const buildings = buildingPositionsRef.current;
+      
+      // ALL physics calculations via WASM (with collision detection)
+      // Convert Float32Array to number arrays for WASM
+      const posArray = Array.from(playerPosRef.current);
+      const velArray = Array.from(playerVelRef.current);
+      const inputArray = Array.from(input);
+      
       wasmGame.updatePlayerPhysics(
-        playerPosRef.current,
-        playerVelRef.current,
-        input,
+        posArray,
+        velArray,
+        inputArray,
         delta,
-        onGroundRef.current
+        onGroundRef.current,
+        buildings
       ).then((physicsResult) => {
         // Update from WASM results
         playerPosRef.current = physicsResult.position;
@@ -954,7 +990,12 @@ function GameScene3D({
       <Terrain sceneConfig={sceneConfig} />
 
       {/* Buildings */}
-      <Buildings sceneConfig={sceneConfig} />
+      <Buildings 
+        sceneConfig={sceneConfig}
+        onBuildingsReady={(buildings) => {
+          buildingPositionsRef.current = buildings;
+        }}
+      />
 
       {/* Player */}
       <Player
@@ -981,15 +1022,18 @@ function GameScene3D({
       ))}
 
       {/* Bullets - ALL trajectory calculations via WASM */}
-      {bullets.map((bullet) => (
-        <BulletComponent
-          key={bullet.id}
-          bullet={bullet}
-          enemies={enemies}
-          onHit={onEnemyKilled}
-          sceneConfig={sceneConfig}
-        />
-      ))}
+      {bullets
+        .filter((bullet) => bullet.active)
+        .map((bullet) => (
+          <BulletComponent
+            key={bullet.id}
+            bullet={bullet}
+            enemies={enemies}
+            enemyPositions={enemyPositionsRef.current}
+            onHit={onEnemyKilled}
+            sceneConfig={sceneConfig}
+          />
+        ))}
 
       {/* Ground Grid */}
       <Grid
@@ -1075,23 +1119,39 @@ function Terrain({ sceneConfig }: { sceneConfig: SceneConfig }) {
 }
 
 // Buildings Component
-function Buildings({ sceneConfig }: { sceneConfig: SceneConfig }) {
+function Buildings({ 
+  sceneConfig,
+  onBuildingsReady,
+}: { 
+  sceneConfig: SceneConfig;
+  onBuildingsReady?: (buildings: Array<{ position: [number, number, number]; size: [number, number, number] }>) => void;
+}) {
   const buildings = useMemo(() => {
-    const buildingData: Array<{ position: [number, number, number]; height: number }> = [];
+    const buildingData: Array<{ position: [number, number, number]; height: number; size: [number, number, number] }> = [];
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2;
       const radius = 8 + Math.random() * 5;
+      const height = 2 + Math.random() * 4;
+      const width = 1.5;
+      const depth = 1.5;
       buildingData.push({
         position: [
           Math.cos(angle) * radius,
-          0,
+          height / 2, // Center Y position
           Math.sin(angle) * radius,
         ],
-        height: 2 + Math.random() * 4, // Fixed height per building
+        height: height,
+        size: [width, height, depth],
       });
     }
+    
+    // Notify parent component of building positions for collision detection
+    if (onBuildingsReady) {
+      onBuildingsReady(buildingData.map(b => ({ position: b.position, size: b.size })));
+    }
+    
     return buildingData;
-  }, []);
+  }, [onBuildingsReady]);
 
   return (
     <>
@@ -1154,9 +1214,15 @@ function EnemyComponent({
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const positionRef = useRef<Float32Array>(new Float32Array(enemy.position));
+  const aliveRef = useRef(enemy.alive);
+
+  // Update alive ref when enemy is killed
+  useEffect(() => {
+    aliveRef.current = enemy.alive;
+  }, [enemy.alive]);
 
   useFrame(async (state, delta) => {
-    if (!enemy.alive || prefersReducedMotion) return;
+    if (!aliveRef.current || !enemy.alive || prefersReducedMotion) return;
 
     // ALL AI calculations via WASM
     const newPos = await wasmGame.calculateEnemyAI(
@@ -1179,13 +1245,14 @@ function EnemyComponent({
       0.5, // enemy radius
       0.5  // player radius
     ).then((collision) => {
-      if (collision && enemy.alive) {
+      if (collision && aliveRef.current && enemy.alive) {
+        aliveRef.current = false;
         onKilled(enemy.id);
       }
     });
   });
 
-  if (!enemy.alive) return null;
+  if (!enemy.alive || !aliveRef.current) return null;
 
   return (
     <mesh
@@ -1203,11 +1270,13 @@ function EnemyComponent({
 function BulletComponent({
   bullet,
   enemies,
+  enemyPositions,
   onHit,
   sceneConfig,
 }: {
   bullet: Bullet;
   enemies: Enemy[];
+  enemyPositions: Map<string, Float32Array>;
   onHit: (id: string) => void;
   sceneConfig: SceneConfig;
 }) {
@@ -1215,6 +1284,7 @@ function BulletComponent({
   const positionRef = useRef<Float32Array>(new Float32Array(bullet.position));
   const activeRef = useRef(bullet.active);
   const bulletSpeed = 50.0;
+  const hitEnemyIdRef = useRef<string | null>(null);
 
   useFrame(async (state, delta) => {
     if (!activeRef.current) return;
@@ -1233,22 +1303,27 @@ function BulletComponent({
       meshRef.current.position.set(newPos[0], newPos[1], newPos[2]);
     }
 
-    // Check hits using WASM - check all enemies
+    // Check hits using WASM - check all enemies using real-time positions
     for (const enemy of enemies) {
-      if (!enemy.alive) continue;
+      if (!enemy.alive || hitEnemyIdRef.current !== null) continue;
+
+      // Get enemy's real-time position from the positions map
+      const enemyPos = enemyPositions.get(enemy.id);
+      if (!enemyPos) continue;
 
       // Use WASM to check bullet hit
       const hit = await wasmGame.checkBulletHit(
         positionRef.current,
-        enemy.position,
-        0.5 // enemy radius
+        enemyPos,
+        0.7 // enemy radius (slightly larger for better hit detection)
       );
 
       if (hit) {
         activeRef.current = false;
-        // Update bullet state
         bullet.active = false;
-        onHit(enemy.id); // This will kill the enemy
+        hitEnemyIdRef.current = enemy.id;
+        // Call onHit to kill the enemy - this will update the enemies array
+        onHit(enemy.id);
         return; // Exit early after hit
       }
     }
