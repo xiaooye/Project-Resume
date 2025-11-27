@@ -2,8 +2,10 @@ export default function SkillsPage() {
   return (
     <section className="section">
       <div className="container">
-        <h1 className="title is-1">Skills</h1>
-        <p className="subtitle is-4">Coming soon...</p>
+        <div className="liquid-glass p-6 has-text-centered">
+          <h1 className="title is-1 liquid-glass-text">Skills</h1>
+          <p className="subtitle is-4 liquid-glass-text">Coming soon...</p>
+        </div>
       </div>
     </section>
   );

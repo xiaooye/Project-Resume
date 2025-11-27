@@ -1086,39 +1086,39 @@ export default function NetworkTrafficDemo() {
   return (
     <div className="container">
       <div className="section">
-        <h2 className="title is-2 has-text-centered mb-6">
+        <h2 className="title is-2 has-text-centered mb-6 liquid-glass-text">
           Real-time Network Traffic & Load Balancing Monitor
         </h2>
         
-        <div className="box mb-6">
+        <div className="box mb-6 liquid-glass-card">
           <div className="content">
-            <h3 className="title is-4 mb-4">About This Demo</h3>
-            <p className="mb-4">
+            <h3 className="title is-4 mb-4 liquid-glass-text">About This Demo</h3>
+            <p className="mb-4 liquid-glass-text">
               This demonstration showcases <strong>real-time network traffic monitoring</strong> and 
               <strong> load balancing visualization</strong> at stock market-level scale. The system 
               monitors <strong>50 servers</strong> across 6 global regions, receiving data updates 
               every <strong>200ms</strong> (5 updates per second) via Server-Sent Events (SSE).
             </p>
             {reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS && (
-              <div className="notification is-warning">
-                <strong>⚠️ Reconnecting...</strong> Attempt {reconnectAttempts}/{MAX_RECONNECT_ATTEMPTS}
-                <p className="mt-2">
+              <div className="notification is-warning liquid-glass">
+                <strong className="liquid-glass-text">⚠️ Reconnecting...</strong> Attempt {reconnectAttempts}/{MAX_RECONNECT_ATTEMPTS}
+                <p className="mt-2 liquid-glass-text">
                   Vercel serverless functions have execution time limits. The connection will automatically reconnect.
                 </p>
               </div>
             )}
             {reconnectAttempts >= MAX_RECONNECT_ATTEMPTS && (
-              <div className="notification is-danger">
-                <strong>❌ Connection Failed</strong>
-                <p className="mt-2">
+              <div className="notification is-danger liquid-glass">
+                <strong className="liquid-glass-text">❌ Connection Failed</strong>
+                <p className="mt-2 liquid-glass-text">
                   Max reconnection attempts reached. Please click "Connect" to retry.
                 </p>
               </div>
             )}
             <div className="columns">
               <div className="column">
-                <h4 className="title is-5 mb-3">Key Features:</h4>
-                <ul>
+                <h4 className="title is-5 mb-3 liquid-glass-text">Key Features:</h4>
+                <ul className="liquid-glass-text">
                   <li>Real-time data streaming (SSE/WebSocket-like)</li>
                   <li>50 servers across 6 regions (us-east, us-west, eu-west, eu-central, ap-southeast, ap-northeast)</li>
                   <li>High-frequency updates (200ms intervals)</li>
@@ -1128,8 +1128,8 @@ export default function NetworkTrafficDemo() {
                 </ul>
               </div>
               <div className="column">
-                <h4 className="title is-5 mb-3">Use Cases:</h4>
-                <ul>
+                <h4 className="title is-5 mb-3 liquid-glass-text">Use Cases:</h4>
+                <ul className="liquid-glass-text">
                   <li>Production traffic monitoring</li>
                   <li>Load balancer performance analysis</li>
                   <li>Real-time system health dashboards</li>
@@ -1138,7 +1138,7 @@ export default function NetworkTrafficDemo() {
                 </ul>
               </div>
             </div>
-            <p className="mt-4">
+            <p className="mt-4 liquid-glass-text">
               <strong>Note:</strong> This demo uses simulated data with realistic patterns (trends, 
               volatility, correlations) to demonstrate real-world scenarios. In production, this would 
               connect to actual monitoring systems like Prometheus, Datadog, or CloudWatch.
@@ -1147,13 +1147,13 @@ export default function NetworkTrafficDemo() {
         </div>
 
         {/* System Architecture Overview */}
-        <div className="box mb-6">
-          <h3 className="title is-4 mb-4">System Architecture Overview</h3>
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">System Architecture Overview</h3>
           <div className="columns">
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Infrastructure</h5>
-                <ul>
+                <h5 className="title is-5 liquid-glass-text">Infrastructure</h5>
+                <ul className="liquid-glass-text">
                   <li><strong>Total Servers:</strong> {data.length} across {Object.keys(regionStats).length} regions</li>
                   <li><strong>Load Balancer:</strong> Multi-region with {lbStrategy.replace("-", " ")} algorithm</li>
                   <li><strong>Data Stream:</strong> Server-Sent Events (SSE) at 200ms intervals</li>
@@ -1163,8 +1163,8 @@ export default function NetworkTrafficDemo() {
             </div>
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Architecture Pattern</h5>
-                <ul>
+                <h5 className="title is-5 liquid-glass-text">Architecture Pattern</h5>
+                <ul className="liquid-glass-text">
                   <li><strong>Pattern:</strong> Distributed microservices with load balancing</li>
                   <li><strong>Scalability:</strong> Horizontal scaling ready</li>
                   <li><strong>Resilience:</strong> Multi-region failover</li>
@@ -1174,8 +1174,8 @@ export default function NetworkTrafficDemo() {
             </div>
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Technology Stack</h5>
-                <ul>
+                <h5 className="title is-5 liquid-glass-text">Technology Stack</h5>
+                <ul className="liquid-glass-text">
                   <li><strong>Frontend:</strong> Next.js 14, React 19, D3.js</li>
                   <li><strong>Backend:</strong> Next.js API Routes, SSE</li>
                   <li><strong>Real-time:</strong> Server-Sent Events</li>
@@ -1187,12 +1187,12 @@ export default function NetworkTrafficDemo() {
         </div>
 
         {/* SLA Monitoring */}
-        <div className="box mb-6">
-          <h3 className="title is-4 mb-4">SLA Compliance & Service Level Monitoring</h3>
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">SLA Compliance & Service Level Monitoring</h3>
           <div className="columns">
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">SLA Targets</h5>
+                <h5 className="title is-5 liquid-glass-text">SLA Targets</h5>
                 <table className="table is-narrow">
                   <thead>
                     <tr>
@@ -1249,7 +1249,7 @@ export default function NetworkTrafficDemo() {
             </div>
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Overall SLA Score</h5>
+                <h5 className="title is-5 liquid-glass-text">Overall SLA Score</h5>
                 <div className="has-text-centered">
                   <p className={`title is-1 ${slaScore >= 100 ? "has-text-success" : slaScore >= 75 ? "has-text-warning" : "has-text-danger"}`}>
                     {slaScore.toFixed(1)}%
@@ -1261,7 +1261,7 @@ export default function NetworkTrafficDemo() {
                   >
                     {slaScore.toFixed(1)}%
                   </progress>
-                  <p className="mt-3">
+                  <p className="mt-3 liquid-glass-text">
                     {slaScore >= 100 ? "✓ All SLA targets met" : 
                      slaScore >= 75 ? "⚠ Some SLA targets at risk" : 
                      "✗ SLA targets not met - Action required"}
@@ -1274,10 +1274,10 @@ export default function NetworkTrafficDemo() {
 
         {/* Critical Alerts */}
         {anomalies.length > 0 && (
-          <div className="notification is-danger mb-6">
+          <div className="notification is-danger mb-6 liquid-glass">
             <button className="delete" onClick={() => {}}></button>
-            <strong>⚠️ {anomalies.length} Anomaly{anomalies.length > 1 ? "ies" : ""} Detected</strong>
-            <p className="mt-2">
+            <strong className="liquid-glass-text">⚠️ {anomalies.length} Anomaly{anomalies.length > 1 ? "ies" : ""} Detected</strong>
+            <p className="mt-2 liquid-glass-text">
               {anomalies.slice(0, 3).map(a => a.serverId).join(", ")}
               {anomalies.length > 3 && ` and ${anomalies.length - 3} more`}
             </p>
@@ -1285,7 +1285,7 @@ export default function NetworkTrafficDemo() {
         )}
 
         {/* Key Metrics Dashboard - Responsive design */}
-        <div className="box mb-6" role="region" aria-label="Key performance metrics dashboard">
+        <div className="box mb-6 liquid-glass-card" role="region" aria-label="Key performance metrics dashboard">
           {isMobile ? (
             // Mobile: Stack metrics vertically
             <div className="columns is-mobile is-multiline">
@@ -1371,30 +1371,30 @@ export default function NetworkTrafficDemo() {
         {/* Load Balancing Info - Fixed height to prevent layout shift */}
         <div className="mb-6" style={{ minHeight: "60px" }}>
           {currentRequest ? (
-            <div className="notification is-info">
-              <strong>Latest Request:</strong> {currentRequest.id} → {currentRequest.target} 
+            <div className="notification is-info liquid-glass">
+              <strong className="liquid-glass-text">Latest Request:</strong> <span className="liquid-glass-text">{currentRequest.id} → {currentRequest.target}</span> 
               <span className="ml-2 tag is-light">{(() => {
                 const age = Date.now() - currentRequest.timestamp;
                 return age < 1000 ? `${age}ms ago` : `${(age / 1000).toFixed(1)}s ago`;
               })()}</span>
             </div>
           ) : (
-            <div className="notification is-light">
-              <strong>Latest Request:</strong> <span className="has-text-grey">Waiting for requests...</span>
+            <div className="notification is-light liquid-glass">
+              <strong className="liquid-glass-text">Latest Request:</strong> <span className="has-text-grey liquid-glass-text">Waiting for requests...</span>
             </div>
           )}
         </div>
 
         {/* Load Balancing Visualization */}
-        <div className="box mb-6">
-          <h3 className="title is-4 mb-4">Request Distribution Visualization</h3>
-          <p className="subtitle is-6 mb-4">
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Request Distribution Visualization</h3>
+          <p className="subtitle is-6 mb-4 liquid-glass-text">
             Shows how requests are distributed across servers using {lbStrategy.replace("-", " ")} algorithm
           </p>
           
           {/* Real-time Request Flow Animation - Fixed container to prevent layout shift */}
-          <div className="box mb-4" style={{ minHeight: "200px" }}>
-            <h4 className="title is-5 mb-3">Real-time Request Routing (Last 20 Requests)</h4>
+          <div className="box mb-4 liquid-glass" style={{ minHeight: "200px" }}>
+            <h4 className="title is-5 mb-3 liquid-glass-text">Real-time Request Routing (Last 20 Requests)</h4>
             {routingHistory.length > 0 ? (
               <div className="columns is-multiline">
                 {(() => {
@@ -1414,12 +1414,12 @@ export default function NetworkTrafficDemo() {
                         transition={{ duration: 0.2 }}
                         layout
                       >
-                        <div className={`box ${isRecent ? "has-background-info-light" : ""}`}>
+                        <div className={`box liquid-glass ${isRecent ? "has-background-info-light" : ""}`}>
                           <div className="content">
-                            <p className="is-size-7">
+                            <p className="is-size-7 liquid-glass-text">
                               <strong>{route.id}</strong>
                             </p>
-                            <p className="is-size-7">
+                            <p className="is-size-7 liquid-glass-text">
                               <span className="tag is-small">LB</span> →{" "}
                               <span className={`tag is-small ${
                                 server?.isDown ? "is-danger" :
@@ -1452,12 +1452,12 @@ export default function NetworkTrafficDemo() {
           
           {/* Strategy Effectiveness Metrics */}
           {requestDistribution.size > 0 && (
-            <div className="box mt-4">
-              <h4 className="title is-5 mb-3">Current Strategy Performance</h4>
+            <div className="box mt-4 liquid-glass">
+              <h4 className="title is-5 mb-3 liquid-glass-text">Current Strategy Performance</h4>
               <div className="columns">
                 <div className="column">
                   <div className="content">
-                    <p><strong>Balance Score:</strong> {(() => {
+                    <p className="liquid-glass-text"><strong>Balance Score:</strong> {(() => {
                       const distArray = Array.from(requestDistribution.values());
                       const avg = distArray.reduce((a, b) => a + b, 0) / distArray.length;
                       const variance = distArray.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / distArray.length;
@@ -1470,8 +1470,8 @@ export default function NetworkTrafficDemo() {
                 </div>
                 <div className="column">
                   <div className="content">
-                    <p><strong>Strategy:</strong> {lbStrategy.replace("-", " ").toUpperCase()}</p>
-                    <p><strong>Load Distribution:</strong> {
+                    <p className="liquid-glass-text"><strong>Strategy:</strong> {lbStrategy.replace("-", " ").toUpperCase()}</p>
+                    <p className="liquid-glass-text"><strong>Load Distribution:</strong> {
                       (() => {
                         const distArray = Array.from(requestDistribution.values());
                         const max = Math.max(...distArray);
@@ -1479,7 +1479,7 @@ export default function NetworkTrafficDemo() {
                         return max > 0 ? ((max - min) / max * 100).toFixed(1) + "% variance" : "N/A";
                       })()
                     }</p>
-                    <p><strong>Health Check:</strong> {
+                    <p className="liquid-glass-text"><strong>Health Check:</strong> {
                       data.filter(d => !d.isDown && d.errorRate < 5).length > 0 ? (
                         <span className="tag is-success">✓ Healthy</span>
                       ) : (
@@ -1494,8 +1494,8 @@ export default function NetworkTrafficDemo() {
         </div>
 
         {/* Load Balancing Analysis */}
-        <div className="box mb-6">
-          <h3 className="title is-4 mb-4">Load Balancing Analysis by Region</h3>
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Load Balancing Analysis by Region</h3>
           <div className="table-container">
             <table className="table is-fullwidth is-striped">
               <thead>
@@ -1542,8 +1542,8 @@ export default function NetworkTrafficDemo() {
         </div>
 
         {/* Simulation Control Panel */}
-        <div className="box mb-6">
-          <h3 className="title is-4 mb-4">Simulation Control Panel</h3>
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Simulation Control Panel</h3>
           
           <div className="columns">
             <div className="column">
@@ -1587,12 +1587,12 @@ export default function NetworkTrafficDemo() {
                 {/* Fixed height recommendation section to prevent layout shift */}
                 <div className="mt-2" style={{ minHeight: recommendation.strategy !== lbStrategy ? "120px" : "0px" }}>
                   {recommendation.strategy !== lbStrategy && (
-                    <div className="notification is-info">
+                    <div className="notification is-info liquid-glass">
                       <button className="delete" onClick={() => {}}></button>
-                      <strong>💡 Recommended: {recommendation.strategy.replace("-", " ").toUpperCase()}</strong>
-                      <p className="mt-2">{recommendation.reason}</p>
+                      <strong className="liquid-glass-text">💡 Recommended: {recommendation.strategy.replace("-", " ").toUpperCase()}</strong>
+                      <p className="mt-2 liquid-glass-text">{recommendation.reason}</p>
                       <button
-                        className="button is-small is-primary mt-2"
+                        className="button is-small is-primary mt-2 liquid-glass-button"
                         onClick={() => {
                           setLbStrategy(recommendation.strategy);
                           setRequestDistribution(new Map());
@@ -1608,8 +1608,8 @@ export default function NetworkTrafficDemo() {
           </div>
 
           {/* Strategy Comparison & Performance Analysis */}
-          <div className="box mt-4">
-            <h4 className="title is-5 mb-4">Strategy Performance Analysis</h4>
+          <div className="box mt-4 liquid-glass">
+            <h4 className="title is-5 mb-4 liquid-glass-text">Strategy Performance Analysis</h4>
             <div className="table-container">
               <table className="table is-fullwidth is-striped">
                 <thead>
@@ -1708,8 +1708,8 @@ export default function NetworkTrafficDemo() {
 
           {/* Scenario-Specific Recommendations */}
           {scenarios.filter(s => s.enabled).length > 0 && (
-            <div className="box mt-4">
-              <h4 className="title is-5 mb-4">Scenario-Specific Solutions</h4>
+            <div className="box mt-4 liquid-glass">
+              <h4 className="title is-5 mb-4 liquid-glass-text">Scenario-Specific Solutions</h4>
               <div className="content">
                 {scenarios.filter(s => s.enabled).map((scenario, idx) => {
                   let solution = "";
@@ -1735,15 +1735,15 @@ export default function NetworkTrafficDemo() {
                   }
                   
                   return (
-                    <div key={idx} className="notification is-warning">
-                      <strong>Scenario: {scenario.type.replace("-", " ").toUpperCase()}</strong>
-                      <p className="mt-2">{solution}</p>
-                      <p className="mt-2">
+                    <div key={idx} className="notification is-warning liquid-glass">
+                      <strong className="liquid-glass-text">Scenario: {scenario.type.replace("-", " ").toUpperCase()}</strong>
+                      <p className="mt-2 liquid-glass-text">{solution}</p>
+                      <p className="mt-2 liquid-glass-text">
                         <strong>Recommended Strategy:</strong>{" "}
                         <span className="tag is-primary">{recommendedStrategy.replace("-", " ").toUpperCase()}</span>
                         {recommendedStrategy !== lbStrategy && (
                           <button
-                            className="button is-small is-primary ml-2"
+                            className="button is-small is-primary ml-2 liquid-glass-button"
                             onClick={() => {
                               setLbStrategy(recommendedStrategy);
                               setRequestDistribution(new Map());
@@ -1909,9 +1909,9 @@ export default function NetworkTrafficDemo() {
               </button>
             </div>
             {scenarios.filter(s => s.enabled).length > 0 && (
-              <div className="notification is-info mt-3">
-                <strong>Active Scenarios:</strong>
-                <ul className="mt-2">
+              <div className="notification is-info mt-3 liquid-glass">
+                <strong className="liquid-glass-text">Active Scenarios:</strong>
+                <ul className="mt-2 liquid-glass-text">
                   {scenarios.filter(s => s.enabled).map((s, idx) => (
                     <li key={idx}>
                       {s.type === "traffic-spike" && `Traffic Spike (${s.trafficMultiplier}x)`}
@@ -1994,7 +1994,7 @@ export default function NetworkTrafficDemo() {
 
         <div className="buttons is-centered mb-6">
           <button
-            className={`button ${isConnected ? "is-danger" : "is-success"} ${isMobile ? "is-medium" : "is-large"}`}
+            className={`button ${isConnected ? "is-danger" : "is-success"} ${isMobile ? "is-medium" : "is-large"} liquid-glass-button`}
             onClick={() => setIsConnected(!isConnected)}
             onKeyDown={(e) => {
               // WCAG 2.2 AAA: Keyboard navigation support
@@ -2010,8 +2010,8 @@ export default function NetworkTrafficDemo() {
           </button>
         </div>
 
-        <div className="box">
-          <h3 className="title is-4 mb-4">Request Distribution Across {data.length} Servers</h3>
+        <div className="box liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Request Distribution Across {data.length} Servers</h3>
           
           {/* WCAG 2.2 AAA: Data table for screen readers */}
           <div className="is-sr-only" role="region" aria-label="Server request distribution data table">
@@ -2066,8 +2066,8 @@ export default function NetworkTrafficDemo() {
           
           {/* Mobile: Show simplified summary */}
           {isMobile && (
-            <div className="box mt-4">
-              <h4 className="title is-5 mb-3">Summary</h4>
+            <div className="box mt-4 liquid-glass">
+              <h4 className="title is-5 mb-3 liquid-glass-text">Summary</h4>
               <div className="columns is-mobile">
                 <div className="column">
                   <p className="heading">Total Requests</p>
@@ -2088,8 +2088,8 @@ export default function NetworkTrafficDemo() {
           )}
         </div>
 
-        <div className="box mt-6">
-          <h3 className="title is-4 mb-4">Latency Trends Over Time (Last 50 Updates)</h3>
+        <div className="box mt-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Latency Trends Over Time (Last 50 Updates)</h3>
           <div className="table-container">
             <svg ref={chartRef} width="100%" height="400" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet"></svg>
           </div>
@@ -2097,14 +2097,14 @@ export default function NetworkTrafficDemo() {
 
         {/* Performance Optimization Recommendations */}
         {optimizations.length > 0 && (
-          <div className="box mt-6">
-            <h3 className="title is-4 mb-4">Performance Optimization Recommendations</h3>
+          <div className="box mt-6 liquid-glass-card">
+            <h3 className="title is-4 mb-4 liquid-glass-text">Performance Optimization Recommendations</h3>
             <div className="columns is-multiline">
               {optimizations.map((opt, idx) => (
                 <div key={idx} className="column is-half">
-                  <div className={`notification ${opt.type === "critical" ? "is-danger" : "is-warning"}`}>
-                    <strong>{opt.title}</strong>
-                    <p className="mt-2">{opt.description}</p>
+                  <div className={`notification ${opt.type === "critical" ? "is-danger" : "is-warning"} liquid-glass`}>
+                    <strong className="liquid-glass-text">{opt.title}</strong>
+                    <p className="mt-2 liquid-glass-text">{opt.description}</p>
                     <p className="mt-2">
                       <span className="tag">Impact: {opt.impact}</span>
                     </p>
@@ -2116,12 +2116,12 @@ export default function NetworkTrafficDemo() {
         )}
 
         {/* Traffic Prediction & Forecasting */}
-        <div className="box mt-6">
-          <h3 className="title is-4 mb-4">Traffic Prediction & Forecasting</h3>
+        <div className="box mt-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Traffic Prediction & Forecasting</h3>
           <div className="columns">
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Current & Predicted Load</h5>
+                <h5 className="title is-5 liquid-glass-text">Current & Predicted Load</h5>
                 <div className="level">
                   <div className="level-item has-text-centered">
                     <div>
@@ -2150,29 +2150,29 @@ export default function NetworkTrafficDemo() {
             </div>
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Capacity Forecast</h5>
+                <h5 className="title is-5 liquid-glass-text">Capacity Forecast</h5>
                 {predictNextMinute > totalRequests * 1.2 && (
-                  <div className="notification is-warning">
-                    <strong>⚠️ Traffic Spike Predicted</strong>
-                    <p className="mt-2">
+                  <div className="notification is-warning liquid-glass">
+                    <strong className="liquid-glass-text">⚠️ Traffic Spike Predicted</strong>
+                    <p className="mt-2 liquid-glass-text">
                       Expected increase of {((predictNextMinute / totalRequests - 1) * 100).toFixed(1)}% in next minute.
                       Consider pre-scaling.
                     </p>
                   </div>
                 )}
                 {predictNextMinute < totalRequests * 0.8 && (
-                  <div className="notification is-info">
-                    <strong>ℹ️ Traffic Decreasing</strong>
-                    <p className="mt-2">
+                  <div className="notification is-info liquid-glass">
+                    <strong className="liquid-glass-text">ℹ️ Traffic Decreasing</strong>
+                    <p className="mt-2 liquid-glass-text">
                       Expected decrease of {((1 - predictNextMinute / totalRequests) * 100).toFixed(1)}%.
                       Monitor for scaling down opportunities.
                     </p>
                   </div>
                 )}
                 {predictNextMinute >= totalRequests * 0.8 && predictNextMinute <= totalRequests * 1.2 && (
-                  <div className="notification is-success">
-                    <strong>✓ Stable Traffic</strong>
-                    <p className="mt-2">Traffic is expected to remain stable.</p>
+                  <div className="notification is-success liquid-glass">
+                    <strong className="liquid-glass-text">✓ Stable Traffic</strong>
+                    <p className="mt-2 liquid-glass-text">Traffic is expected to remain stable.</p>
                   </div>
                 )}
               </div>
@@ -2182,13 +2182,13 @@ export default function NetworkTrafficDemo() {
 
         {/* Cost Optimization */}
         {costOptimizations.length > 0 && (
-          <div className="box mt-6">
-            <h3 className="title is-4 mb-4">Cost Optimization Opportunities</h3>
+          <div className="box mt-6 liquid-glass-card">
+            <h3 className="title is-4 mb-4 liquid-glass-text">Cost Optimization Opportunities</h3>
             <div className="content">
               {costOptimizations.map((opt, idx) => (
-                <div key={idx} className="notification is-info">
-                  <strong>💰 {opt.title}</strong>
-                  <p className="mt-2">{opt.description}</p>
+                <div key={idx} className="notification is-info liquid-glass">
+                  <strong className="liquid-glass-text">💰 {opt.title}</strong>
+                  <p className="mt-2 liquid-glass-text">{opt.description}</p>
                 </div>
               ))}
             </div>
@@ -2196,13 +2196,13 @@ export default function NetworkTrafficDemo() {
         )}
 
         {/* Capacity Planning & Recommendations */}
-        <div className="box mt-6">
-          <h3 className="title is-4 mb-4">Capacity Planning & Recommendations</h3>
+        <div className="box mt-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Capacity Planning & Recommendations</h3>
           <div className="columns">
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Current State</h5>
-                <ul>
+                <h5 className="title is-5 liquid-glass-text">Current State</h5>
+                <ul className="liquid-glass-text">
                   <li>Total Capacity: {(data.length * maxCapacity).toLocaleString()} req/sec</li>
                   <li>Current Load: {totalRequests.toLocaleString()} req/sec</li>
                   <li>Utilization: <strong className={needsScaling ? "has-text-danger" : "has-text-success"}>{utilization.toFixed(1)}%</strong></li>
@@ -2212,27 +2212,27 @@ export default function NetworkTrafficDemo() {
             </div>
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Recommendations</h5>
+                <h5 className="title is-5 liquid-glass-text">Recommendations</h5>
                 {needsScaling ? (
-                  <div className="notification is-warning">
-                    <strong>⚠️ Scaling Recommended</strong>
-                    <p className="mt-2">
+                  <div className="notification is-warning liquid-glass">
+                    <strong className="liquid-glass-text">⚠️ Scaling Recommended</strong>
+                    <p className="mt-2 liquid-glass-text">
                       Current utilization ({utilization.toFixed(1)}%) exceeds 80% threshold.
                       Consider adding {Math.ceil((totalRequests / maxCapacity) - data.length)} more servers.
                     </p>
                   </div>
                 ) : (
-                  <div className="notification is-success">
-                    <strong>✓ Capacity Healthy</strong>
-                    <p className="mt-2">
+                  <div className="notification is-success liquid-glass">
+                    <strong className="liquid-glass-text">✓ Capacity Healthy</strong>
+                    <p className="mt-2 liquid-glass-text">
                       Current utilization is within acceptable range. No immediate scaling needed.
                     </p>
                   </div>
                 )}
                 {p99Latency > 200 && (
-                  <div className="notification is-danger mt-3">
-                    <strong>⚠️ High P99 Latency</strong>
-                    <p className="mt-2">
+                  <div className="notification is-danger mt-3 liquid-glass">
+                    <strong className="liquid-glass-text">⚠️ High P99 Latency</strong>
+                    <p className="mt-2 liquid-glass-text">
                       P99 latency ({p99Latency.toFixed(2)}ms) exceeds SLA threshold (200ms).
                       Investigate performance bottlenecks.
                     </p>
@@ -2242,8 +2242,8 @@ export default function NetworkTrafficDemo() {
             </div>
             <div className="column">
               <div className="content">
-                <h5 className="title is-5">Cost Analysis</h5>
-                <ul>
+                <h5 className="title is-5 liquid-glass-text">Cost Analysis</h5>
+                <ul className="liquid-glass-text">
                   <li>Estimated Cost: ${(data.length * 50).toFixed(2)}/hour</li>
                   <li>Monthly Projection: ${(data.length * 50 * 730).toLocaleString()}</li>
                   <li>Cost per Request: ${((data.length * 50) / totalRequests * 1000).toFixed(4)}/1K</li>
@@ -2258,8 +2258,8 @@ export default function NetworkTrafficDemo() {
           </div>
         </div>
 
-        <div className="box mt-6">
-          <h3 className="title is-4 mb-4">Server Details ({data.length} servers)</h3>
+        <div className="box mt-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Server Details ({data.length} servers)</h3>
           <div className="table-container">
             <table className="table is-fullwidth is-striped">
               <thead>

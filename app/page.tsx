@@ -47,10 +47,10 @@ export default function Home() {
       <HeroSection />
       <section id="demos" className="section">
         <div className="container">
-          <h2 className="title is-2 has-text-centered mb-6">
+          <h2 className="title is-2 has-text-centered mb-6 liquid-glass-text">
             Interactive Demos
           </h2>
-          <p className="subtitle is-5 has-text-centered mb-6">
+          <p className="subtitle is-5 has-text-centered mb-6 liquid-glass-text">
             Explore advanced technology demonstrations showcasing real-world
             applications
           </p>
@@ -59,17 +59,17 @@ export default function Home() {
             {demos.map((demo) => (
               <div key={demo.href} className="column is-one-third">
                 <Link href={demo.href}>
-                  <div className="card">
+                  <div className="card liquid-glass-card">
                     <div className="card-content">
                       <div className="media">
                         <div className="media-left">
                           <div className="is-size-1">{demo.icon}</div>
                         </div>
                         <div className="media-content">
-                          <p className="title is-4">{demo.title}</p>
+                          <p className="title is-4 liquid-glass-text">{demo.title}</p>
                         </div>
                       </div>
-                      <div className="content">{demo.description}</div>
+                      <div className="content liquid-glass-text">{demo.description}</div>
                     </div>
                   </div>
                 </Link>

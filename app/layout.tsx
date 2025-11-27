@@ -40,6 +40,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable}`}
       >
+        <div className="floating-shapes"></div>
+        <div className="noise-texture"></div>
         <ThemeProvider>
           <Navbar />
           <main className="is-fullheight pt-6">{children}</main>

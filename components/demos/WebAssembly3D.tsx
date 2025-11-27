@@ -48,6 +48,7 @@ function ParticleSystem() {
           count={particles.length / 3}
           array={particles}
           itemSize={3}
+          args={[particles, 3]}
         />
       </bufferGeometry>
       <pointsMaterial size={0.05} color="#48c78e" transparent opacity={0.6} />

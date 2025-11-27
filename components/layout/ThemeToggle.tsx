@@ -9,7 +9,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="button is-light"
+      className="button is-light liquid-glass-button"
       aria-label="Toggle theme"
     >
       <motion.span
