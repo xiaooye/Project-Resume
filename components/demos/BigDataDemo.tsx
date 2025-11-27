@@ -1273,10 +1273,11 @@ export default function BigDataDemo() {
       configHash: configHash.substring(0, 50),
     });
     
-    if (analysisType !== "time-series" || filteredData.length < 50) {
+    // Run time series analysis for both "time-series" and "forecast" analysis types
+    if ((analysisType !== "time-series" && analysisType !== "forecast") || filteredData.length < 50) {
       // Clear results when switching away or not enough data
-      if (analysisType !== "time-series") {
-        console.log("[Time Series] Skipping: analysisType is not 'time-series', current:", analysisType);
+      if (analysisType !== "time-series" && analysisType !== "forecast") {
+        console.log("[Time Series] Skipping: analysisType is not 'time-series' or 'forecast', current:", analysisType);
         setTimeSeriesAnalysis(null);
       } else {
         console.log("[Time Series] Skipping: not enough data, have:", filteredData.length);
@@ -3399,51 +3400,136 @@ export default function BigDataDemo() {
             )}
 
             {/* Forecast & Prediction */}
-            {analysisType === "forecast" && timeSeriesAnalysis && (
+            {analysisType === "forecast" && (
               <div className="box mb-6">
                 <h3 className="title is-4 mb-4">Forecast & Prediction</h3>
-                <div className="content">
-                  <p><strong>Current Trend:</strong> {timeSeriesAnalysis.trend}</p>
-                  <p><strong>Trend Strength:</strong> {timeSeriesAnalysis.trendStrength.toFixed(4)}</p>
-                  {timeSeriesAnalysis.forecast.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="title is-5 mb-3">Predicted Values</h4>
-                      <div className="table-container">
-                        <table className="table is-fullwidth is-hoverable">
-                          <thead>
-                            <tr>
-                              <th>Period</th>
-                              <th>Predicted Value</th>
-                              <th>Confidence Interval</th>
-                              <th>Risk Level</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {timeSeriesAnalysis.forecast.map((f, i) => {
-                              const riskLevel = f.confidence > 0.8 ? "Low" : f.confidence > 0.6 ? "Medium" : "High";
-                              return (
-                                <tr key={i}>
-                                  <td>{f.date}</td>
-                                  <td><strong>{f.predicted.toFixed(2)}</strong></td>
-                                  <td>±{((1 - f.confidence) * f.predicted).toFixed(2)}</td>
-                                  <td>
-                                    <span className={`tag ${
-                                      riskLevel === "Low" ? "is-success" :
-                                      riskLevel === "Medium" ? "is-warning" :
-                                      "is-danger"
-                                    }`}>
-                                      {riskLevel}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                {timeSeriesAnalysis ? (
+                  <div className="content">
+                    <div className="level mb-4">
+                      <div className="level-item has-text-centered">
+                        <div>
+                          <p className="heading">Current Trend</p>
+                          <p className={`title is-5 ${
+                            timeSeriesAnalysis.trend === "increasing" ? "has-text-success" :
+                            timeSeriesAnalysis.trend === "decreasing" ? "has-text-danger" :
+                            timeSeriesAnalysis.trend === "volatile" ? "has-text-warning" :
+                            "has-text-info"
+                          }`}>
+                            {timeSeriesAnalysis.trend.toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="level-item has-text-centered">
+                        <div>
+                          <p className="heading">Trend Strength</p>
+                          <p className="title is-5">{timeSeriesAnalysis.trendStrength.toFixed(4)}</p>
+                        </div>
+                      </div>
+                      <div className="level-item has-text-centered">
+                        <div>
+                          <p className="heading">Seasonality</p>
+                          <p className="title is-5">{timeSeriesAnalysis.seasonality ? "Yes" : "No"}</p>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                    {timeSeriesAnalysis.forecast.length > 0 ? (
+                      <div className="mt-4">
+                        <h4 className="title is-5 mb-3">Predicted Values (Next {timeSeriesAnalysis.forecast.length} Periods)</h4>
+                        <div className="table-container">
+                          <table className="table is-fullwidth is-hoverable">
+                            <thead>
+                              <tr>
+                                <th>Period</th>
+                                <th>Predicted Value</th>
+                                <th>Confidence</th>
+                                <th>Confidence Interval</th>
+                                <th>Risk Level</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {timeSeriesAnalysis.forecast.map((f, i) => {
+                                const riskLevel = f.confidence > 0.8 ? "Low" : f.confidence > 0.6 ? "Medium" : "High";
+                                const confidenceInterval = ((1 - f.confidence) * f.predicted);
+                                return (
+                                  <tr key={i}>
+                                    <td><strong>{f.date}</strong></td>
+                                    <td><strong className="is-size-5">${f.predicted.toFixed(2)}</strong></td>
+                                    <td>
+                                      <progress
+                                        className={`progress ${
+                                          f.confidence > 0.8 ? "is-success" :
+                                          f.confidence > 0.6 ? "is-warning" :
+                                          "is-danger"
+                                        }`}
+                                        value={f.confidence * 100}
+                                        max={100}
+                                      >
+                                        {(f.confidence * 100).toFixed(0)}%
+                                      </progress>
+                                      <small className="has-text-grey">{(f.confidence * 100).toFixed(1)}%</small>
+                                    </td>
+                                    <td>±${confidenceInterval.toFixed(2)}</td>
+                                    <td>
+                                      <span className={`tag ${
+                                        riskLevel === "Low" ? "is-success" :
+                                        riskLevel === "Medium" ? "is-warning" :
+                                        "is-danger"
+                                      }`}>
+                                        {riskLevel}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="box mt-4">
+                          <h5 className="title is-6 mb-3">Forecast Insights</h5>
+                          <div className="content">
+                            <p>
+                              <strong>Forecast Periods:</strong> {timeSeriesAnalysis.forecast.length} periods ahead
+                            </p>
+                            <p>
+                              <strong>Average Confidence:</strong> {(
+                                timeSeriesAnalysis.forecast.reduce((sum, f) => sum + f.confidence, 0) / 
+                                timeSeriesAnalysis.forecast.length * 100
+                              ).toFixed(1)}%
+                            </p>
+                            <p>
+                              <strong>Predicted Range:</strong> ${Math.min(...timeSeriesAnalysis.forecast.map(f => f.predicted)).toFixed(2)} - ${Math.max(...timeSeriesAnalysis.forecast.map(f => f.predicted)).toFixed(2)}
+                            </p>
+                            {timeSeriesAnalysis.trend === "increasing" && (
+                              <p className="has-text-success">
+                                <strong>📈 Upward Trend:</strong> Values are predicted to increase over the forecast period.
+                              </p>
+                            )}
+                            {timeSeriesAnalysis.trend === "decreasing" && (
+                              <p className="has-text-danger">
+                                <strong>📉 Downward Trend:</strong> Values are predicted to decrease over the forecast period.
+                              </p>
+                            )}
+                            {timeSeriesAnalysis.seasonality && (
+                              <p className="has-text-info">
+                                <strong>🔄 Seasonality Detected:</strong> Data shows periodic patterns that may affect forecast accuracy.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="has-text-centered py-6">
+                        <p className="subtitle">No forecast data available</p>
+                        <p className="help">Forecast requires sufficient historical data. Try adjusting the forecast periods in the configuration panel.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="has-text-centered py-6">
+                    <p className="subtitle">Calculating forecast...</p>
+                    <p className="help">Analyzing time series data and generating predictions. This may take a moment.</p>
+                  </div>
+                )}
               </div>
             )}
 
