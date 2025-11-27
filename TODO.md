@@ -380,14 +380,49 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
 
 #### Pages (CTO Expectation: Professional Presentation)
 
-- [x] **项目作品集页面** (Staff Level: Portfolio & Case Studies)
-  - [x] 项目数据管理 - 结构化数据，分类标签
-  - [x] 卡片布局 - 响应式网格，移动端优化
-  - [x] 详情模态框 - 项目详情，技术栈展示
-  - [x] AI 生成描述集成 - 自动生成，人工审核
-  - [x] **响应式优化** - 移动端卡片布局，触摸交互
-  - [x] **WCAG 2.2 AAA** - 语义化 HTML，键盘导航，屏幕阅读器支持
-  - [x] **性能** - 图片懒加载，代码分割
+- [ ] **项目作品集页面重写** (Staff Level: Portfolio & Case Studies)
+  - [ ] **数据层改进**
+    - [ ] 创建 `data/projects.ts` 文件 - 将项目数据从组件分离
+    - [ ] 扩展 Project 接口 - 添加 category, status, complexity, dates, metrics 等字段
+    - [ ] 创建项目图标映射 - 类似技能图标系统
+    - [ ] 创建项目分类配置 - 匹配技能分类系统
+  - [ ] **UI/UX 改进（匹配技能页面风格）**
+    - [ ] 搜索功能 - 搜索框，支持按标题、描述、技术栈搜索
+    - [ ] 排序功能 - 按名称、日期、复杂度、分类排序，支持升序/降序
+    - [ ] 分类筛选 - 按项目分类筛选（Languages, Frontend, Backend, Cloud, DevOps, Advanced, AI/ML）
+    - [ ] 状态筛选 - 按项目状态筛选（All, Completed, In Progress, Planned）
+    - [ ] 复杂度筛选 - 按复杂度筛选（Beginner, Intermediate, Advanced, Expert）
+    - [ ] 项目卡片样式 - 匹配技能卡片设计，添加状态徽章、复杂度指示器
+    - [ ] 项目详情模态框 - 匹配技能模态框设计，显示完整项目信息
+    - [ ] 国际化 - 所有文本改为英文
+    - [ ] 对比度优化 - 确保 WCAG 2.2 AAA 标准
+  - [ ] **新增项目（21个）**
+    - [ ] Languages 分类项目（3个）- TypeScript工具、JavaScript性能分析器、Python数据处理
+    - [ ] Frontend 分类项目（3个）- React组件库、Next.js电商平台、PWA框架
+    - [ ] Backend 分类项目（3个）- GraphQL网关、微服务编排、实时API服务器
+    - [ ] Cloud 分类项目（3个）- AWS Serverless、Azure多区域部署、多云成本优化
+    - [ ] DevOps 分类项目（3个）- Kubernetes CI/CD、Docker注册表、基础设施即代码
+    - [ ] Advanced 分类项目（3个）- WebAssembly视频处理、WebRTC多用户平台、Web3 NFT市场
+    - [ ] AI/ML 分类项目（3个）- ONNX Runtime平台、AI Agent框架、ML模型训练平台
+  - [ ] **可视化（可选）**
+    - [ ] 项目时间线图表 - D3.js 可视化，按完成日期展示
+    - [ ] 项目分类分布图 - 饼图或柱状图，展示项目分布
+    - [ ] 技术栈使用热力图 - 展示技术使用频率
+  - [ ] **代码结构优化**
+    - [ ] 组件拆分 - ProjectCard, ProjectModal, ProjectFilters 独立组件
+    - [ ] 代码组织 - 匹配 SkillsPage.tsx 的结构
+  - [ ] **测试和验证**
+    - [ ] 功能测试 - 搜索、排序、筛选功能
+    - [ ] 响应式测试 - 移动端、平板、桌面端
+    - [ ] 无障碍测试 - 键盘导航、屏幕阅读器
+    - [ ] 浏览器兼容性测试
+  - [x] 项目数据管理 - 结构化数据，分类标签（旧版）
+  - [x] 卡片布局 - 响应式网格，移动端优化（旧版）
+  - [x] 详情模态框 - 项目详情，技术栈展示（旧版）
+  - [x] AI 生成描述集成 - 自动生成，人工审核（旧版）
+  - [x] **响应式优化** - 移动端卡片布局，触摸交互（旧版）
+  - [x] **WCAG 2.2 AAA** - 语义化 HTML，键盘导航，屏幕阅读器支持（旧版）
+  - [x] **性能** - 图片懒加载，代码分割（旧版）
 
 - [x] **技能展示页面** (CTO Expectation: Technical Competency)
   - [x] 技能雷达图 - D3.js 可视化，交互式图表
