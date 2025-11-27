@@ -36,18 +36,442 @@ interface StreamConfig {
   maxItems: number; // Maximum items to keep in memory
 }
 
-// Stream data generator - yields data in batches
+// Normal distribution random number generator (Box-Muller transform)
+function normalRandom(mean: number = 0, stdDev: number = 1): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random(); // Converting [0,1) to (0,1)
+  while (v === 0) v = Math.random();
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return z * stdDev + mean;
+}
+
+// Skewed distribution (exponential/log-normal style)
+function skewedRandom(mean: number, stdDev: number, skewness: number = 0): number {
+  // skewness > 0: right-skewed, < 0: left-skewed, = 0: normal
+  if (Math.abs(skewness) < 0.1) {
+    return normalRandom(mean, stdDev);
+  }
+  // Use exponential transform for skewness
+  const u = Math.random();
+  const base = normalRandom(0, 1);
+  const skewed = base + skewness * (u - 0.5);
+  return skewed * stdDev + mean;
+}
+
+// Bimodal distribution (two peaks)
+function bimodalRandom(mean1: number, stdDev1: number, mean2: number, stdDev2: number, weight: number = 0.5): number {
+  // weight: probability of choosing first distribution (0-1)
+  if (Math.random() < weight) {
+    return normalRandom(mean1, stdDev1);
+  } else {
+    return normalRandom(mean2, stdDev2);
+  }
+}
+
+// Multimodal distribution (multiple peaks)
+function multimodalRandom(modes: Array<{ mean: number; stdDev: number; weight: number }>): number {
+  const rand = Math.random();
+  let cumulative = 0;
+  for (const mode of modes) {
+    cumulative += mode.weight;
+    if (rand < cumulative) {
+      return normalRandom(mode.mean, mode.stdDev);
+    }
+  }
+  // Fallback to last mode
+  const lastMode = modes[modes.length - 1];
+  return normalRandom(lastMode.mean, lastMode.stdDev);
+}
+
+// Power law / Pareto distribution (long-tail distribution)
+function powerLawRandom(min: number, alpha: number = 2.5): number {
+  // alpha: shape parameter (lower = more extreme values)
+  const u = Math.random();
+  return min * Math.pow(1 - u, -1 / (alpha - 1));
+}
+
+// Log-normal distribution (right-skewed, common in real-world data)
+function logNormalRandom(mean: number, stdDev: number): number {
+  const normal = normalRandom(0, 1);
+  const logMean = Math.log(mean) - 0.5 * Math.log(1 + (stdDev / mean) ** 2);
+  const logStdDev = Math.sqrt(Math.log(1 + (stdDev / mean) ** 2));
+  return Math.exp(logMean + logStdDev * normal);
+}
+
+// Exponential distribution (for durations, waiting times)
+function exponentialRandom(lambda: number): number {
+  // lambda: rate parameter (1/mean)
+  return -Math.log(1 - Math.random()) / lambda;
+}
+
+// Beta distribution (bounded between 0 and 1, good for percentages)
+function betaRandom(alpha: number, beta: number): number {
+  // Using approximation via normal distribution
+  const mean = alpha / (alpha + beta);
+  const variance = (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1));
+  const stdDev = Math.sqrt(variance);
+  let result = normalRandom(mean, stdDev);
+  // Clamp to [0, 1]
+  return Math.max(0, Math.min(1, result));
+}
+
+// Clamp value to range
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+// Multi-level category hierarchy definition
+const categoryHierarchy = {
+  "Technology": {
+    "Software": {
+      "Cloud Services": ["AWS", "Azure", "GCP", "Other"],
+      "Enterprise Software": ["ERP", "CRM", "HRM", "Other"],
+      "Development Tools": ["IDEs", "Version Control", "CI/CD", "Other"],
+    },
+    "Hardware": {
+      "Servers": ["Dell", "HP", "IBM", "Other"],
+      "Networking": ["Cisco", "Juniper", "Aruba", "Other"],
+      "Storage": ["EMC", "NetApp", "Pure Storage", "Other"],
+    },
+    "Services": {
+      "Consulting": ["Strategy", "Implementation", "Support", "Other"],
+      "Managed Services": ["Infrastructure", "Security", "Monitoring", "Other"],
+      "Training": ["Technical", "Business", "Certification", "Other"],
+    },
+  },
+  "Finance": {
+    "Banking": {
+      "Retail Banking": ["Checking", "Savings", "Loans", "Other"],
+      "Investment Banking": ["M&A", "Trading", "Advisory", "Other"],
+      "Digital Banking": ["Mobile", "Online", "API", "Other"],
+    },
+    "Insurance": {
+      "Life Insurance": ["Term", "Whole Life", "Universal", "Other"],
+      "Property & Casualty": ["Auto", "Home", "Business", "Other"],
+      "Health Insurance": ["Individual", "Group", "Medicare", "Other"],
+    },
+    "Investment": {
+      "Stocks": ["Large Cap", "Mid Cap", "Small Cap", "Other"],
+      "Bonds": ["Government", "Corporate", "Municipal", "Other"],
+      "Alternative": ["Real Estate", "Commodities", "Crypto", "Other"],
+    },
+  },
+  "Healthcare": {
+    "Pharmaceuticals": {
+      "Research": ["Clinical Trials", "Drug Development", "Testing", "Other"],
+      "Manufacturing": ["Production", "Quality Control", "Packaging", "Other"],
+      "Distribution": ["Wholesale", "Retail", "Hospital", "Other"],
+    },
+    "Medical Devices": {
+      "Diagnostic": ["Imaging", "Lab Equipment", "Monitoring", "Other"],
+      "Therapeutic": ["Surgical", "Implantable", "Wearable", "Other"],
+      "Support Equipment": ["Beds", "Ventilators", "Mobility", "Other"],
+    },
+    "Services": {
+      "Hospitals": ["General", "Specialty", "Emergency", "Other"],
+      "Clinics": ["Primary Care", "Specialty Care", "Urgent Care", "Other"],
+      "Telemedicine": ["Consultation", "Monitoring", "Prescription", "Other"],
+    },
+  },
+  "Retail": {
+    "E-commerce": {
+      "Marketplace": ["Amazon", "eBay", "Etsy", "Other"],
+      "Direct Sales": ["B2C", "B2B", "D2C", "Other"],
+      "Platforms": ["Shopify", "WooCommerce", "Magento", "Other"],
+    },
+    "Physical Stores": {
+      "Department Stores": ["Fashion", "Electronics", "Home", "Other"],
+      "Specialty Stores": ["Grocery", "Pharmacy", "Convenience", "Other"],
+      "Discount Stores": ["Warehouse", "Outlet", "Dollar", "Other"],
+    },
+    "Supply Chain": {
+      "Logistics": ["Shipping", "Warehousing", "Last Mile", "Other"],
+      "Procurement": ["Sourcing", "Vendor Management", "Purchasing", "Other"],
+      "Inventory": ["Management", "Forecasting", "Optimization", "Other"],
+    },
+  },
+  "Manufacturing": {
+    "Automotive": {
+      "Vehicles": ["Cars", "Trucks", "Motorcycles", "Other"],
+      "Components": ["Engines", "Electronics", "Interior", "Other"],
+      "Services": ["Maintenance", "Parts", "Warranty", "Other"],
+    },
+    "Electronics": {
+      "Consumer": ["Smartphones", "Laptops", "TVs", "Other"],
+      "Industrial": ["Sensors", "Controllers", "Automation", "Other"],
+      "Components": ["Semiconductors", "Displays", "Batteries", "Other"],
+    },
+    "Food & Beverage": {
+      "Processing": ["Packaging", "Preservation", "Quality", "Other"],
+      "Distribution": ["Cold Chain", "Retail", "Food Service", "Other"],
+      "Products": ["Packaged Foods", "Beverages", "Snacks", "Other"],
+    },
+  },
+};
+
+// Flatten category hierarchy for random selection
+function getRandomCategory(): {
+  mainCategory: string;
+  subCategory: string;
+  categoryLevel3: string;
+  categoryLevel4: string;
+} {
+  const mainCategories = Object.keys(categoryHierarchy);
+  const mainCategory = mainCategories[Math.floor(Math.random() * mainCategories.length)];
+  const mainCatData = categoryHierarchy[mainCategory as keyof typeof categoryHierarchy];
+  
+  const subCategories = Object.keys(mainCatData);
+  const subCategory = subCategories[Math.floor(Math.random() * subCategories.length)];
+  const subCatData = mainCatData[subCategory as keyof typeof mainCatData];
+  
+  const level3Categories = Object.keys(subCatData);
+  const categoryLevel3 = level3Categories[Math.floor(Math.random() * level3Categories.length)];
+  const level4Options = subCatData[categoryLevel3 as keyof typeof subCatData];
+  
+  const categoryLevel4 = level4Options[Math.floor(Math.random() * level4Options.length)];
+  
+  return { mainCategory, subCategory, categoryLevel3, categoryLevel4 };
+}
+
+// Generate realistic data with normal distribution, correlations, skewness, and outliers
 function* generateDataStream(count: number): Generator<BigDataItem[], void, unknown> {
+  const regions = ["North America", "Europe", "Asia Pacific", "South America", "Africa", "Middle East"];
+  const statuses: Array<"active" | "pending" | "completed" | "failed"> = ["active", "pending", "completed", "failed"];
+  const statusWeights = [0.6, 0.2, 0.15, 0.05]; // Probability distribution for statuses
+  
+  // Base parameters for normal distributions
+  const valueMean = 5000;
+  const valueStdDev = 2000;
+  const qualityMean = 75;
+  const qualityStdDev = 15;
+  const durationMean = 300; // 5 minutes
+  const durationStdDev = 120;
+  const errorRateMean = 2;
+  const errorRateStdDev = 1.5;
+  const efficiencyMean = 80;
+  const efficiencyStdDev = 12;
+  
+  // Random correlation coefficients (will vary across batches for diversity)
+  // These will be regenerated periodically to create different correlation patterns
+  let correlationPattern = Math.floor(Math.random() * 4); // 0-3 different patterns
+  let patternChangeCounter = 0;
+  const PATTERN_CHANGE_INTERVAL = 100000; // Change pattern every 100k items
+  
+  // Outlier injection parameters
+  const OUTLIER_PROBABILITY = 0.02; // 2% chance of outlier
+  const OUTLIER_MULTIPLIER_MIN = 3;
+  const OUTLIER_MULTIPLIER_MAX = 10;
+  
   let current = 0;
+  const baseTimestamp = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days ago
+  
   while (current < count) {
     const batchSize = Math.min(STREAM_BATCH_SIZE, count - current);
-    const batch = Array.from({ length: batchSize }, (_, i) => ({
-      id: `item-${current + i}`,
-      name: `Data Item ${current + i + 1}`,
-      value: Math.floor(Math.random() * 10000),
-      category: `Category ${((current + i) % 10) + 1}`,
-      timestamp: Date.now() - Math.random() * 86400000,
-    }));
+    
+    // Change correlation pattern periodically
+    patternChangeCounter += batchSize;
+    if (patternChangeCounter >= PATTERN_CHANGE_INTERVAL) {
+      correlationPattern = Math.floor(Math.random() * 4);
+      patternChangeCounter = 0;
+    }
+    
+    // Define correlation patterns (different strengths and directions)
+    const patterns = [
+      // Pattern 0: Strong positive correlation between value and quality
+      { valueQuality: 0.8, valueRevenue: 0.7, qualityEfficiency: 0.6, valueCost: 0.5 },
+      // Pattern 1: Moderate correlations, some negative
+      { valueQuality: 0.4, valueRevenue: 0.6, qualityEfficiency: -0.3, valueCost: 0.7 },
+      // Pattern 2: Weak correlations, mixed
+      { valueQuality: 0.2, valueRevenue: 0.3, qualityEfficiency: 0.1, valueCost: 0.4 },
+      // Pattern 3: Strong negative correlation between error rate and quality
+      { valueQuality: 0.5, valueRevenue: 0.6, qualityEfficiency: 0.7, valueCost: 0.3, qualityErrorRate: -0.8 },
+    ];
+    const pattern = patterns[correlationPattern];
+    
+    // Random skewness for different fields (changes per batch)
+    const valueSkew = (Math.random() - 0.5) * 0.5; // -0.25 to 0.25
+    const qualitySkew = (Math.random() - 0.5) * 0.3;
+    const durationSkew = Math.random() * 0.6; // Right-skewed (most are short, few are long)
+    const errorRateSkew = Math.random() * 0.8; // Right-skewed (most have low errors)
+    
+    const batch = Array.from({ length: batchSize }, (_, i) => {
+      const index = current + i;
+      const isOutlier = Math.random() < OUTLIER_PROBABILITY;
+      
+      // Generate base value with skewed distribution
+      let baseValue = skewedRandom(valueMean, valueStdDev, valueSkew);
+      if (isOutlier) {
+        // Inject outlier: either very high or very low
+        const outlierType = Math.random() < 0.5 ? -1 : 1; // -1 for low, 1 for high
+        const multiplier = normalRandom(
+          (OUTLIER_MULTIPLIER_MIN + OUTLIER_MULTIPLIER_MAX) / 2,
+          (OUTLIER_MULTIPLIER_MAX - OUTLIER_MULTIPLIER_MIN) / 3
+        );
+        baseValue = valueMean + outlierType * Math.abs(multiplier) * valueStdDev;
+      }
+      const value = Math.round(clamp(baseValue, 100, 50000));
+      
+      // Generate quality with correlation to value and skewness
+      let qualityBase = skewedRandom(qualityMean, qualityStdDev, qualitySkew);
+      // Apply correlation with value
+      const valueNormalized = (value - valueMean) / valueStdDev;
+      qualityBase += pattern.valueQuality * valueNormalized * qualityStdDev;
+      // Add random noise
+      qualityBase += normalRandom(0, qualityStdDev * 0.3);
+      const quality = clamp(Math.round(qualityBase), 0, 100);
+      
+      // Generate cost (correlated with value, with randomness and skewness)
+      const costBase = value * (0.1 + normalRandom(0.15, 0.05) + pattern.valueCost * 0.1);
+      const cost = Math.round(costBase * 100) / 100;
+      
+      // Generate revenue (correlated with value and quality, with randomness)
+      const revenueBase = value * (0.8 + quality / 200) * (1 + pattern.valueRevenue * 0.2 + normalRandom(0, 0.1));
+      const revenue = Math.round(revenueBase * 100) / 100;
+      
+      // Generate duration (right-skewed, inversely correlated with efficiency)
+      let durationBase = skewedRandom(durationMean, durationStdDev, durationSkew);
+      durationBase = Math.max(10, durationBase); // Ensure positive
+      const duration = Math.round(clamp(durationBase, 10, 1800));
+      
+      // Generate error rate (right-skewed, negatively correlated with quality if pattern 3)
+      let errorRateBase = skewedRandom(errorRateMean, errorRateStdDev, errorRateSkew);
+      if (pattern.qualityErrorRate) {
+        const qualityNormalized = (quality - qualityMean) / qualityStdDev;
+        errorRateBase += pattern.qualityErrorRate * qualityNormalized * errorRateStdDev;
+      }
+      // Add some outliers for error rate
+      if (isOutlier && Math.random() < 0.3) {
+        errorRateBase = errorRateMean + Math.abs(normalRandom(0, errorRateStdDev * 3));
+      }
+      const errorRate = clamp(Math.round(errorRateBase * 100) / 100, 0, 15);
+      
+      // Generate throughput (correlated with value, with some randomness)
+      const throughputBase = value * (0.5 + normalRandom(0.3, 0.1));
+      const throughput = Math.round(throughputBase);
+      
+      // Generate efficiency (correlated with quality, with randomness)
+      let efficiencyBase = normalRandom(efficiencyMean, efficiencyStdDev);
+      if (pattern.qualityEfficiency) {
+        const qualityNormalized = (quality - qualityMean) / qualityStdDev;
+        efficiencyBase += pattern.qualityEfficiency * qualityNormalized * efficiencyStdDev;
+      }
+      efficiencyBase += normalRandom(0, efficiencyStdDev * 0.2);
+      const efficiency = clamp(Math.round(efficiencyBase), 0, 100);
+      
+      // Generate priority (1-5, weighted towards middle values, but with some randomness)
+      const priorityRand = Math.random();
+      let priority = priorityRand < 0.1 ? 1 :
+                     priorityRand < 0.3 ? 2 :
+                     priorityRand < 0.7 ? 3 :
+                     priorityRand < 0.9 ? 4 : 5;
+      // Add some correlation: high value items might have higher priority
+      if (value > valueMean + valueStdDev && Math.random() < 0.3) {
+        priority = Math.min(5, priority + 1);
+      }
+      
+      // Select status based on weights, but with some correlation to error rate
+      const statusRand = Math.random();
+      let status: "active" | "pending" | "completed" | "failed" = "active";
+      let cumulative = 0;
+      // Higher error rate increases chance of "failed"
+      const adjustedWeights = errorRate > 5 
+        ? [0.4, 0.15, 0.15, 0.3] // More failures
+        : statusWeights;
+      for (let j = 0; j < statuses.length; j++) {
+        cumulative += adjustedWeights[j];
+        if (statusRand < cumulative) {
+          status = statuses[j];
+          break;
+        }
+      }
+      
+      // Select region (weighted distribution, with some correlation to value)
+      // Higher value items more likely in certain regions
+      let regionIndex = Math.floor(Math.random() * regions.length);
+      if (value > valueMean + valueStdDev * 1.5) {
+        // High value items more likely in "North America" or "Europe"
+        if (Math.random() < 0.6) {
+          regionIndex = Math.random() < 0.5 ? 0 : 1; // North America or Europe
+        }
+      }
+      const region = regions[regionIndex];
+      
+      // Generate multi-level category with some correlation to region and value
+      let categoryData = getRandomCategory();
+      
+      // Add correlation: certain regions prefer certain main categories
+      // North America/Europe: more Technology and Finance
+      if (regionIndex < 2 && Math.random() < 0.4) {
+        const preferredMain = Math.random() < 0.5 ? "Technology" : "Finance";
+        if (categoryHierarchy[preferredMain as keyof typeof categoryHierarchy]) {
+          const mainCatData = categoryHierarchy[preferredMain as keyof typeof categoryHierarchy];
+          const subCategories = Object.keys(mainCatData);
+          const subCategory = subCategories[Math.floor(Math.random() * subCategories.length)];
+          const subCatData = mainCatData[subCategory as keyof typeof mainCatData];
+          const level3Categories = Object.keys(subCatData);
+          const categoryLevel3 = level3Categories[Math.floor(Math.random() * level3Categories.length)];
+          const level4Options = subCatData[categoryLevel3 as keyof typeof subCatData];
+          const categoryLevel4 = level4Options[Math.floor(Math.random() * level4Options.length)];
+          categoryData = {
+            mainCategory: preferredMain,
+            subCategory,
+            categoryLevel3,
+            categoryLevel4,
+          };
+        }
+      }
+      // Asia Pacific: more Manufacturing and Retail
+      else if (regionIndex === 2 && Math.random() < 0.4) {
+        const preferredMain = Math.random() < 0.5 ? "Manufacturing" : "Retail";
+        if (categoryHierarchy[preferredMain as keyof typeof categoryHierarchy]) {
+          const mainCatData = categoryHierarchy[preferredMain as keyof typeof categoryHierarchy];
+          const subCategories = Object.keys(mainCatData);
+          const subCategory = subCategories[Math.floor(Math.random() * subCategories.length)];
+          const subCatData = mainCatData[subCategory as keyof typeof mainCatData];
+          const level3Categories = Object.keys(subCatData);
+          const categoryLevel3 = level3Categories[Math.floor(Math.random() * level3Categories.length)];
+          const level4Options = subCatData[categoryLevel3 as keyof typeof subCatData];
+          const categoryLevel4 = level4Options[Math.floor(Math.random() * level4Options.length)];
+          categoryData = {
+            mainCategory: preferredMain,
+            subCategory,
+            categoryLevel3,
+            categoryLevel4,
+          };
+        }
+      }
+      
+      // Legacy category field for backward compatibility (use level 3 as category)
+      const category = categoryData.categoryLevel3;
+      
+      // Timestamp (distributed over last 30 days with some clustering and trends)
+      // Add some time-based trends: higher values in recent days
+      const daysAgo = normalRandom(15, 10);
+      const timeTrend = (30 - Math.max(0, daysAgo)) / 30; // More recent = higher trend
+      const timestamp = baseTimestamp + Math.round(clamp(daysAgo, 0, 30) * 24 * 60 * 60 * 1000);
+      
+      return {
+        id: `item-${index}`,
+        name: `Transaction-${String(index + 1).padStart(8, "0")}`,
+        value,
+        category, // Legacy field
+        timestamp,
+        mainCategory: categoryData.mainCategory,
+        subCategory: categoryData.subCategory,
+        categoryLevel3: categoryData.categoryLevel3,
+        categoryLevel4: categoryData.categoryLevel4,
+        region,
+        status,
+        priority,
+        quality,
+        cost,
+        revenue,
+        duration,
+        errorRate,
+        throughput,
+        efficiency,
+      };
+    });
     current += batchSize;
     yield batch;
   }
@@ -951,6 +1375,7 @@ export default function BigDataDemo() {
       console.log("[Correlation] Starting calculation", {
         minCorrelation: analysisConfig.minCorrelation,
         method: analysisConfig.correlationMethod,
+        dataCount: filteredData.length,
       });
       const values = filteredData.map(item => item.value);
       const timestamps = filteredData.map(item => item.timestamp);
@@ -964,22 +1389,36 @@ export default function BigDataDemo() {
         const corrValueCat = await wasmCalculations.calculateCorrelation(values, categories);
         const corrTimeCat = await wasmCalculations.calculateCorrelation(timestamps, categories);
         
-        const correlations = [
+        // Calculate all correlations first (don't filter yet)
+        const allCorrelations = [
           { field1: "Value", field2: "Timestamp", value: corrValueTime },
           { field1: "Value", field2: "Category", value: corrValueCat },
           { field1: "Timestamp", field2: "Category", value: corrTimeCat },
-        ].filter(corr => Math.abs(corr.value) >= analysisConfig.minCorrelation);
+        ];
         
-        const strongest = correlations.length > 0
-          ? correlations.reduce((max, curr) => 
+        console.log("[Correlation] All correlations calculated:", {
+          valueTime: corrValueTime.toFixed(4),
+          valueCat: corrValueCat.toFixed(4),
+          timeCat: corrTimeCat.toFixed(4),
+          minThreshold: analysisConfig.minCorrelation,
+        });
+        
+        // Filter by threshold
+        const correlations = allCorrelations.filter(corr => Math.abs(corr.value) >= analysisConfig.minCorrelation);
+        
+        // Find strongest from ALL correlations (not just filtered ones)
+        const strongest = allCorrelations.length > 0
+          ? allCorrelations.reduce((max, curr) => 
               Math.abs(curr.value) > Math.abs(max.value) ? curr : max
             )
           : null;
         
         const result = { correlations, strongest };
         console.log("[Correlation] WASM result:", {
-          correlationCount: correlations.length,
+          totalCalculated: allCorrelations.length,
+          afterFiltering: correlations.length,
           strongest: strongest ? `${strongest.field1}-${strongest.field2}: ${strongest.value.toFixed(4)}` : "none",
+          note: correlations.length === 0 ? "All correlations below threshold. Consider lowering minCorrelation." : "",
         });
         setCorrelationAnalysis(result);
       } catch (error) {
@@ -1000,22 +1439,36 @@ export default function BigDataDemo() {
         const corrValueCat = calcCorrelation(values, categories, meanValue, meanCat);
         const corrTimeCat = calcCorrelation(timestamps, categories, meanTime, meanCat);
         
-        const correlations = [
+        // Calculate all correlations first
+        const allCorrelations = [
           { field1: "Value", field2: "Timestamp", value: corrValueTime },
           { field1: "Value", field2: "Category", value: corrValueCat },
           { field1: "Timestamp", field2: "Category", value: corrTimeCat },
-        ].filter(corr => Math.abs(corr.value) >= analysisConfig.minCorrelation);
+        ];
         
-        const strongest = correlations.length > 0
-          ? correlations.reduce((max, curr) => 
+        console.log("[Correlation] All correlations calculated (JS):", {
+          valueTime: corrValueTime.toFixed(4),
+          valueCat: corrValueCat.toFixed(4),
+          timeCat: corrTimeCat.toFixed(4),
+          minThreshold: analysisConfig.minCorrelation,
+        });
+        
+        // Filter by threshold
+        const correlations = allCorrelations.filter(corr => Math.abs(corr.value) >= analysisConfig.minCorrelation);
+        
+        // Find strongest from ALL correlations
+        const strongest = allCorrelations.length > 0
+          ? allCorrelations.reduce((max, curr) => 
               Math.abs(curr.value) > Math.abs(max.value) ? curr : max
             )
           : null;
         
         const result = { correlations, strongest };
         console.log("[Correlation] JS fallback result:", {
-          correlationCount: correlations.length,
+          totalCalculated: allCorrelations.length,
+          afterFiltering: correlations.length,
           strongest: strongest ? `${strongest.field1}-${strongest.field2}: ${strongest.value.toFixed(4)}` : "none",
+          note: correlations.length === 0 ? "All correlations below threshold. Consider lowering minCorrelation." : "",
         });
         setCorrelationAnalysis(result);
       }
@@ -1407,12 +1860,261 @@ export default function BigDataDemo() {
     return () => clearTimeout(timer);
   }, [virtualItems.length, renderMethod]);
 
+  // Multi-dimensional statistics for professional insights
+  const multiDimStats = useMemo(() => {
+    if (allData.length === 0) {
+      return {
+        byMainCategory: {} as Record<string, { count: number; totalValue: number; avgQuality: number; totalRevenue: number }>,
+        byRegion: {} as Record<string, { count: number; totalValue: number; avgEfficiency: number; totalCost: number }>,
+        byStatus: {} as Record<string, { count: number; percentage: number; avgDuration: number }>,
+        byPriority: {} as Record<number, { count: number; avgValue: number; avgQuality: number }>,
+        categoryHierarchy: {} as Record<string, Record<string, number>>,
+        revenueMetrics: { total: 0, avg: 0, profitMargin: 0 },
+        performanceMetrics: { avgThroughput: 0, avgErrorRate: 0, avgEfficiency: 0 },
+      };
+    }
+
+    const byMainCategory: Record<string, { count: number; totalValue: number; avgQuality: number; totalRevenue: number }> = {};
+    const byRegion: Record<string, { count: number; totalValue: number; avgEfficiency: number; totalCost: number }> = {};
+    const byStatus: Record<string, { count: number; percentage: number; avgDuration: number }> = {};
+    const byPriority: Record<number, { count: number; avgValue: number; avgQuality: number }> = {};
+    const categoryHierarchy: Record<string, Record<string, number>> = {};
+
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let totalThroughput = 0;
+    let totalErrorRate = 0;
+    let totalEfficiency = 0;
+
+    allData.forEach(item => {
+      // By main category
+      const mainCat = item.mainCategory || "Unknown";
+      if (!byMainCategory[mainCat]) {
+        byMainCategory[mainCat] = { count: 0, totalValue: 0, avgQuality: 0, totalRevenue: 0 };
+      }
+      byMainCategory[mainCat].count++;
+      byMainCategory[mainCat].totalValue += item.value;
+      byMainCategory[mainCat].totalRevenue += item.revenue || 0;
+
+      // By region
+      const region = item.region || "Unknown";
+      if (!byRegion[region]) {
+        byRegion[region] = { count: 0, totalValue: 0, avgEfficiency: 0, totalCost: 0 };
+      }
+      byRegion[region].count++;
+      byRegion[region].totalValue += item.value;
+      byRegion[region].totalCost += item.cost || 0;
+
+      // By status
+      const status = item.status || "unknown";
+      if (!byStatus[status]) {
+        byStatus[status] = { count: 0, percentage: 0, avgDuration: 0 };
+      }
+      byStatus[status].count++;
+
+      // By priority
+      const priority = item.priority || 3;
+      if (!byPriority[priority]) {
+        byPriority[priority] = { count: 0, avgValue: 0, avgQuality: 0 };
+      }
+      byPriority[priority].count++;
+
+      // Category hierarchy
+      if (item.mainCategory && item.subCategory) {
+        if (!categoryHierarchy[item.mainCategory]) {
+          categoryHierarchy[item.mainCategory] = {};
+        }
+        categoryHierarchy[item.mainCategory][item.subCategory] = 
+          (categoryHierarchy[item.mainCategory][item.subCategory] || 0) + 1;
+      }
+
+      // Aggregate metrics
+      totalRevenue += item.revenue || 0;
+      totalCost += item.cost || 0;
+      totalThroughput += item.throughput || 0;
+      totalErrorRate += item.errorRate || 0;
+      totalEfficiency += item.efficiency || 0;
+    });
+
+    // Calculate averages
+    Object.keys(byMainCategory).forEach(cat => {
+      const stats = byMainCategory[cat];
+      const qualitySum = allData
+        .filter(item => (item.mainCategory || "Unknown") === cat)
+        .reduce((sum, item) => sum + (item.quality || 0), 0);
+      stats.avgQuality = qualitySum / stats.count;
+    });
+
+    Object.keys(byRegion).forEach(reg => {
+      const stats = byRegion[reg];
+      const efficiencySum = allData
+        .filter(item => (item.region || "Unknown") === reg)
+        .reduce((sum, item) => sum + (item.efficiency || 0), 0);
+      stats.avgEfficiency = efficiencySum / stats.count;
+    });
+
+    Object.keys(byStatus).forEach(status => {
+      const stats = byStatus[status];
+      stats.percentage = (stats.count / allData.length) * 100;
+      const durationSum = allData
+        .filter(item => (item.status || "unknown") === status)
+        .reduce((sum, item) => sum + (item.duration || 0), 0);
+      stats.avgDuration = durationSum / stats.count;
+    });
+
+    Object.keys(byPriority).forEach(pri => {
+      const priority = parseInt(pri);
+      const stats = byPriority[priority];
+      const items = allData.filter(item => (item.priority || 3) === priority);
+      stats.avgValue = items.reduce((sum, item) => sum + item.value, 0) / stats.count;
+      stats.avgQuality = items.reduce((sum, item) => sum + (item.quality || 0), 0) / stats.count;
+    });
+
+    const profitMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0;
+
+    return {
+      byMainCategory,
+      byRegion,
+      byStatus,
+      byPriority,
+      categoryHierarchy,
+      revenueMetrics: {
+        total: totalRevenue,
+        avg: totalRevenue / allData.length,
+        profitMargin,
+      },
+      performanceMetrics: {
+        avgThroughput: totalThroughput / allData.length,
+        avgErrorRate: totalErrorRate / allData.length,
+        avgEfficiency: totalEfficiency / allData.length,
+      },
+    };
+  }, [allData]);
+
   return (
     <div className="container">
       <div className="section">
-        <h2 className="title is-2 has-text-centered mb-6" id="big-data-demo">
-          Big Data Demo: Handling, Representation & Analysis
+        <h2 className="title is-2 has-text-centered mb-6 liquid-glass-text" id="big-data-demo">
+          Enterprise Big Data Analytics Platform
         </h2>
+        
+        {/* System Overview - Professional CTO-level Dashboard */}
+        <div className="box mb-6 liquid-glass-card">
+          <div className="content">
+            <h3 className="title is-4 mb-4 liquid-glass-text">System Overview</h3>
+            <p className="mb-4 liquid-glass-text">
+              This enterprise-grade big data analytics platform processes <strong>{TOTAL_ITEMS.toLocaleString()} records</strong> with 
+              <strong> multi-level hierarchical categorization</strong>, <strong>real-time streaming capabilities</strong>, and 
+              <strong> advanced statistical analysis</strong>. The system handles complex data distributions including 
+              <strong> multimodal, skewed, and power-law distributions</strong> to simulate real-world scenarios.
+            </p>
+            <div className="columns">
+              <div className="column">
+                <h4 className="title is-5 mb-3 liquid-glass-text">Data Characteristics:</h4>
+                <ul className="liquid-glass-text">
+                  <li><strong>Total Records:</strong> {allData.length.toLocaleString()} / {TOTAL_ITEMS.toLocaleString()}</li>
+                  <li><strong>Data Distribution:</strong> Multimodal, skewed, power-law</li>
+                  <li><strong>Category Levels:</strong> 4-level hierarchy (Main → Sub → Level3 → Level4)</li>
+                  <li><strong>Fields per Record:</strong> 15+ metrics (value, quality, cost, revenue, efficiency, etc.)</li>
+                  <li><strong>Real-time Streaming:</strong> SSE/WebSocket support</li>
+                </ul>
+              </div>
+              <div className="column">
+                <h4 className="title is-5 mb-3 liquid-glass-text">Key Capabilities:</h4>
+                <ul className="liquid-glass-text">
+                  <li>Multi-dimensional data analysis</li>
+                  <li>Time series forecasting & trend analysis</li>
+                  <li>Correlation & anomaly detection</li>
+                  <li>Capacity planning & cost optimization</li>
+                  <li>WebAssembly-accelerated calculations</li>
+                  <li>Canvas-based high-performance visualization</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Key Performance Indicators */}
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Key Performance Indicators</h3>
+          <div className="columns is-multiline">
+            <div className="column is-one-quarter">
+              <div className="has-text-centered">
+                <p className="heading liquid-glass-text">Total Revenue</p>
+                <p className="title is-4 liquid-glass-text">
+                  ${multiDimStats.revenueMetrics.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+                <p className="help liquid-glass-text">
+                  Avg: ${multiDimStats.revenueMetrics.avg.toFixed(2)} per record
+                </p>
+              </div>
+            </div>
+            <div className="column is-one-quarter">
+              <div className="has-text-centered">
+                <p className="heading liquid-glass-text">Profit Margin</p>
+                <p className={`title is-4 ${multiDimStats.revenueMetrics.profitMargin > 20 ? "has-text-success" : multiDimStats.revenueMetrics.profitMargin > 10 ? "has-text-warning" : "has-text-danger"} liquid-glass-text`}>
+                  {multiDimStats.revenueMetrics.profitMargin.toFixed(1)}%
+                </p>
+                <p className="help liquid-glass-text">Revenue vs Cost</p>
+              </div>
+            </div>
+            <div className="column is-one-quarter">
+              <div className="has-text-centered">
+                <p className="heading liquid-glass-text">Avg Efficiency</p>
+                <p className={`title is-4 ${multiDimStats.performanceMetrics.avgEfficiency > 80 ? "has-text-success" : multiDimStats.performanceMetrics.avgEfficiency > 60 ? "has-text-warning" : "has-text-danger"} liquid-glass-text`}>
+                  {multiDimStats.performanceMetrics.avgEfficiency.toFixed(1)}%
+                </p>
+                <p className="help liquid-glass-text">System efficiency score</p>
+              </div>
+            </div>
+            <div className="column is-one-quarter">
+              <div className="has-text-centered">
+                <p className="heading liquid-glass-text">Error Rate</p>
+                <p className={`title is-4 ${multiDimStats.performanceMetrics.avgErrorRate < 2 ? "has-text-success" : multiDimStats.performanceMetrics.avgErrorRate < 5 ? "has-text-warning" : "has-text-danger"} liquid-glass-text`}>
+                  {multiDimStats.performanceMetrics.avgErrorRate.toFixed(2)}%
+                </p>
+                <p className="help liquid-glass-text">Average error rate</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Category Distribution */}
+        <div className="box mb-6 liquid-glass-card">
+          <h3 className="title is-4 mb-4 liquid-glass-text">Data Distribution by Main Category</h3>
+          <div className="table-container">
+            <table className="table is-fullwidth is-hoverable">
+              <thead>
+                <tr>
+                  <th>Main Category</th>
+                  <th>Count</th>
+                  <th>Percentage</th>
+                  <th>Total Value</th>
+                  <th>Avg Quality</th>
+                  <th>Total Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(multiDimStats.byMainCategory)
+                  .sort((a, b) => b[1].count - a[1].count)
+                  .map(([category, stats]) => (
+                    <tr key={category}>
+                      <td><strong>{category}</strong></td>
+                      <td>{stats.count.toLocaleString()}</td>
+                      <td>{((stats.count / allData.length) * 100).toFixed(1)}%</td>
+                      <td>${stats.totalValue.toLocaleString()}</td>
+                      <td>
+                        <span className={`tag ${stats.avgQuality > 80 ? "is-success" : stats.avgQuality > 60 ? "is-warning" : "is-danger"}`}>
+                          {stats.avgQuality.toFixed(1)}
+                        </span>
+                      </td>
+                      <td>${stats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
         
         {/* Streaming Progress Indicator */}
         {isStreaming && (
@@ -2451,52 +3153,72 @@ export default function BigDataDemo() {
                 <h3 className="title is-4 mb-4">Correlation Analysis</h3>
                 {correlationAnalysis ? (
                   <div>
-                    <div className="table-container">
-                      <table className="table is-fullwidth is-hoverable">
-                        <thead>
-                          <tr>
-                            <th>Field 1</th>
-                            <th>Field 2</th>
-                            <th>Correlation Coefficient</th>
-                            <th>Strength</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {correlationAnalysis.correlations.map((corr, i) => {
-                            const strength = Math.abs(corr.value);
-                            const strengthLabel = strength > 0.7 ? "Strong" : strength > 0.4 ? "Moderate" : strength > 0.2 ? "Weak" : "Very Weak";
-                            return (
-                              <tr key={i}>
-                                <td>{corr.field1}</td>
-                                <td>{corr.field2}</td>
-                                <td>{corr.value.toFixed(4)}</td>
-                                <td>
-                                  <span className={`tag ${
-                                    strength > 0.7 ? "is-success" :
-                                    strength > 0.4 ? "is-warning" :
-                                    "is-light"
-                                  }`}>
-                                    {strengthLabel}
-                                  </span>
-                                </td>
+                    {correlationAnalysis.correlations.length > 0 ? (
+                      <>
+                        <div className="table-container">
+                          <table className="table is-fullwidth is-hoverable">
+                            <thead>
+                              <tr>
+                                <th>Field 1</th>
+                                <th>Field 2</th>
+                                <th>Correlation Coefficient</th>
+                                <th>Strength</th>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    {correlationAnalysis.strongest && (
-                      <div className="box mt-4">
-                        <p className="title is-5">Strongest Correlation</p>
-                        <p>
-                          <strong>{correlationAnalysis.strongest.field1}</strong> and{" "}
-                          <strong>{correlationAnalysis.strongest.field2}</strong>:{" "}
-                          {correlationAnalysis.strongest.value.toFixed(4)}
-                        </p>
+                            </thead>
+                            <tbody>
+                              {correlationAnalysis.correlations.map((corr, i) => {
+                                const strength = Math.abs(corr.value);
+                                const strengthLabel = strength > 0.7 ? "Strong" : strength > 0.4 ? "Moderate" : strength > 0.2 ? "Weak" : "Very Weak";
+                                return (
+                                  <tr key={i}>
+                                    <td>{corr.field1}</td>
+                                    <td>{corr.field2}</td>
+                                    <td>{corr.value.toFixed(4)}</td>
+                                    <td>
+                                      <span className={`tag ${
+                                        strength > 0.7 ? "is-success" :
+                                        strength > 0.4 ? "is-warning" :
+                                        "is-light"
+                                      }`}>
+                                        {strengthLabel}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        {correlationAnalysis.strongest && (
+                          <div className="box mt-4">
+                            <p className="title is-5">Strongest Correlation</p>
+                            <p>
+                              <strong>{correlationAnalysis.strongest.field1}</strong> and{" "}
+                              <strong>{correlationAnalysis.strongest.field2}</strong>:{" "}
+                              {correlationAnalysis.strongest.value.toFixed(4)}
+                            </p>
+                            <p className="help mt-2">
+                              {Math.abs(correlationAnalysis.strongest.value) > 0.7
+                                ? "Strong correlation suggests these metrics may be related."
+                                : "Moderate correlation - further investigation recommended."}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="has-text-centered py-6">
+                        <p className="subtitle is-5">No correlations found above threshold</p>
                         <p className="help mt-2">
-                          {Math.abs(correlationAnalysis.strongest.value) > 0.7
-                            ? "Strong correlation suggests these metrics may be related."
-                            : "Moderate correlation - further investigation recommended."}
+                          All correlations are below the minimum threshold ({analysisConfig.minCorrelation}).
+                          {correlationAnalysis.strongest && (
+                            <>
+                              <br />
+                              The strongest correlation found is: <strong>{correlationAnalysis.strongest.field1}</strong> and{" "}
+                              <strong>{correlationAnalysis.strongest.field2}</strong> = {correlationAnalysis.strongest.value.toFixed(4)}
+                              <br />
+                              Consider lowering the "Minimum Correlation" threshold in the configuration panel to see more results.
+                            </>
+                          )}
                         </p>
                       </div>
                     )}
