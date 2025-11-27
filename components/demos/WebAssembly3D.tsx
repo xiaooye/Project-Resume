@@ -17,7 +17,7 @@ import {
   PointerLockControls,
 } from "@react-three/drei";
 import * as THREE from "three";
-import * as wasm3D from "@/lib/wasm/3d-calculations";
+import * as wasmGame from "@/lib/wasm/game-physics";
 
 type CameraMode = "first-person" | "third-person" | "free";
 type GameState = "menu" | "playing" | "paused" | "gameover";
@@ -33,9 +33,10 @@ interface PerformanceMetrics {
 
 interface GameStats {
   score: number;
-  collectibles: number;
+  kills: number;
   time: number;
   health: number;
+  ammo: number;
 }
 
 interface SceneConfig {
@@ -47,11 +48,18 @@ interface SceneConfig {
   lodEnabled: boolean;
 }
 
-interface Collectible {
+interface Enemy {
   id: string;
-  position: [number, number, number];
-  collected: boolean;
-  type: "coin" | "powerup" | "key";
+  position: Float32Array;
+  health: number;
+  alive: boolean;
+}
+
+interface Bullet {
+  id: string;
+  position: Float32Array;
+  direction: Float32Array;
+  active: boolean;
 }
 
 export default function WebAssembly3D() {
@@ -69,11 +77,13 @@ export default function WebAssembly3D() {
   });
   const [gameStats, setGameStats] = useState<GameStats>({
     score: 0,
-    collectibles: 0,
+    kills: 0,
     time: 0,
     health: 100,
+    ammo: 30,
   });
-  const [collectibles, setCollectibles] = useState<Collectible[]>([]);
+  const [enemies, setEnemies] = useState<Enemy[]>([]);
+  const [bullets, setBullets] = useState<Bullet[]>([]);
   const [sceneConfig, setSceneConfig] = useState<SceneConfig>({
     enableShadows: true,
     enableFog: false,
@@ -101,7 +111,7 @@ export default function WebAssembly3D() {
     setIsMounted(true);
 
     // Initialize WASM
-    wasm3D.initWasm();
+    wasmGame.initWasm();
 
     // Detect screen size for responsive design
     const checkScreenSize = () => {
@@ -122,23 +132,6 @@ export default function WebAssembly3D() {
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
 
-    // Initialize collectibles
-    const initialCollectibles: Collectible[] = [];
-    for (let i = 0; i < 20; i++) {
-      const angle = (i / 20) * Math.PI * 2;
-      const radius = 3 + Math.random() * 7;
-      initialCollectibles.push({
-        id: `collectible-${i}`,
-        position: [
-          Math.cos(angle) * radius,
-          1 + Math.random() * 2,
-          Math.sin(angle) * radius,
-        ],
-        collected: false,
-        type: Math.random() > 0.7 ? (Math.random() > 0.5 ? "powerup" : "key") : "coin",
-      });
-    }
-    setCollectibles(initialCollectibles);
 
     return () => {
       window.removeEventListener("resize", checkScreenSize);
@@ -165,7 +158,7 @@ export default function WebAssembly3D() {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
-      const stats = wasm3D.getPerformanceStats();
+      const stats = wasmGame.getPerformanceStats();
       const memoryInfo = (window.performance as any).memory;
       const memoryUsage = memoryInfo ? memoryInfo.usedJSHeapSize / 1024 / 1024 : 0;
 
@@ -194,7 +187,7 @@ export default function WebAssembly3D() {
 
   // Reset performance stats
   const resetStats = useCallback(() => {
-    wasm3D.resetPerformanceStats();
+    wasmGame.resetPerformanceStats();
     fpsRef.current = [];
     frameCountRef.current = 0;
   }, []);
@@ -204,33 +197,48 @@ export default function WebAssembly3D() {
     setGameState("playing");
     setGameStats({
       score: 0,
-      collectibles: 0,
+      kills: 0,
       time: 0,
       health: 100,
+      ammo: 30,
     });
     gameTimeRef.current = 0;
-    // Reset collectibles
-    setCollectibles((prev) =>
-      prev.map((c) => ({ ...c, collected: false }))
-    );
+    
+    // Initialize enemies using WASM
+    const initialEnemies: Enemy[] = [];
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2;
+      const radius = 8 + Math.random() * 5;
+      initialEnemies.push({
+        id: `enemy-${i}`,
+        position: new Float32Array([
+          Math.cos(angle) * radius,
+          1,
+          Math.sin(angle) * radius,
+        ]),
+        health: 100,
+        alive: true,
+      });
+    }
+    setEnemies(initialEnemies);
+    setBullets([]);
   }, []);
 
-  // Collect item
-  const collectItem = useCallback((id: string, type: Collectible["type"]) => {
-    setCollectibles((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, collected: true } : c))
-    );
-    setGameStats((prev) => {
-      const scoreIncrease =
-        type === "coin" ? 10 : type === "powerup" ? 50 : 100;
-      const collectibleIncrease = 1;
-      return {
-        ...prev,
-        score: prev.score + scoreIncrease,
-        collectibles: prev.collectibles + collectibleIncrease,
-      };
-    });
-  }, []);
+  // Shoot bullet
+  const shootBullet = useCallback((origin: Float32Array, direction: Float32Array) => {
+    if (gameStats.ammo <= 0) return;
+    
+    setGameStats((prev) => ({ ...prev, ammo: prev.ammo - 1 }));
+    
+    const newBullet: Bullet = {
+      id: `bullet-${Date.now()}-${Math.random()}`,
+      position: new Float32Array(origin),
+      direction: new Float32Array(direction),
+      active: true,
+    };
+    
+    setBullets((prev) => [...prev, newBullet]);
+  }, [gameStats.ammo]);
 
   // Scene height based on device
   const sceneHeight = isMobile ? 500 : isTablet ? 600 : 700;
@@ -269,7 +277,10 @@ export default function WebAssembly3D() {
                     Score: <span className="has-text-primary">{gameStats.score}</span>
                   </p>
                   <p>
-                    Collectibles: <span className="has-text-success">{gameStats.collectibles}/20</span>
+                    Kills: <span className="has-text-success">{gameStats.kills}/10</span>
+                  </p>
+                  <p>
+                    Ammo: <span className="has-text-warning">{gameStats.ammo}/30</span>
                   </p>
                 </div>
               </div>
@@ -500,8 +511,17 @@ export default function WebAssembly3D() {
                     sceneConfig={sceneConfig}
                     isPlaying={isPlaying}
                     prefersReducedMotion={!!prefersReducedMotion}
-                    collectibles={collectibles}
-                    onCollectItem={collectItem}
+                    enemies={enemies}
+                    bullets={bullets}
+                    onShoot={shootBullet}
+                    onEnemyKilled={(id) => {
+                      setEnemies((prev) => prev.map((e) => (e.id === id ? { ...e, alive: false } : e)));
+                      setGameStats((prev) => ({
+                        ...prev,
+                        kills: prev.kills + 1,
+                        score: prev.score + 100,
+                      }));
+                    }}
                     onPerformanceUpdate={(metrics) => {
                       setPerformance((prev) => ({
                         ...prev,
@@ -660,8 +680,10 @@ interface GameScene3DProps {
   sceneConfig: SceneConfig;
   isPlaying: boolean;
   prefersReducedMotion: boolean;
-  collectibles: Collectible[];
-  onCollectItem: (id: string, type: Collectible["type"]) => void;
+  enemies: Enemy[];
+  bullets: Bullet[];
+  onShoot: (origin: Float32Array, direction: Float32Array) => void;
+  onEnemyKilled: (id: string) => void;
   onPerformanceUpdate: (metrics: { drawCalls: number; triangles: number }) => void;
   onFrameUpdate: (deltaTime: number) => void;
 }
@@ -671,8 +693,10 @@ function GameScene3D({
   sceneConfig,
   isPlaying,
   prefersReducedMotion,
-  collectibles,
-  onCollectItem,
+  enemies,
+  bullets,
+  onShoot,
+  onEnemyKilled,
   onPerformanceUpdate,
   onFrameUpdate,
 }: GameScene3DProps) {
@@ -700,47 +724,81 @@ function GameScene3D({
     };
   }, []);
 
-  // Player movement
+  // Player physics state (WASM managed)
+  const playerPosRef = useRef<Float32Array>(new Float32Array([0, 1, 0]));
+  const playerVelRef = useRef<Float32Array>(new Float32Array([0, 0, 0]));
+  const onGroundRef = useRef<boolean>(true);
+
+  // Player movement - ALL calculations via WASM
   useFrame((state, delta) => {
     if (!isPlaying || prefersReducedMotion) return;
 
     onFrameUpdate(delta);
 
-    // Player movement using WASM physics
-    const moveSpeed = 5;
-    const moveVector = new THREE.Vector3();
-
+    // Prepare input for WASM (forward, right, jump)
+    const input = new Float32Array(3);
     if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
-      moveVector.z -= 1;
+      input[0] = 1; // Forward
     }
     if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
-      moveVector.z += 1;
+      input[0] = -1; // Backward
     }
     if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
-      moveVector.x -= 1;
+      input[1] = -1; // Left
     }
     if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
-      moveVector.x += 1;
+      input[1] = 1; // Right
+    }
+    if (keysRef.current.has(" ") || keysRef.current.has("space")) {
+      input[2] = 1; // Jump
     }
 
-    if (moveVector.length() > 0) {
-      moveVector.normalize();
-      moveVector.multiplyScalar(moveSpeed * delta);
-      positionRef.current.add(moveVector);
-    }
+    // ALL physics calculations via WASM (synchronous call)
+    wasmGame.updatePlayerPhysics(
+      playerPosRef.current,
+      playerVelRef.current,
+      input,
+      delta,
+      onGroundRef.current
+    ).then((physicsResult) => {
+      // Update from WASM results
+      playerPosRef.current = physicsResult.position;
+      playerVelRef.current = physicsResult.velocity;
+      onGroundRef.current = physicsResult.onGround;
 
-    // Update player position
-    if (playerRef.current) {
-      playerRef.current.position.copy(positionRef.current);
-    }
+      // Update player position in Three.js
+      if (playerRef.current) {
+        playerRef.current.position.set(
+          playerPosRef.current[0],
+          playerPosRef.current[1],
+          playerPosRef.current[2]
+        );
+      }
+    });
 
     // Update camera for third-person view
     if (cameraMode === "third-person" && state.camera) {
       const camera = state.camera;
-      const idealOffset = new THREE.Vector3(0, 5, 10);
-      const idealPosition = positionRef.current.clone().add(idealOffset);
-      camera.position.lerp(idealPosition, 0.1);
-      camera.lookAt(positionRef.current);
+      const target = new THREE.Vector3(
+        playerPosRef.current[0],
+        playerPosRef.current[1] + 1,
+        playerPosRef.current[2]
+      );
+      const eye = new THREE.Vector3(
+        playerPosRef.current[0],
+        playerPosRef.current[1] + 5,
+        playerPosRef.current[2] + 10
+      );
+      
+      // Use WASM for camera calculations
+      const up = new Float32Array([0, 1, 0]);
+      const targetWasm = new Float32Array([target.x, target.y, target.z]);
+      const eyeWasm = new Float32Array([eye.x, eye.y, eye.z]);
+      
+      wasmGame.calculateCameraMatrix(eyeWasm, targetWasm, up).then(() => {
+        camera.position.set(eye.x, eye.y, eye.z);
+        camera.lookAt(target.x, target.y, target.z);
+      });
     }
 
     // Update performance metrics
@@ -762,19 +820,35 @@ function GameScene3D({
       {/* Player */}
       <Player
         ref={playerRef}
-        position={positionRef.current}
+        position={new THREE.Vector3(
+          playerPosRef.current[0],
+          playerPosRef.current[1],
+          playerPosRef.current[2]
+        )}
         cameraMode={cameraMode}
         sceneConfig={sceneConfig}
       />
 
-      {/* Collectibles */}
-      {collectibles.map((collectible) => (
-        <CollectibleItem
-          key={collectible.id}
-          collectible={collectible}
-          onCollect={onCollectItem}
+      {/* Enemies - ALL AI calculations via WASM */}
+      {enemies.map((enemy) => (
+        <EnemyComponent
+          key={enemy.id}
+          enemy={enemy}
+          playerPos={playerPosRef.current}
+          onKilled={onEnemyKilled}
           sceneConfig={sceneConfig}
           prefersReducedMotion={prefersReducedMotion}
+        />
+      ))}
+
+      {/* Bullets - ALL trajectory calculations via WASM */}
+      {bullets.map((bullet) => (
+        <BulletComponent
+          key={bullet.id}
+          bullet={bullet}
+          enemies={enemies}
+          onHit={onEnemyKilled}
+          sceneConfig={sceneConfig}
         />
       ))}
 
@@ -922,75 +996,140 @@ function Building({
   );
 }
 
-// Collectible Item Component
-function CollectibleItem({
-  collectible,
-  onCollect,
+// Enemy Component - ALL AI calculations via WASM
+function EnemyComponent({
+  enemy,
+  playerPos,
+  onKilled,
   sceneConfig,
   prefersReducedMotion,
 }: {
-  collectible: Collectible;
-  onCollect: (id: string, type: Collectible["type"]) => void;
+  enemy: Enemy;
+  playerPos: Float32Array;
+  onKilled: (id: string) => void;
   sceneConfig: SceneConfig;
   prefersReducedMotion: boolean;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const [hovered, setHovered] = useState(false);
+  const positionRef = useRef<Float32Array>(new Float32Array(enemy.position));
 
-  useFrame((state) => {
-    if (meshRef.current && !prefersReducedMotion && !collectible.collected) {
-      // Rotation animation
-      meshRef.current.rotation.y += 0.02;
-      // Floating animation
-      meshRef.current.position.y =
-        collectible.position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.3;
+  useFrame(async (state, delta) => {
+    if (!enemy.alive || prefersReducedMotion) return;
+
+    // ALL AI calculations via WASM
+    const newPos = await wasmGame.calculateEnemyAI(
+      positionRef.current,
+      playerPos,
+      2.0, // enemy speed
+      delta
+    );
+
+    positionRef.current = newPos;
+
+    if (meshRef.current) {
+      meshRef.current.position.set(newPos[0], newPos[1], newPos[2]);
+    }
+
+    // Check collision with player using WASM
+    wasmGame.checkEnemyCollisions(
+      positionRef.current,
+      playerPos,
+      0.5, // enemy radius
+      0.5  // player radius
+    ).then((collision) => {
+      if (collision && enemy.alive) {
+        onKilled(enemy.id);
+      }
+    });
+  });
+
+  if (!enemy.alive) return null;
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={[enemy.position[0], enemy.position[1], enemy.position[2]]}
+      castShadow={sceneConfig.enableShadows}
+    >
+      <capsuleGeometry args={[0.4, 1, 4, 8]} />
+      <meshStandardMaterial color="#ff0000" roughness={0.7} metalness={0.3} />
+    </mesh>
+  );
+}
+
+// Bullet Component - ALL trajectory calculations via WASM
+function BulletComponent({
+  bullet,
+  enemies,
+  onHit,
+  sceneConfig,
+}: {
+  bullet: Bullet;
+  enemies: Enemy[];
+  onHit: (id: string) => void;
+  sceneConfig: SceneConfig;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const positionRef = useRef<Float32Array>(new Float32Array(bullet.position));
+  const activeRef = useRef(bullet.active);
+  const bulletSpeed = 50.0;
+
+  useFrame(async (state, delta) => {
+    if (!activeRef.current) return;
+
+    // ALL trajectory calculations via WASM
+    const newPos = await wasmGame.calculateBulletTrajectory(
+      positionRef.current,
+      bullet.direction,
+      bulletSpeed,
+      delta
+    );
+
+    positionRef.current = newPos;
+
+    if (meshRef.current) {
+      meshRef.current.position.set(newPos[0], newPos[1], newPos[2]);
+    }
+
+    // Check hits using WASM
+    for (const enemy of enemies) {
+      if (!enemy.alive) continue;
+
+      const hit = await wasmGame.checkBulletHit(
+        positionRef.current,
+        enemy.position,
+        0.5 // enemy radius
+      );
+
+      if (hit) {
+        activeRef.current = false;
+        onHit(enemy.id);
+        break;
+      }
+    }
+
+    // Check max distance
+    const dist = Math.sqrt(
+      positionRef.current[0] ** 2 +
+      positionRef.current[1] ** 2 +
+      positionRef.current[2] ** 2
+    );
+
+    if (dist > 100) {
+      activeRef.current = false;
     }
   });
 
-  const handleClick = () => {
-    if (!collectible.collected) {
-      onCollect(collectible.id, collectible.type);
-    }
-  };
-
-  if (collectible.collected) return null;
-
-  const color =
-    collectible.type === "coin"
-      ? "#ffd700"
-      : collectible.type === "powerup"
-      ? "#00ff00"
-      : "#ff00ff";
+  if (!activeRef.current) return null;
 
   return (
-    <Float
-      speed={prefersReducedMotion ? 0 : 1}
-      rotationIntensity={prefersReducedMotion ? 0 : 0.5}
+    <mesh
+      ref={meshRef}
+      position={[bullet.position[0], bullet.position[1], bullet.position[2]]}
     >
-      <mesh
-        ref={meshRef}
-        position={collectible.position}
-        onClick={handleClick}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-        castShadow={sceneConfig.enableShadows}
-      >
-        {collectible.type === "coin" ? (
-          <cylinderGeometry args={[0.3, 0.3, 0.1, 32]} />
-        ) : collectible.type === "powerup" ? (
-          <octahedronGeometry args={[0.4, 0]} />
-        ) : (
-          <boxGeometry args={[0.4, 0.4, 0.4]} />
-        )}
-        <meshStandardMaterial
-          color={color}
-          metalness={0.9}
-          roughness={0.1}
-          emissive={color}
-          emissiveIntensity={hovered ? 0.8 : 0.5}
-        />
-      </mesh>
-    </Float>
+      <sphereGeometry args={[0.1, 8, 8]} />
+      <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={1} />
+    </mesh>
   );
 }
 
