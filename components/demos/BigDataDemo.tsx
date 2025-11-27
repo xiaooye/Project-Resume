@@ -226,9 +226,11 @@ function getRandomCategory(): {
   
   const level3Categories = Object.keys(subCatData);
   const categoryLevel3 = level3Categories[Math.floor(Math.random() * level3Categories.length)];
-  const level4Options = subCatData[categoryLevel3 as keyof typeof subCatData];
-  
-  const categoryLevel4 = level4Options[Math.floor(Math.random() * level4Options.length)];
+  const level4Options = (subCatData[categoryLevel3 as keyof typeof subCatData] || []) as string[];
+
+  const categoryLevel4 = level4Options.length > 0 
+    ? level4Options[Math.floor(Math.random() * level4Options.length)]
+    : "Level4-1";
   
   return { mainCategory, subCategory, categoryLevel3, categoryLevel4 };
 }
@@ -410,8 +412,10 @@ function* generateDataStream(count: number): Generator<BigDataItem[], void, unkn
           const subCatData = mainCatData[subCategory as keyof typeof mainCatData];
           const level3Categories = Object.keys(subCatData);
           const categoryLevel3 = level3Categories[Math.floor(Math.random() * level3Categories.length)];
-          const level4Options = subCatData[categoryLevel3 as keyof typeof subCatData];
-          const categoryLevel4 = level4Options[Math.floor(Math.random() * level4Options.length)];
+          const level4Options = (subCatData[categoryLevel3 as keyof typeof subCatData] || []) as string[];
+          const categoryLevel4 = level4Options.length > 0 
+            ? level4Options[Math.floor(Math.random() * level4Options.length)]
+            : "Level4-1";
           categoryData = {
             mainCategory: preferredMain,
             subCategory,
@@ -430,8 +434,10 @@ function* generateDataStream(count: number): Generator<BigDataItem[], void, unkn
           const subCatData = mainCatData[subCategory as keyof typeof mainCatData];
           const level3Categories = Object.keys(subCatData);
           const categoryLevel3 = level3Categories[Math.floor(Math.random() * level3Categories.length)];
-          const level4Options = subCatData[categoryLevel3 as keyof typeof subCatData];
-          const categoryLevel4 = level4Options[Math.floor(Math.random() * level4Options.length)];
+          const level4Options = (subCatData[categoryLevel3 as keyof typeof subCatData] || []) as string[];
+          const categoryLevel4 = level4Options.length > 0 
+            ? level4Options[Math.floor(Math.random() * level4Options.length)]
+            : "Level4-1";
           categoryData = {
             mainCategory: preferredMain,
             subCategory,
@@ -1041,13 +1047,8 @@ export default function BigDataDemo() {
       // Simulated stream - generate data periodically
       setStreamStats(prev => ({ ...prev, connectionStatus: "connected" }));
       const interval = setInterval(() => {
-        const batch: BigDataItem[] = Array.from({ length: 10 }, (_, i) => ({
-          id: `stream-${Date.now()}-${i}`,
-          name: `Stream Item ${Date.now()}-${i}`,
-          value: Math.floor(Math.random() * 10000),
-          category: `Category ${(Math.floor(Math.random() * 10) + 1)}`,
-          timestamp: Date.now(),
-        }));
+        const generator = generateDataStream(10);
+        const batch = generator.next().value || [];
         handleStreamData(batch);
       }, streamConfig.updateInterval);
 
@@ -1148,11 +1149,9 @@ export default function BigDataDemo() {
       return;
     }
     
-    // Only recalculate if analysisType is 'descriptive' or if it's the default (first load)
+    // Only recalculate if analysisType is 'descriptive'
     // This allows config changes to trigger recalculation when viewing descriptive stats
-    const shouldRecalculate = analysisType === "descriptive" || analysisType === "descriptive";
-    
-    if (!shouldRecalculate && analysisType !== "descriptive") {
+    if (analysisType !== "descriptive") {
       console.log("[Descriptive Stats] Skipping: analysisType is not 'descriptive', current:", analysisType);
       return;
     }
@@ -1864,7 +1863,9 @@ export default function BigDataDemo() {
     const containerHeight = isMobile ? 400 : 600;
     const visibleCount = Math.ceil(containerHeight / itemHeight) + 5; // Extra buffer
     const buffer = Math.max(3, Math.floor(visibleCount * 0.2)); // 20% buffer
-    const start = Math.max(0, Math.floor(scrollTop / itemHeight) - buffer);
+    // Round scrollTop to nearest itemHeight to prevent constant recalculation
+    const roundedScrollTop = Math.floor(scrollTop / itemHeight) * itemHeight;
+    const start = Math.max(0, Math.floor(roundedScrollTop / itemHeight) - buffer);
     const end = Math.min(start + visibleCount + buffer * 2, totalItems);
     return { start, end };
   }, [scrollTop, totalItems, useVirtualization, isMounted, isMobile, itemHeight]);
@@ -1877,9 +1878,21 @@ export default function BigDataDemo() {
   // Optimized scroll handler with debouncing to prevent scroll jumping
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const rafRef = useRef<number | null>(null);
+  const lastScrollTopRef = useRef<number>(0);
+  const isScrollingRef = useRef<boolean>(false);
   
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
+    
+    // Only update if scroll position actually changed significantly (avoid micro-updates)
+    if (Math.abs(newScrollTop - lastScrollTopRef.current) < 1) {
+      return;
+    }
+    
+    // Prevent recursive updates
+    if (isScrollingRef.current) {
+      return;
+    }
     
     // Cancel any pending animation frame
     if (rafRef.current !== null) {
@@ -1888,8 +1901,13 @@ export default function BigDataDemo() {
     
     // Use requestAnimationFrame for smooth, synchronized updates
     rafRef.current = requestAnimationFrame(() => {
+      lastScrollTopRef.current = newScrollTop;
       setScrollTop(newScrollTop);
       rafRef.current = null;
+      // Reset scrolling flag after a short delay
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 50);
     });
   }, []);
   
@@ -3742,9 +3760,10 @@ export default function BigDataDemo() {
               <div className="has-text-centered py-6" role="status" aria-live="polite">
                 <p className="subtitle">Loading...</p>
               </div>
-            ) : Array.isArray(processedData) ? (
-              renderMethod === "virtual" ? (
-              <>
+            ) : (
+              Array.isArray(processedData) ? (
+                (renderMethod === "virtual" ? (
+                  <>
                 {/* Scrollable container with fixed header */}
                 <div
                   ref={scrollContainerRef}
@@ -4071,7 +4090,7 @@ export default function BigDataDemo() {
                     </tbody>
                   </table>
                 </div>
-              )
+                ))
               ) : (
                 <div>
                   <h4 className="title is-5 mb-4">Grouped Data</h4>
@@ -4103,8 +4122,7 @@ export default function BigDataDemo() {
                   ))}
                 </div>
               )
-              }
-            </div>
+            )}
           </div>
         )}
 
