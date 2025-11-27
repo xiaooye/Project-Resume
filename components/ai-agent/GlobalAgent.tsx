@@ -3,6 +3,7 @@
 /**
  * Global AI Agent Component
  * Floating button and chat interface accessible from anywhere in the app
+ * Uses ONLY Bulma CSS classes - no inline styles except for dynamic calculations
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -37,23 +38,6 @@ export default function GlobalAgent() {
     window.addEventListener("resize", checkScreenSize);
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
-
-export default function GlobalAgent() {
-  const {
-    messages,
-    isOpen,
-    isProcessing,
-    toggleAgent,
-    sendMessage,
-    clearMessages,
-    currentContext,
-  } = useAgent();
-
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = useReducedMotion();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -100,9 +84,9 @@ export default function GlobalAgent() {
 
   return (
     <>
-      {/* Floating Action Button */}
+      {/* Floating Action Button - Using Bulma classes with minimal inline styles for positioning */}
       <motion.button
-        className="button is-primary is-rounded"
+        className={`button is-primary is-rounded ${isMobile ? "" : "is-large"}`}
         style={{
           position: "fixed",
           bottom: isMobile ? "16px" : "24px",
@@ -111,7 +95,6 @@ export default function GlobalAgent() {
           width: isMobile ? "56px" : "64px",
           height: isMobile ? "56px" : "64px",
           borderRadius: "50%",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
         }}
         onClick={toggleAgent}
         aria-label={isOpen ? "Close AI assistant" : "Open AI assistant"}
@@ -132,20 +115,19 @@ export default function GlobalAgent() {
       {/* Chat Interface */}
       <AnimatePresence>
         {isOpen && (
-            <motion.div
-              className="box"
-              style={{
-                position: "fixed",
-                bottom: isMobile ? "80px" : "100px",
-                right: isMobile ? "16px" : "24px",
-                width: isMobile ? "calc(100vw - 32px)" : "400px",
-                maxWidth: "calc(100vw - 32px)",
-                maxHeight: "calc(100vh - 120px)",
-                zIndex: 999,
-                display: "flex",
-                flexDirection: "column",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
-              }}
+          <motion.div
+            className={`box ${isMobile ? "is-mobile" : ""}`}
+            style={{
+              position: "fixed",
+              bottom: isMobile ? "80px" : "100px",
+              right: isMobile ? "16px" : "24px",
+              width: isMobile ? "calc(100vw - 32px)" : "400px",
+              maxWidth: "calc(100vw - 32px)",
+              maxHeight: "calc(100vh - 120px)",
+              zIndex: 999,
+              display: "flex",
+              flexDirection: "column",
+            }}
             initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
@@ -194,11 +176,10 @@ export default function GlobalAgent() {
 
             {/* Messages Area */}
             <div
-              className="box"
+              className="box has-background-light"
               style={{
                 flex: 1,
                 overflowY: "auto",
-                backgroundColor: "#f5f5f5",
                 minHeight: "300px",
                 maxHeight: "400px",
               }}
