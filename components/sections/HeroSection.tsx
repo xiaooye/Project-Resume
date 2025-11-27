@@ -156,14 +156,29 @@ export default function HeroSection() {
   const [fps, setFps] = useState(0);
   const [memoryUsage, setMemoryUsage] = useState(0);
   const [loadTime, setLoadTime] = useState(0);
-  const loadStartTime = useRef<number>(performance.now());
+  const [isMounted, setIsMounted] = useState(false);
+  const [showPerformanceMetrics, setShowPerformanceMetrics] = useState(false);
+  const loadStartTime = useRef<number>(0);
   const fpsRef = useRef<number>(0);
   const lastFrameTime = useRef<number>(performance.now());
   const frameCount = useRef<number>(0);
   const reducedMotion = useReducedMotion();
 
+  // Mount check and initialize client-side only values
+  useEffect(() => {
+    setIsMounted(true);
+    loadStartTime.current = performance.now();
+    
+    // Check if we should show performance metrics
+    const shouldShow = process.env.NODE_ENV === "development" || 
+      (typeof window !== "undefined" && window.location.search.includes("perf=true"));
+    setShowPerformanceMetrics(shouldShow);
+  }, []);
+
   // Detect mobile and reduced motion preference
   useEffect(() => {
+    if (!isMounted) return;
+    
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -181,10 +196,12 @@ export default function HeroSection() {
       window.removeEventListener("resize", checkMobile);
       mediaQuery.removeEventListener("change", handleChange);
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, isMounted]);
 
   // Performance monitoring
   useEffect(() => {
+    if (!isMounted) return;
+    
     const measureFPS = () => {
       frameCount.current++;
       const now = performance.now();
@@ -222,7 +239,7 @@ export default function HeroSection() {
       }
       clearInterval(memoryInterval);
     };
-  }, []);
+  }, [isMounted]);
 
   // Cursor blinking animation
   useEffect(() => {
@@ -380,7 +397,7 @@ export default function HeroSection() {
             </motion.div>
 
             {/* Performance Metrics - Only show in development or with query param */}
-            {typeof window !== "undefined" && (process.env.NODE_ENV === "development" || window.location.search.includes("perf=true")) && (
+            {isMounted && showPerformanceMetrics && (
               <div className="box mt-6 is-size-7">
                 <div className="level">
                   <div className="level-item has-text-centered">
