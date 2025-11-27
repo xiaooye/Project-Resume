@@ -59,6 +59,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/enterprise-microservices",
+    demoUrl: "/projects/1",
     metrics: {
       performance: "Sub-100ms P95 latency",
       scale: "10M+ requests/day",
@@ -87,6 +88,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/distributed-monitoring",
+    demoUrl: "/projects/2",
     metrics: {
       performance: "Real-time metrics collection",
       scale: "1000+ services monitored",
@@ -115,6 +117,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/multi-tenant-saas",
+    demoUrl: "/projects/3",
     metrics: {
       performance: "Tenant isolation guarantee",
       scale: "10,000+ tenants",
@@ -144,6 +147,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/api-gateway",
+    demoUrl: "/projects/4",
     metrics: {
       performance: "Sub-50ms latency",
       scale: "1M+ requests/minute",
@@ -172,6 +176,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/streaming-pipeline",
+    demoUrl: "/projects/5",
     metrics: {
       performance: "Low latency streaming",
       scale: "100M+ events/day",
@@ -200,6 +205,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/auto-scaling-platform",
+    demoUrl: "/projects/6",
     metrics: {
       performance: "Predictive scaling accuracy",
       scale: "Multi-cloud support",
@@ -229,6 +235,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/typescript-framework",
+    demoUrl: "/projects/7",
     metrics: {
       performance: "Code quality improvement",
       scale: "50+ teams adoption",
@@ -257,6 +264,7 @@ export const projectsData: Project[] = [
     complexity: "advanced",
     featured: false,
     githubUrl: "https://github.com/example/design-system",
+    demoUrl: "/projects/8",
     metrics: {
       performance: "80%+ test coverage",
       scale: "100+ components",
@@ -285,6 +293,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/dev-productivity",
+    demoUrl: "/projects/9",
     metrics: {
       performance: "50% faster deployments",
       scale: "Automated testing coverage",
@@ -314,6 +323,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/cost-optimization",
+    demoUrl: "/projects/10",
     metrics: {
       performance: "Cost forecasting accuracy",
       scale: "Multi-cloud support",
@@ -342,6 +352,7 @@ export const projectsData: Project[] = [
     complexity: "advanced",
     featured: false,
     githubUrl: "https://github.com/example/performance-optimization",
+    demoUrl: "/projects/11",
     metrics: {
       performance: "40% performance improvement",
       scale: "Core Web Vitals optimization",
@@ -370,6 +381,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: true,
     githubUrl: "https://github.com/example/ecommerce-platform",
+    demoUrl: "/projects/12",
     metrics: {
       performance: "Sub-2s page load",
       scale: "Black Friday traffic handling",
@@ -399,6 +411,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/graphql-federation",
+    demoUrl: "/projects/13",
     metrics: {
       performance: "Query optimization",
       scale: "20+ federated services",
@@ -427,6 +440,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/serverless-framework",
+    demoUrl: "/projects/14",
     metrics: {
       performance: "Auto-scaling",
       scale: "Multi-cloud deployment",
@@ -455,6 +469,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/collaboration-platform",
+    demoUrl: "/projects/15",
     metrics: {
       performance: "Real-time sync",
       scale: "Conflict resolution",
@@ -484,6 +499,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/event-driven-architecture",
+    demoUrl: "/projects/16",
     metrics: {
       performance: "Event sourcing",
       scale: "CQRS implementation",
@@ -512,6 +528,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/distributed-cache",
+    demoUrl: "/projects/17",
     metrics: {
       performance: "Sub-10ms latency",
       scale: "99.9% cache hit rate",
@@ -540,6 +557,7 @@ export const projectsData: Project[] = [
     complexity: "advanced",
     featured: false,
     githubUrl: "https://github.com/example/rate-limiting",
+    demoUrl: "/projects/18",
     metrics: {
       performance: "Distributed rate limiting",
       scale: "Multiple algorithms",
@@ -569,6 +587,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/security-audit",
+    demoUrl: "/projects/19",
     metrics: {
       performance: "OWASP compliance",
       scale: "Vulnerability detection",
@@ -597,6 +616,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/iam-system",
+    demoUrl: "/projects/20",
     metrics: {
       performance: "OAuth 2.0",
       scale: "RBAC implementation",
@@ -626,6 +646,7 @@ export const projectsData: Project[] = [
     complexity: "expert",
     featured: false,
     githubUrl: "https://github.com/example/big-data-engine",
+    demoUrl: "/projects/21",
     metrics: {
       performance: "Batch and stream processing",
       scale: "1B+ records processed",
