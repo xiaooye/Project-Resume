@@ -78,20 +78,20 @@ export default function ProjectDemo({ project }: ProjectDemoProps) {
     <div className="section">
       <div className="container">
         {/* Header */}
-        <div className="box mb-6">
+        <div className="box liquid-glass-card mb-6">
           <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
             <div className="is-flex is-align-items-center">
               <span className="is-size-1 mr-3" role="img" aria-label={project.title}>
                 {getProjectIcon(project.title)}
               </span>
               <div>
-                <h1 className="title is-2 mb-2">{project.title}</h1>
-                <p className="subtitle is-5 has-text-grey">{project.category}</p>
+                <h1 className="title is-2 mb-2 liquid-glass-text">{project.title}</h1>
+                <p className="subtitle is-5 liquid-glass-text">{project.category}</p>
               </div>
             </div>
             <Link
               href="/projects"
-              className="button is-light"
+              className="button is-light liquid-glass-button"
               aria-label="Back to projects"
             >
               <span className="icon">
@@ -117,12 +117,12 @@ export default function ProjectDemo({ project }: ProjectDemoProps) {
           </div>
 
           {project.description && (
-            <p className="content is-medium">{project.description}</p>
+            <p className="content is-medium liquid-glass-text">{project.description}</p>
           )}
 
           {project.longDescription && (
             <div className="content mt-4">
-              <p>{project.longDescription}</p>
+              <p className="liquid-glass-text">{project.longDescription}</p>
             </div>
           )}
 
@@ -154,10 +154,10 @@ export default function ProjectDemo({ project }: ProjectDemoProps) {
 // Default demo component for projects without specific demos
 function DefaultProjectDemo({ project }: { project: Project }) {
   return (
-    <div className="box">
-      <h2 className="title is-4 mb-4">Project Overview</h2>
+    <div className="box liquid-glass-card">
+      <h2 className="title is-4 mb-4 liquid-glass-text">Project Overview</h2>
       <div className="content">
-        <h3 className="title is-5">Technologies</h3>
+        <h3 className="title is-5 liquid-glass-text">Technologies</h3>
         <div className="tags">
           {project.technologies.map((tech) => (
             <span key={tech} className="tag is-primary">
@@ -168,29 +168,29 @@ function DefaultProjectDemo({ project }: { project: Project }) {
 
         {project.metrics && (
           <>
-            <h3 className="title is-5 mt-5">Key Metrics</h3>
+            <h3 className="title is-5 mt-5 liquid-glass-text">Key Metrics</h3>
             <div className="columns">
               {project.metrics.performance && (
                 <div className="column">
-                  <div className="box has-background-info-light">
-                    <p className="heading">Performance</p>
-                    <p className="title is-5">{project.metrics.performance}</p>
+                  <div className="box liquid-glass-card has-background-info-light">
+                    <p className="heading liquid-glass-text">Performance</p>
+                    <p className="title is-5 liquid-glass-text">{project.metrics.performance}</p>
                   </div>
                 </div>
               )}
               {project.metrics.scale && (
                 <div className="column">
-                  <div className="box has-background-success-light">
-                    <p className="heading">Scale</p>
-                    <p className="title is-5">{project.metrics.scale}</p>
+                  <div className="box liquid-glass-card has-background-success-light">
+                    <p className="heading liquid-glass-text">Scale</p>
+                    <p className="title is-5 liquid-glass-text">{project.metrics.scale}</p>
                   </div>
                 </div>
               )}
               {project.metrics.cost && (
                 <div className="column">
-                  <div className="box has-background-warning-light">
-                    <p className="heading">Cost</p>
-                    <p className="title is-5">{project.metrics.cost}</p>
+                  <div className="box liquid-glass-card has-background-warning-light">
+                    <p className="heading liquid-glass-text">Cost</p>
+                    <p className="title is-5 liquid-glass-text">{project.metrics.cost}</p>
                   </div>
                 </div>
               )}
@@ -200,10 +200,10 @@ function DefaultProjectDemo({ project }: { project: Project }) {
 
         {project.highlights && project.highlights.length > 0 && (
           <>
-            <h3 className="title is-5 mt-5">Key Highlights</h3>
+            <h3 className="title is-5 mt-5 liquid-glass-text">Key Highlights</h3>
             <ul>
               {project.highlights.map((highlight, index) => (
-                <li key={index}>{highlight}</li>
+                <li key={index} className="liquid-glass-text">{highlight}</li>
               ))}
             </ul>
           </>
