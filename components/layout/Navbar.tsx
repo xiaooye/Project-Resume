@@ -42,17 +42,11 @@ export default function Navbar() {
       animate={{ y: 0 }}
       className={`navbar is-fixed-top ${
         isScrolled
-          ? "has-background-white has-shadow"
+          ? "has-background-white has-shadow navbar-backdrop"
           : "is-transparent"
       }`}
       role="navigation"
       aria-label="main navigation"
-      style={{
-        backdropFilter: isScrolled ? "blur(10px)" : "none",
-        backgroundColor: isScrolled
-          ? "rgba(255, 255, 255, 0.9)"
-          : "transparent",
-      }}
     >
       <div className="container">
         <div className="navbar-brand">

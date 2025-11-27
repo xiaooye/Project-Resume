@@ -153,18 +153,13 @@ export default function BigDataDemo() {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            style={{
-              height: "600px",
-              overflowY: "auto",
-              border: "1px solid #dbdbdb",
-              borderRadius: "4px",
-            }}
+            className="scroll-container"
           >
             {renderMethod === "virtual" ? (
               <div
+                className="virtual-scroll-wrapper"
                 style={{
                   height: filteredData.length * VIRTUAL_ITEM_HEIGHT,
-                  position: "relative",
                 }}
               >
                 <div
@@ -178,14 +173,7 @@ export default function BigDataDemo() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2 }}
-                      style={{
-                        height: VIRTUAL_ITEM_HEIGHT,
-                        padding: "12px",
-                        borderBottom: "1px solid #dbdbdb",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
+                      className="virtual-scroll-item"
                     >
                       <div>
                         <strong>{item.name}</strong>
@@ -209,13 +197,7 @@ export default function BigDataDemo() {
                     key={item.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid #dbdbdb",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
+                    className="data-item-row"
                   >
                     <div>
                       <strong>{item.name}</strong>

@@ -107,12 +107,12 @@ export default function HeroSection() {
   return (
     <section className="hero is-fullheight">
       {/* 3D Background */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+      <div className="hero-3d-background">
         <Scene3D />
       </div>
 
       {/* Content */}
-      <div className="hero-body" style={{ position: "relative", zIndex: 10 }}>
+      <div className="hero-body hero-body-content">
         <div className="container has-text-centered">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -120,8 +120,7 @@ export default function HeroSection() {
             transition={{ duration: 0.8 }}
           >
             <motion.h1
-              className="title is-1 has-gradient-text mb-6"
-              style={{ fontSize: "clamp(2.5rem, 8vw, 5rem)" }}
+              className="title is-1 has-gradient-text mb-6 hero-title-large"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -130,21 +129,19 @@ export default function HeroSection() {
             </motion.h1>
 
             <motion.div
-              className="title is-1 mb-6"
-              style={{ minHeight: "120px", fontSize: "clamp(2rem, 6vw, 4rem)" }}
+              className="title is-1 mb-6 hero-title-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
               <span className="has-gradient-text">
                 {displayText}
-                <span style={{ animation: "pulse 1s infinite" }}>|</span>
+                <span className="typing-indicator">|</span>
               </span>
             </motion.div>
 
             <motion.p
-              className="subtitle is-4 mb-6"
-              style={{ maxWidth: "800px", margin: "0 auto 3rem" }}
+              className="subtitle is-4 mb-6 hero-subtitle-container"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
@@ -183,15 +180,14 @@ export default function HeroSection() {
 
       {/* Scroll Indicator */}
       <motion.div
-        className="hero-foot"
-        style={{ position: "relative", zIndex: 10 }}
+        className="hero-foot hero-body-content"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, repeat: Infinity, repeatType: "reverse", duration: 1.5 }}
       >
         <div className="container has-text-centered">
           <svg
-            style={{ width: "24px", height: "24px" }}
+            className="icon-size-medium"
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
