@@ -740,8 +740,9 @@ function GameScene3D({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isPointerLockedRef.current && cameraMode === "first-person") {
-        mouseRef.current.x += e.movementX * 0.002;
-        mouseRef.current.y += e.movementY * 0.002;
+        // Fix direction: movementX positive = right, should rotate right (positive rotation)
+        mouseRef.current.x -= e.movementX * 0.002; // Invert X for correct rotation
+        mouseRef.current.y -= e.movementY * 0.002; // Invert Y for correct vertical look
         mouseRef.current.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, mouseRef.current.y));
         playerRotationRef.current = mouseRef.current.x;
       }
@@ -760,33 +761,55 @@ function GameScene3D({
     };
   }, [cameraMode]);
 
-  // Shooting
+  // Shooting - works in both first-person and third-person
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 && cameraMode === "first-person") {
-        // Request pointer lock if not already locked
-        const canvas = document.querySelector("canvas");
-        if (canvas && !isPointerLockedRef.current) {
-          canvas.requestPointerLock();
-          return;
+      if (e.button === 0 && (cameraMode === "first-person" || cameraMode === "third-person")) {
+        // Request pointer lock for first-person if not already locked
+        if (cameraMode === "first-person") {
+          const canvas = document.querySelector("canvas");
+          if (canvas && !isPointerLockedRef.current) {
+            canvas.requestPointerLock();
+            return;
+          }
         }
         
-        if (isPointerLockedRef.current) {
-          // Calculate shooting direction using WASM
+        // Calculate shooting direction from camera
+        let forward: Float32Array;
+        let origin: Float32Array;
+        
+        if (cameraMode === "first-person" && isPointerLockedRef.current) {
+          // First-person: use mouse rotation
           const forwardX = Math.sin(playerRotationRef.current) * Math.cos(mouseRef.current.y);
           const forwardY = Math.sin(mouseRef.current.y);
           const forwardZ = Math.cos(playerRotationRef.current) * Math.cos(mouseRef.current.y);
-          
-          const forward = new Float32Array([forwardX, forwardY, forwardZ]);
-          wasmGame.normalizeVector(forward).then((dir) => {
-            const origin = new Float32Array([
-              playerPosRef.current[0],
-              playerPosRef.current[1] + 1.6,
-              playerPosRef.current[2],
-            ]);
-            onShoot(origin, dir);
-          });
+          forward = new Float32Array([forwardX, forwardY, forwardZ]);
+          origin = new Float32Array([
+            playerPosRef.current[0],
+            playerPosRef.current[1] + 1.6,
+            playerPosRef.current[2],
+          ]);
+        } else if (cameraMode === "third-person" && cameraRef.current) {
+          // Third-person: use camera direction
+          const camera = cameraRef.current;
+          const cameraForward = new THREE.Vector3();
+          camera.getWorldDirection(cameraForward);
+          forward = new Float32Array([cameraForward.x, cameraForward.y, cameraForward.z]);
+          origin = new Float32Array([
+            playerPosRef.current[0],
+            playerPosRef.current[1] + 1.6,
+            playerPosRef.current[2],
+          ]);
+        } else {
+          return; // Can't shoot in this mode
         }
+        
+        // Normalize direction using WASM and shoot
+        wasmGame.normalizeVector(forward).then((dir) => {
+          onShoot(origin, dir);
+        });
       }
     };
 
@@ -803,40 +826,38 @@ function GameScene3D({
     // Prepare input for WASM (forward, right, jump)
     const input = new Float32Array(3);
     
-    // Calculate movement direction based on camera rotation for first-person
-    if (cameraMode === "first-person") {
-      const forward = Math.sin(playerRotationRef.current);
-      const right = Math.cos(playerRotationRef.current);
+    // Get camera forward direction from current camera state
+    let cameraForward = new THREE.Vector3();
+    let cameraRight = new THREE.Vector3();
+    
+    if (state.camera && (cameraMode === "first-person" || cameraMode === "third-person")) {
+      // Get camera's forward and right vectors
+      state.camera.getWorldDirection(cameraForward);
+      cameraForward.y = 0; // Keep movement on horizontal plane
+      cameraForward.normalize();
       
+      // Calculate right vector (cross product of forward and up)
+      cameraRight.crossVectors(cameraForward, new THREE.Vector3(0, 1, 0));
+      cameraRight.normalize();
+    }
+    
+    // Calculate movement direction based on camera view for both first-person and third-person
+    if (cameraMode === "first-person" || cameraMode === "third-person") {
       if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
-        input[0] = forward;
-        input[1] = right;
+        input[0] = -cameraForward.z; // Forward in Z (negative because camera looks in -Z)
+        input[1] = cameraForward.x;  // Right in X
       }
       if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
-        input[0] = -forward;
-        input[1] = -right;
+        input[0] = cameraForward.z;  // Backward
+        input[1] = -cameraForward.x;  // Left
       }
       if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
-        input[0] = -right;
-        input[1] = forward;
+        input[0] = cameraRight.z;     // Strafe left
+        input[1] = -cameraRight.x;
       }
       if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
-        input[0] = right;
-        input[1] = -forward;
-      }
-    } else if (cameraMode === "third-person") {
-      // Third-person - simple movement
-      if (keysRef.current.has("w") || keysRef.current.has("arrowup")) {
-        input[0] = 1; // Forward
-      }
-      if (keysRef.current.has("s") || keysRef.current.has("arrowdown")) {
-        input[0] = -1; // Backward
-      }
-      if (keysRef.current.has("a") || keysRef.current.has("arrowleft")) {
-        input[1] = -1; // Left
-      }
-      if (keysRef.current.has("d") || keysRef.current.has("arrowright")) {
-        input[1] = 1; // Right
+        input[0] = -cameraRight.z;    // Strafe right
+        input[1] = cameraRight.x;
       }
     }
     // Free camera mode - no player movement, only camera movement via OrbitControls
@@ -1212,10 +1233,11 @@ function BulletComponent({
       meshRef.current.position.set(newPos[0], newPos[1], newPos[2]);
     }
 
-    // Check hits using WASM
+    // Check hits using WASM - check all enemies
     for (const enemy of enemies) {
       if (!enemy.alive) continue;
 
+      // Use WASM to check bullet hit
       const hit = await wasmGame.checkBulletHit(
         positionRef.current,
         enemy.position,
@@ -1224,19 +1246,21 @@ function BulletComponent({
 
       if (hit) {
         activeRef.current = false;
-        onHit(enemy.id);
-        break;
+        // Update bullet state
+        bullet.active = false;
+        onHit(enemy.id); // This will kill the enemy
+        return; // Exit early after hit
       }
     }
 
-    // Check max distance
-    const dist = Math.sqrt(
-      positionRef.current[0] ** 2 +
-      positionRef.current[1] ** 2 +
-      positionRef.current[2] ** 2
+    // Check max distance from origin
+    const originDist = Math.sqrt(
+      (positionRef.current[0] - bullet.position[0]) ** 2 +
+      (positionRef.current[1] - bullet.position[1]) ** 2 +
+      (positionRef.current[2] - bullet.position[2]) ** 2
     );
 
-    if (dist > 100) {
+    if (originDist > 100) {
       activeRef.current = false;
     }
   });
@@ -1246,7 +1270,11 @@ function BulletComponent({
   return (
     <mesh
       ref={meshRef}
-      position={[bullet.position[0], bullet.position[1], bullet.position[2]]}
+      position={[
+        positionRef.current[0],
+        positionRef.current[1],
+        positionRef.current[2],
+      ]}
     >
       <sphereGeometry args={[0.1, 8, 8]} />
       <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={1} />
