@@ -350,7 +350,9 @@ export default function BigDataDemo() {
   // Create a config hash to force recalculation when config changes
   // Use individual values instead of stringify to ensure proper reactivity
   const configHash = useMemo(() => {
-    return `${analysisConfig.anomalyThreshold}-${analysisConfig.anomalyMethod}-${analysisConfig.trendWindow}-${analysisConfig.forecastPeriods}-${analysisConfig.seasonalityDetection}-${analysisConfig.minCorrelation}-${analysisConfig.correlationMethod}-${analysisConfig.growthRate}-${analysisConfig.headroom}-${analysisConfig.costPerUnit}-${analysisConfig.outlierRemoval}-${analysisConfig.outlierMethod}-${analysisConfig.outlierThreshold}`;
+    const hash = `${analysisConfig.anomalyThreshold}-${analysisConfig.anomalyMethod}-${analysisConfig.trendWindow}-${analysisConfig.forecastPeriods}-${analysisConfig.seasonalityDetection}-${analysisConfig.minCorrelation}-${analysisConfig.correlationMethod}-${analysisConfig.growthRate}-${analysisConfig.headroom}-${analysisConfig.costPerUnit}-${analysisConfig.outlierRemoval}-${analysisConfig.outlierMethod}-${analysisConfig.outlierThreshold}`;
+    console.log("[Config Hash] Updated:", hash.substring(0, 100));
+    return hash;
   }, [
     analysisConfig.anomalyThreshold,
     analysisConfig.anomalyMethod,
@@ -366,6 +368,19 @@ export default function BigDataDemo() {
     analysisConfig.outlierMethod,
     analysisConfig.outlierThreshold,
   ]);
+
+  // Debug: Log config changes
+  useEffect(() => {
+    console.log("[Config Change] Analysis config updated:", {
+      anomalyThreshold: analysisConfig.anomalyThreshold,
+      anomalyMethod: analysisConfig.anomalyMethod,
+      trendWindow: analysisConfig.trendWindow,
+      forecastPeriods: analysisConfig.forecastPeriods,
+      minCorrelation: analysisConfig.minCorrelation,
+      growthRate: analysisConfig.growthRate,
+      headroom: analysisConfig.headroom,
+    });
+  }, [analysisConfig]);
 
   // Detect mobile
   useEffect(() => {
@@ -709,15 +724,32 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Time Series Analysis using WebAssembly
   useEffect(() => {
+    console.log("[Time Series] Effect triggered", {
+      analysisType,
+      dataLength: filteredData.length,
+      trendWindow: analysisConfig.trendWindow,
+      forecastPeriods: analysisConfig.forecastPeriods,
+      seasonality: analysisConfig.seasonalityDetection,
+      configHash: configHash.substring(0, 50),
+    });
+    
     if (analysisType !== "time-series" || filteredData.length < 50) {
       // Clear results when switching away or not enough data
       if (analysisType !== "time-series") {
+        console.log("[Time Series] Clearing - wrong analysis type");
         setTimeSeriesAnalysis(null);
+      } else {
+        console.log("[Time Series] Clearing - not enough data");
       }
       return;
     }
     
     const calculateTimeSeries = async () => {
+      console.log("[Time Series] Starting calculation", {
+        trendWindow: analysisConfig.trendWindow,
+        forecastPeriods: analysisConfig.forecastPeriods,
+        seasonality: analysisConfig.seasonalityDetection,
+      });
       // Sort by timestamp
       const sorted = [...filteredData].sort((a, b) => a.timestamp - b.timestamp);
       const timestamps = sorted.map(item => item.timestamp);
@@ -738,12 +770,19 @@ export default function BigDataDemo() {
           confidence: f.confidence,
         }));
         
-        setTimeSeriesAnalysis({
+        const analysisResult = {
           trend: result.trend,
           trendStrength: result.trendStrength,
           seasonality: analysisConfig.seasonalityDetection ? result.seasonality : false,
           forecast,
+        };
+        console.log("[Time Series] WASM result:", {
+          trend: analysisResult.trend,
+          trendStrength: analysisResult.trendStrength,
+          seasonality: analysisResult.seasonality,
+          forecastCount: forecast.length,
         });
+        setTimeSeriesAnalysis(analysisResult);
       } catch (error) {
         console.error("WASM time series error:", error);
         // Fallback to JS (same as before but using config)
@@ -787,12 +826,19 @@ export default function BigDataDemo() {
           };
         });
         
-        setTimeSeriesAnalysis({
+        const analysisResult = {
           trend,
           trendStrength,
           seasonality: analysisConfig.seasonalityDetection && variance > 500000 && n > 100,
           forecast,
+        };
+        console.log("[Time Series] JS fallback result:", {
+          trend: analysisResult.trend,
+          trendStrength: analysisResult.trendStrength,
+          seasonality: analysisResult.seasonality,
+          forecastCount: forecast.length,
         });
+        setTimeSeriesAnalysis(analysisResult);
       }
     };
     
@@ -802,15 +848,30 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Correlation Analysis using WebAssembly
   useEffect(() => {
+    console.log("[Correlation] Effect triggered", {
+      analysisType,
+      dataLength: filteredData.length,
+      minCorrelation: analysisConfig.minCorrelation,
+      method: analysisConfig.correlationMethod,
+      configHash: configHash.substring(0, 50),
+    });
+    
     if (analysisType !== "correlation" || filteredData.length < 100) {
       // Clear results when switching away or not enough data
       if (analysisType !== "correlation") {
+        console.log("[Correlation] Clearing - wrong analysis type");
         setCorrelationAnalysis(null);
+      } else {
+        console.log("[Correlation] Clearing - not enough data");
       }
       return;
     }
     
     const calculateCorrelation = async () => {
+      console.log("[Correlation] Starting calculation", {
+        minCorrelation: analysisConfig.minCorrelation,
+        method: analysisConfig.correlationMethod,
+      });
       const values = filteredData.map(item => item.value);
       const timestamps = filteredData.map(item => item.timestamp);
       const categories = filteredData.map(item => 
@@ -835,7 +896,12 @@ export default function BigDataDemo() {
             )
           : null;
         
-        setCorrelationAnalysis({ correlations, strongest });
+        const result = { correlations, strongest };
+        console.log("[Correlation] WASM result:", {
+          correlationCount: correlations.length,
+          strongest: strongest ? `${strongest.field1}-${strongest.field2}: ${strongest.value.toFixed(4)}` : "none",
+        });
+        setCorrelationAnalysis(result);
       } catch (error) {
         console.error("WASM correlation error:", error);
         // Fallback to JS
@@ -866,7 +932,12 @@ export default function BigDataDemo() {
             )
           : null;
         
-        setCorrelationAnalysis({ correlations, strongest });
+        const result = { correlations, strongest };
+        console.log("[Correlation] JS fallback result:", {
+          correlationCount: correlations.length,
+          strongest: strongest ? `${strongest.field1}-${strongest.field2}: ${strongest.value.toFixed(4)}` : "none",
+        });
+        setCorrelationAnalysis(result);
       }
     };
     
@@ -876,15 +947,31 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Anomaly Detection using WebAssembly
   useEffect(() => {
+    console.log("[Anomaly Detection] Effect triggered", {
+      analysisType,
+      dataLength: filteredData.length,
+      threshold: analysisConfig.anomalyThreshold,
+      method: analysisConfig.anomalyMethod,
+      configHash: configHash.substring(0, 50),
+    });
+    
     if (analysisType !== "anomaly" || filteredData.length < 50) {
       // Clear results when switching away or not enough data
       if (analysisType !== "anomaly") {
+        console.log("[Anomaly Detection] Clearing - wrong analysis type");
         setAnomalyDetection(null);
+      } else {
+        console.log("[Anomaly Detection] Clearing - not enough data");
       }
       return;
     }
     
     const detectAnomalies = async () => {
+      console.log("[Anomaly Detection] Starting calculation", {
+        threshold: analysisConfig.anomalyThreshold,
+        method: analysisConfig.anomalyMethod,
+        dataCount: filteredData.length,
+      });
       const values = filteredData.map(item => item.value);
       const threshold = analysisConfig.anomalyThreshold;
       
@@ -901,11 +988,17 @@ export default function BigDataDemo() {
             reason: anomaly.zScore > 3 ? "Extreme outlier" : "Statistical anomaly",
           }));
         
-        setAnomalyDetection({
+        const result = {
           anomalies,
           threshold,
           anomalyRate: (wasmAnomalies.length / filteredData.length) * 100,
+        };
+        console.log("[Anomaly Detection] WASM result:", {
+          anomalyCount: anomalies.length,
+          anomalyRate: result.anomalyRate,
+          threshold,
         });
+        setAnomalyDetection(result);
       } catch (error) {
         console.error("WASM anomaly detection error:", error);
         // Fallback to JS with method selection
@@ -950,11 +1043,18 @@ export default function BigDataDemo() {
           });
         }
         
-        setAnomalyDetection({
+        const result = {
           anomalies: anomalies.sort((a, b) => b.score - a.score).slice(0, 20),
           threshold,
           anomalyRate: (anomalies.length / filteredData.length) * 100,
+        };
+        console.log("[Anomaly Detection] JS fallback result:", {
+          anomalyCount: result.anomalies.length,
+          anomalyRate: result.anomalyRate,
+          threshold,
+          method: analysisConfig.anomalyMethod,
         });
+        setAnomalyDetection(result);
       }
     };
     
@@ -964,15 +1064,32 @@ export default function BigDataDemo() {
 
   // Advanced Analysis: Capacity Planning using WebAssembly
   useEffect(() => {
+    console.log("[Capacity Planning] Effect triggered", {
+      analysisType,
+      dataLength: filteredData.length,
+      growthRate: analysisConfig.growthRate,
+      headroom: analysisConfig.headroom,
+      costPerUnit: analysisConfig.costPerUnit,
+      configHash: configHash.substring(0, 50),
+    });
+    
     if (analysisType !== "capacity" || filteredData.length < 100) {
       // Clear results when switching away or not enough data
       if (analysisType !== "capacity") {
+        console.log("[Capacity Planning] Clearing - wrong analysis type");
         setCapacityPlanning(null);
+      } else {
+        console.log("[Capacity Planning] Clearing - not enough data");
       }
       return;
     }
     
     const calculateCapacity = async () => {
+      console.log("[Capacity Planning] Starting calculation", {
+        growthRate: analysisConfig.growthRate,
+        headroom: analysisConfig.headroom,
+        costPerUnit: analysisConfig.costPerUnit,
+      });
       const currentLoad = filteredData.length;
       
       try {
@@ -997,13 +1114,20 @@ export default function BigDataDemo() {
           recommendations.push("Scale to multi-region deployment for better performance");
         }
         
-        setCapacityPlanning({
+        const planningResult = {
           currentLoad,
           projectedLoad: result.projectedLoad,
           recommendedCapacity: result.recommendedCapacity,
           costEstimate: result.costEstimate * analysisConfig.costPerUnit / 0.01, // Scale by user config
           recommendations,
+        };
+        console.log("[Capacity Planning] WASM result:", {
+          currentLoad: planningResult.currentLoad,
+          projectedLoad: planningResult.projectedLoad,
+          recommendedCapacity: planningResult.recommendedCapacity,
+          costEstimate: planningResult.costEstimate,
         });
+        setCapacityPlanning(planningResult);
       } catch (error) {
         console.error("WASM capacity planning error:", error);
         // Fallback to JS
@@ -1025,13 +1149,20 @@ export default function BigDataDemo() {
           recommendations.push("Scale to multi-region deployment for better performance");
         }
         
-        setCapacityPlanning({
+        const planningResult = {
           currentLoad,
           projectedLoad,
           recommendedCapacity,
           costEstimate,
           recommendations,
+        };
+        console.log("[Capacity Planning] JS fallback result:", {
+          currentLoad: planningResult.currentLoad,
+          projectedLoad: planningResult.projectedLoad,
+          recommendedCapacity: planningResult.recommendedCapacity,
+          costEstimate: planningResult.costEstimate,
         });
+        setCapacityPlanning(planningResult);
       }
     };
     
