@@ -2,11 +2,24 @@ export interface Project {
   id: string;
   title: string;
   description: string;
+  longDescription?: string; // Detailed description for modal
   technologies: string[];
+  category: string; // Match skill categories: Languages, Frontend, Backend, Cloud, DevOps, Advanced, AI/ML
+  status: "completed" | "in-progress" | "planned";
+  completionDate?: string; // ISO date string
+  startDate?: string; // ISO date string
+  complexity: "beginner" | "intermediate" | "advanced" | "expert";
   githubUrl?: string;
   demoUrl?: string;
   imageUrl?: string;
   videoUrl?: string;
+  featured: boolean; // For highlighting important projects
+  metrics?: {
+    performance?: string; // e.g., "Sub-100ms response time"
+    scale?: string; // e.g., "Handles 1M+ requests"
+    cost?: string; // e.g., "50% cost reduction"
+  };
+  highlights: string[]; // Key achievements/features
 }
 
 export interface Skill {
