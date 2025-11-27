@@ -347,6 +347,11 @@ export default function BigDataDemo() {
     outlierThreshold: 2.5,
   });
 
+  // Create a config hash to force recalculation when config changes
+  const configHash = useMemo(() => {
+    return JSON.stringify(analysisConfig);
+  }, [analysisConfig]);
+
   // Detect mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -692,6 +697,7 @@ export default function BigDataDemo() {
     if (analysisType !== "time-series" || filteredData.length < 50) return;
     
     const calculateTimeSeries = async () => {
+      console.log("Recalculating time series with config:", analysisConfig.trendWindow, analysisConfig.forecastPeriods);
       // Sort by timestamp
       const sorted = [...filteredData].sort((a, b) => a.timestamp - b.timestamp);
       const timestamps = sorted.map(item => item.timestamp);
@@ -772,13 +778,14 @@ export default function BigDataDemo() {
     
     const timeoutId = setTimeout(calculateTimeSeries, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, analysisConfig.trendWindow, analysisConfig.forecastPeriods, analysisConfig.seasonalityDetection]);
+  }, [filteredData, analysisType, configHash, analysisConfig.trendWindow, analysisConfig.forecastPeriods, analysisConfig.seasonalityDetection]);
 
   // Advanced Analysis: Correlation Analysis using WebAssembly
   useEffect(() => {
     if (analysisType !== "correlation" || filteredData.length < 100) return;
     
     const calculateCorrelation = async () => {
+      console.log("Recalculating correlation with config:", analysisConfig.minCorrelation, analysisConfig.correlationMethod);
       const values = filteredData.map(item => item.value);
       const timestamps = filteredData.map(item => item.timestamp);
       const categories = filteredData.map(item => 
@@ -840,13 +847,14 @@ export default function BigDataDemo() {
     
     const timeoutId = setTimeout(calculateCorrelation, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, analysisConfig.minCorrelation, analysisConfig.correlationMethod]);
+  }, [filteredData, analysisType, configHash, analysisConfig.minCorrelation, analysisConfig.correlationMethod]);
 
   // Advanced Analysis: Anomaly Detection using WebAssembly
   useEffect(() => {
     if (analysisType !== "anomaly" || filteredData.length < 50) return;
     
     const detectAnomalies = async () => {
+      console.log("Recalculating anomalies with config:", analysisConfig.anomalyThreshold, analysisConfig.anomalyMethod);
       const values = filteredData.map(item => item.value);
       const threshold = analysisConfig.anomalyThreshold;
       
@@ -922,13 +930,14 @@ export default function BigDataDemo() {
     
     const timeoutId = setTimeout(detectAnomalies, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, analysisConfig.anomalyThreshold, analysisConfig.anomalyMethod]);
+  }, [filteredData, analysisType, configHash, analysisConfig.anomalyThreshold, analysisConfig.anomalyMethod]);
 
   // Advanced Analysis: Capacity Planning using WebAssembly
   useEffect(() => {
     if (analysisType !== "capacity" || filteredData.length < 100) return;
     
     const calculateCapacity = async () => {
+      console.log("Recalculating capacity with config:", analysisConfig.growthRate, analysisConfig.headroom, analysisConfig.costPerUnit);
       const currentLoad = filteredData.length;
       
       try {
@@ -993,7 +1002,7 @@ export default function BigDataDemo() {
     
     const timeoutId = setTimeout(calculateCapacity, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, stats, analysisConfig.growthRate, analysisConfig.headroom, analysisConfig.costPerUnit]);
+  }, [filteredData, analysisType, stats, configHash, analysisConfig.growthRate, analysisConfig.headroom, analysisConfig.costPerUnit]);
   
   // Process data with sorting and grouping
   const processedData = useMemo(() => {
