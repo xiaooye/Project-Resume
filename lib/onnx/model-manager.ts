@@ -73,17 +73,28 @@ env.allowRemoteModels = true;
 
 // Configure WASM backend for optimal performance
 if (typeof navigator !== "undefined" && env.backends?.onnx?.wasm) {
-  // Use all available CPU cores for WASM backend
+  // Check if cross-origin isolation is enabled (required for multi-threading)
+  const isCrossOriginIsolated = typeof window !== "undefined" && 
+    (window.crossOriginIsolated || 
+     (window as any).crossOriginIsolated !== undefined);
+  
+  // Use all available CPU cores for WASM backend, but only if cross-origin isolated
   const cores = navigator.hardwareConcurrency || 4;
-  env.backends.onnx.wasm.numThreads = cores;
+  
+  if (isCrossOriginIsolated) {
+    env.backends.onnx.wasm.numThreads = cores;
+    console.log(`ONNX Runtime WASM configured: ${cores} threads, SIMD enabled (cross-origin isolated)`);
+  } else {
+    // Single-threaded mode (no cross-origin isolation)
+    env.backends.onnx.wasm.numThreads = 1;
+    console.log(`ONNX Runtime WASM configured: single-threaded mode (cross-origin isolation not enabled). For multi-threading, see: https://web.dev/cross-origin-isolation-guide/`);
+  }
   
   // Enable SIMD for vectorized operations (significant performance boost)
   env.backends.onnx.wasm.simd = true;
   
   // Enable proxy for better memory management
   env.backends.onnx.wasm.proxy = false; // Set to false for direct WASM execution
-  
-  console.log(`ONNX Runtime WASM configured: ${cores} threads, SIMD enabled`);
 }
 
 // Note: WebGPU backend is automatically used when available via device: 'webgpu'
@@ -176,13 +187,22 @@ export class ModelManager {
           device: device, // Explicitly set device to use WebGPU if available
           progress_callback: (progress: any) => {
             // Show detailed loading progress
-            if (progress.status === "progress" && progress.progress) {
-              const percent = Math.round((progress.progress / progress.file.size) * 100);
-              console.log(`Loading model from ${progress.file.src}: ${percent}%`);
+            if (progress.status === "progress" && progress.progress && progress.file) {
+              const fileSize = progress.file.size || 0;
+              const loaded = progress.progress || 0;
+              const percent = fileSize > 0 ? Math.round((loaded / fileSize) * 100) : 0;
+              const fileName = progress.file.name || progress.file.src || "unknown file";
+              console.log(`Loading ${fileName}: ${percent}% (${(loaded / 1024 / 1024).toFixed(2)}MB / ${(fileSize / 1024 / 1024).toFixed(2)}MB)`);
             } else if (progress.status === "done") {
               console.log("Model loaded and cached in browser IndexedDB");
+            } else if (progress.status === "ready") {
+              console.log(`Model ready: ${progress.model || progress.name || "unknown"}`);
             } else {
-              console.log("Model loading progress:", progress);
+              // Only log important status updates, not every single progress event
+              if (progress.status === "initiate" || progress.status === "download") {
+                const fileName = progress.file?.name || progress.file?.src || progress.file || "unknown";
+                console.log(`Model loading: ${progress.status} - ${fileName}`);
+              }
             }
           },
         } as any
