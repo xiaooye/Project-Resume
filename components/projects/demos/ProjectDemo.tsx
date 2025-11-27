@@ -12,6 +12,20 @@ import HighPerformanceAPIGatewayDemo from "./HighPerformanceAPIGatewayDemo";
 import RealTimeDataStreamingDemo from "./RealTimeDataStreamingDemo";
 import CostOptimizationAnalyticsDemo from "./CostOptimizationAnalyticsDemo";
 import GraphQLFederationDemo from "./GraphQLFederationDemo";
+import AutoScalingInfrastructureDemo from "./AutoScalingInfrastructureDemo";
+import EnterpriseTypeScriptFrameworkDemo from "./EnterpriseTypeScriptFrameworkDemo";
+import ComponentDesignSystemDemo from "./ComponentDesignSystemDemo";
+import DeveloperProductivityDemo from "./DeveloperProductivityDemo";
+import PerformanceOptimizationDemo from "./PerformanceOptimizationDemo";
+import ScalableEcommerceDemo from "./ScalableEcommerceDemo";
+import ServerlessApplicationFrameworkDemo from "./ServerlessApplicationFrameworkDemo";
+import RealTimeCollaborationDemo from "./RealTimeCollaborationDemo";
+import EventDrivenArchitectureDemo from "./EventDrivenArchitectureDemo";
+import DistributedCacheDemo from "./DistributedCacheDemo";
+import APIRateLimitingDemo from "./APIRateLimitingDemo";
+import SecurityAuditComplianceDemo from "./SecurityAuditComplianceDemo";
+import IdentityAccessManagementDemo from "./IdentityAccessManagementDemo";
+import BigDataProcessingEngineDemo from "./BigDataProcessingEngineDemo";
 
 interface ProjectDemoProps {
   project: Project;
@@ -243,59 +257,4 @@ function DefaultProjectDemo({ project }: { project: Project }) {
 // Placeholder components for projects without specific demos yet
 
 
-function AutoScalingInfrastructureDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function EnterpriseTypeScriptFrameworkDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function ComponentDesignSystemDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function DeveloperProductivityDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function PerformanceOptimizationDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function ScalableEcommerceDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function ServerlessApplicationFrameworkDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function RealTimeCollaborationDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function EventDrivenArchitectureDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function DistributedCacheDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function APIRateLimitingDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function SecurityAuditComplianceDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function IdentityAccessManagementDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function BigDataProcessingEngineDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
 
