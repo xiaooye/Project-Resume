@@ -12,6 +12,7 @@ import { CacheManager } from "@/lib/onnx/cache-manager";
 import LLMChatInterface from "./onnx-ai/LLMChatInterface";
 import ImageClassificationInterface from "./onnx-ai/ImageClassificationInterface";
 import TextClassificationInterface from "./onnx-ai/TextClassificationInterface";
+import PerformanceComparison, { BackendPerformance } from "./onnx-ai/PerformanceComparison";
 
 type InputSource = "camera" | "upload" | "url" | "text";
 
@@ -37,6 +38,10 @@ export default function OnnxAIDemo() {
     inferenceTime: number;
     modelName: string;
   }>>([]);
+  const [backendPerformanceHistory, setBackendPerformanceHistory] = useState<BackendPerformance[]>([]);
+  const [isBenchmarking, setIsBenchmarking] = useState(false);
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [batchResults, setBatchResults] = useState<InferenceResult[]>([]);
 
   // Camera and image handling
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -227,6 +232,19 @@ export default function OnnxAIDemo() {
             modelName: result.modelName,
           },
         ]);
+
+        // Track backend performance
+        if (currentBackend !== "unknown") {
+          setBackendPerformanceHistory((prev) => [
+            ...prev.slice(-99), // Keep last 100 entries
+            {
+              backend: currentBackend,
+              inferenceTime: result.inferenceTime,
+              throughput: 1000 / result.inferenceTime,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
         
         return result;
     },
@@ -268,38 +286,87 @@ export default function OnnxAIDemo() {
     [isModelLoaded, currentModel]
   );
 
-  // Handle file upload
+  // Handle file upload (supports batch processing)
   const handleFileUpload = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files || []);
+      if (files.length === 0) return;
 
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            setCurrentImage(img);
-            setInputSource("upload");
-            stopCamera();
-            if (currentModel?.type === "image-classification" || currentModel?.type === "object-detection") {
-              runInference(img);
+      // Single file processing
+      if (files.length === 1) {
+        const file = files[0];
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              setCurrentImage(img);
+              setInputSource("upload");
+              stopCamera();
+              if (currentModel?.type === "image-classification" || currentModel?.type === "object-detection") {
+                runInference(img);
+              }
+            };
+            img.src = e.target?.result as string;
+          };
+          reader.readAsDataURL(file);
+        } else if (file.type === "text/plain") {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const text = e.target?.result as string;
+            setTextInput(text);
+            setInputSource("text");
+            if (currentModel?.type === "text-classification" || currentModel?.type === "sentiment-analysis" || currentModel?.type === "text-generation") {
+              runInference(text);
             }
           };
-          img.src = e.target?.result as string;
-        };
-        reader.readAsDataURL(file);
-      } else if (file.type === "text/plain") {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target?.result as string;
-          setTextInput(text);
-          setInputSource("text");
-          if (currentModel?.type === "text-classification" || currentModel?.type === "sentiment-analysis" || currentModel?.type === "text-generation") {
-            runInference(text);
+          reader.readAsText(file);
+        }
+      } else {
+        // Batch processing for images
+        if (currentModel?.type === "image-classification" || currentModel?.type === "object-detection") {
+          setBatchProcessing(true);
+          setBatchResults([]);
+          stopCamera();
+          
+          const imageFiles = files.filter(f => f.type.startsWith("image/"));
+          const results: InferenceResult[] = [];
+          
+          for (const file of imageFiles) {
+            try {
+              const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const img = new Image();
+                  img.onload = () => resolve(img);
+                  img.onerror = reject;
+                  img.src = e.target?.result as string;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+              });
+              
+              const result = await runInference(img);
+              results.push(result);
+              setBatchResults([...results]);
+            } catch (error) {
+              console.error(`Failed to process ${file.name}:`, error);
+            }
           }
-        };
-        reader.readAsText(file);
+          
+          setBatchProcessing(false);
+          if (imageFiles.length > 0 && results.length > 0) {
+            setCurrentImage(await new Promise<HTMLImageElement>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = e.target?.result as string;
+              };
+              reader.readAsDataURL(imageFiles[0]);
+            }));
+          }
+        }
       }
     },
     [runInference, stopCamera, currentModel]
@@ -556,14 +623,26 @@ export default function OnnxAIDemo() {
         <div className="box mb-6">
           <h2 className="title is-4 mb-4">Model Selection</h2>
           <div className="field">
-            <label className="label">Select Model</label>
+            <label className="label" htmlFor="model-select">
+              Select Model
+              {isMobile && (
+                <span className="tag is-info is-small ml-2">
+                  <span className="icon is-small">
+                    <i className="fas fa-mobile-alt"></i>
+                  </span>
+                  <span>Mobile Optimized</span>
+                </span>
+              )}
+            </label>
             <div className="control">
               <div className="select is-fullwidth">
                 <select
+                  id="model-select"
                   value={currentModelId}
                   onChange={(e) => handleModelChange(e.target.value)}
                   disabled={isLoading}
                   aria-label="Select AI model"
+                  aria-describedby="model-select-help"
                 >
                   {availableModels.map((model) => {
                     const isRecommended = recommendedModels.some((m) => m.id === model.id);
@@ -577,6 +656,9 @@ export default function OnnxAIDemo() {
                 </select>
               </div>
             </div>
+            <p className="help" id="model-select-help">
+              Choose a model based on your task. Recommended models are marked with ⭐.
+            </p>
           </div>
 
           {currentModel && (
@@ -606,20 +688,24 @@ export default function OnnxAIDemo() {
             </div>
           )}
 
-          <div className="field is-grouped mt-4">
+          <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-4`}>
             <div className="control">
               <button
-                className={`button is-primary ${isLoading ? "is-loading" : ""}`}
+                className={`button is-primary is-fullwidth-mobile ${isLoading ? "is-loading" : ""}`}
                 onClick={loadModel}
                 disabled={isLoading || isModelLoaded || !currentModelId}
                 aria-label="Load selected model"
+                aria-describedby="load-model-help"
               >
-                {isModelLoaded ? "Model Loaded" : "Load Model"}
+                <span className="icon">
+                  <i className={`fas ${isModelLoaded ? "fa-check" : "fa-download"}`}></i>
+                </span>
+                <span>{isModelLoaded ? "Model Loaded" : "Load Model"}</span>
               </button>
             </div>
             {isModelLoaded && (
               <div className="control">
-                <span className="tag is-success is-large">
+                <span className="tag is-success is-large" role="status" aria-live="polite">
                   <span className="icon">
                     <i className="fas fa-check"></i>
                   </span>
@@ -628,6 +714,11 @@ export default function OnnxAIDemo() {
               </div>
             )}
           </div>
+          <p className="help" id="load-model-help">
+            {isModelLoaded 
+              ? "Model is ready for inference. You can now upload images or use the camera."
+              : "Click to load the selected model. First-time loading may take a few seconds."}
+          </p>
 
           {loadingProgress && (
             <div className="notification is-info is-light mt-4">
@@ -717,6 +808,50 @@ export default function OnnxAIDemo() {
           </>
         )}
 
+        {/* Batch Processing Results */}
+        {batchResults.length > 0 && (
+          <div className="box mb-6">
+            <h3 className="title is-4 mb-4">Batch Processing Results ({batchResults.length} images)</h3>
+            <div className="content">
+              <div className="table-container">
+                <table className="table is-fullwidth is-striped" role="table" aria-label="Batch processing results">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Inference Time (ms)</th>
+                      <th>Throughput (inf/sec)</th>
+                      <th>Top Prediction</th>
+                      <th>Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchResults.map((result, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <td>{result.inferenceTime.toFixed(2)}</td>
+                        <td>{(1000 / result.inferenceTime).toFixed(2)}</td>
+                        <td>{result.predictions?.[0]?.label || "N/A"}</td>
+                        <td>
+                          {result.predictions?.[0] 
+                            ? `${(result.predictions[0].confidence * 100).toFixed(2)}%`
+                            : "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="notification is-info is-light mt-4">
+                <p>
+                  <strong>Batch Statistics:</strong> Average inference time:{" "}
+                  {(batchResults.reduce((sum, r) => sum + r.inferenceTime, 0) / batchResults.length).toFixed(2)}ms |{" "}
+                  Total time: {batchResults.reduce((sum, r) => sum + r.inferenceTime, 0).toFixed(2)}ms
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Inference Results - Only show for non-chat models */}
         {inferenceResult && 
          currentModel && 
@@ -757,35 +892,46 @@ export default function OnnxAIDemo() {
                 {inferenceResult.predictions && inferenceResult.predictions.length > 0 && (
                   <div className="mt-4">
                     <h3 className="title is-5">Top Predictions:</h3>
-                    <table className="table is-fullwidth">
-                      <thead>
-                        <tr>
-                          <th>Rank</th>
-                          <th>Label</th>
-                          <th>Confidence</th>
-                          <th>Visual</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {inferenceResult.predictions.slice(0, 10).map((pred, index) => (
-                          <tr key={index}>
-                            <td>{index + 1}</td>
-                            <td>{pred.label}</td>
-                            <td>{(pred.confidence * 100).toFixed(2)}%</td>
-                            <td>
-                              <progress 
-                                className="progress is-primary" 
-                                value={pred.confidence * 100} 
-                                max="100"
-                                aria-label={`Confidence: ${(pred.confidence * 100).toFixed(2)}%`}
-                              >
-                                {(pred.confidence * 100).toFixed(2)}%
-                              </progress>
-                            </td>
+                    <div className="table-container">
+                      <table className="table is-fullwidth" role="table" aria-label="Inference predictions">
+                        <thead>
+                          <tr>
+                            <th>Rank</th>
+                            <th>Label</th>
+                            <th>Confidence</th>
+                            <th>Visual</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {inferenceResult.predictions.slice(0, 10).map((pred, index) => (
+                            <tr key={index}>
+                              <td>{index + 1}</td>
+                              <td>
+                                <strong>{pred.label}</strong>
+                              </td>
+                              <td>{(pred.confidence * 100).toFixed(2)}%</td>
+                              <td>
+                                <progress 
+                                  className="progress is-primary" 
+                                  value={pred.confidence * 100} 
+                                  max="100"
+                                  aria-label={`${pred.label}: ${(pred.confidence * 100).toFixed(2)}% confidence`}
+                                  aria-valuenow={pred.confidence * 100}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                >
+                                  {(pred.confidence * 100).toFixed(2)}%
+                                </progress>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Screen reader summary */}
+                    <div className="is-sr-only" role="status" aria-live="polite">
+                      Top prediction: {inferenceResult.predictions[0]?.label} with {((inferenceResult.predictions[0]?.confidence || 0) * 100).toFixed(2)}% confidence.
+                    </div>
                   </div>
                 )}
               </div>
@@ -823,6 +969,44 @@ export default function OnnxAIDemo() {
                 </div>
               </div>
             )}
+
+            {/* Performance Comparison */}
+            <PerformanceComparison
+              performanceHistory={backendPerformanceHistory}
+              currentBackend={currentBackend}
+              onBenchmark={async () => {
+                if (!isModelLoaded || !currentModel) return;
+                setIsBenchmarking(true);
+                try {
+                  // Run 10 inferences to benchmark
+                  const testInput = currentImage || (canvasRef.current || undefined);
+                  if (!testInput && currentModel.type !== "text-classification" && currentModel.type !== "sentiment-analysis" && currentModel.type !== "text-generation" && currentModel.type !== "llm") {
+                    alert("Please provide an input (image or camera) to run benchmark");
+                    return;
+                  }
+                  
+                  const testText = currentModel.type === "text-classification" || currentModel.type === "sentiment-analysis" 
+                    ? "This is a test text for benchmarking performance." 
+                    : undefined;
+
+                  for (let i = 0; i < 10; i++) {
+                    if (testInput) {
+                      await runInference(testInput as any);
+                    } else if (testText) {
+                      await runInference(testText);
+                    }
+                    // Small delay between inferences
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                } catch (error) {
+                  console.error("Benchmark failed:", error);
+                  alert(`Benchmark failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+                } finally {
+                  setIsBenchmarking(false);
+                }
+              }}
+              isBenchmarking={isBenchmarking}
+            />
           </>
         )}
       </motion.div>

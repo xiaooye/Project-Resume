@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { InferenceResult } from "@/lib/onnx/model-manager";
 
 interface ImageClassificationInterfaceProps {
@@ -39,6 +39,16 @@ export default function ImageClassificationInterface({
   onStopRealTime,
 }: ImageClassificationInterfaceProps) {
   const [inputSource, setInputSource] = useState<"camera" | "upload" | "url">("camera");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   return (
     <div className="box">
@@ -126,6 +136,7 @@ export default function ImageClassificationInterface({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={onFileUpload}
         className="is-hidden"
         aria-label="Image file input"
@@ -141,22 +152,25 @@ export default function ImageClassificationInterface({
             muted
             className="image"
             style={{ maxWidth: "100%", height: "auto" }}
-            aria-label="Camera preview"
+            aria-label="Camera preview for image classification"
           />
-          <div className="field is-grouped mt-4">
+          <div className={`field ${isMobile ? "is-grouped-multiline" : "is-grouped"} mt-4`}>
             <div className="control">
               <button
-                className={`button ${isRealTimeInference ? "is-danger" : "is-success"}`}
+                className={`button is-fullwidth-mobile ${isRealTimeInference ? "is-danger" : "is-success"}`}
                 onClick={isRealTimeInference ? onStopRealTime : onStartRealTime}
                 disabled={!isModelLoaded}
                 aria-label={isRealTimeInference ? "Stop real-time inference" : "Start real-time inference"}
               >
-                {isRealTimeInference ? "Stop Real-time" : "Start Real-time"}
+                <span className="icon">
+                  <i className={`fas ${isRealTimeInference ? "fa-stop" : "fa-play"}`}></i>
+                </span>
+                <span>{isRealTimeInference ? "Stop Real-time" : "Start Real-time"}</span>
               </button>
             </div>
             <div className="control">
               <button
-                className="button is-warning"
+                className="button is-fullwidth-mobile is-warning"
                 onClick={() => {
                   const canvas = onCaptureFrame();
                   if (canvas) {
@@ -164,21 +178,37 @@ export default function ImageClassificationInterface({
                   }
                 }}
                 disabled={!isModelLoaded}
-                aria-label="Run single inference"
+                aria-label="Run single inference on current frame"
               >
-                Single Inference
+                <span className="icon">
+                  <i className="fas fa-camera"></i>
+                </span>
+                <span>Single Inference</span>
               </button>
             </div>
             <div className="control">
               <button
-                className="button is-light"
+                className="button is-fullwidth-mobile is-light"
                 onClick={onStopCamera}
                 aria-label="Stop camera"
               >
-                Stop Camera
+                <span className="icon">
+                  <i className="fas fa-stop-circle"></i>
+                </span>
+                <span>Stop Camera</span>
               </button>
             </div>
           </div>
+          {isRealTimeInference && (
+            <div className="notification is-info is-light mt-2" role="status" aria-live="polite">
+              <p className="is-size-7">
+                <span className="icon">
+                  <i className="fas fa-info-circle"></i>
+                </span>
+                Real-time inference is running. Processing frames at 5 FPS.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -188,20 +218,29 @@ export default function ImageClassificationInterface({
           <figure className="image">
             <img
               src={currentImage.src}
-              alt="Input image for inference"
+              alt="Input image for AI inference"
               style={{ maxWidth: "100%", height: "auto" }}
             />
           </figure>
           <div className="field mt-4">
             <button
-              className="button is-primary"
+              className="button is-primary is-fullwidth-mobile"
               onClick={() => onRunInference(currentImage)}
               disabled={!isModelLoaded}
-              aria-label="Run inference on image"
+              aria-label="Run inference on uploaded image"
             >
-              Run Inference
+              <span className="icon">
+                <i className="fas fa-play"></i>
+              </span>
+              <span>Run Inference</span>
             </button>
           </div>
+          <p className="help mt-2">
+            <span className="icon">
+              <i className="fas fa-info-circle"></i>
+            </span>
+            You can upload multiple images for batch processing by selecting multiple files.
+          </p>
         </div>
       )}
 

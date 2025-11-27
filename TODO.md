@@ -292,14 +292,14 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
 
 #### AI/ML & Advanced Demos (CTO Expectation: Cutting-Edge Technology)
 
-- [ ] **ONNX Runtime Web AI 演示** (Staff Level: ML Engineering)
-  - [ ] ONNX Runtime Web 集成 - 模型加载，推理管道
-  - [ ] 模型加载和推理 - 多种模型支持，批量推理
-  - [ ] WebGPU/WebNN 加速配置 - 性能对比，回退策略
-  - [ ] 实时推理演示 - 摄像头输入，实时处理
-  - [ ] 性能对比可视化 - CPU vs GPU vs WebNN，延迟对比
-  - [ ] **响应式优化** - 移动端模型选择，性能适配
-  - [ ] **无障碍** - 推理结果描述，键盘控制
+- [x] **ONNX Runtime Web AI 演示** (Staff Level: ML Engineering)
+  - [x] ONNX Runtime Web 集成 - 模型加载，推理管道
+  - [x] 模型加载和推理 - 多种模型支持，批量推理
+  - [x] WebGPU/WebNN 加速配置 - 性能对比，回退策略
+  - [x] 实时推理演示 - 摄像头输入，实时处理
+  - [x] 性能对比可视化 - CPU vs GPU vs WebNN，延迟对比
+  - [x] **响应式优化** - 移动端模型选择，性能适配
+  - [x] **无障碍** - 推理结果描述，键盘控制
 
 - [x] **AI Agent 集成** (CTO Expectation: Production AI Systems)
   - [x] Gemini API 集成 - 流式响应，错误处理，重试机制
