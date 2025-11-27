@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import * as d3 from "d3";
 import { NetworkTrafficData, SimulationScenario } from "@/types";
@@ -423,14 +423,27 @@ export default function NetworkTrafficDemo() {
       .range([margin.left, width - margin.right])
       .padding(0.1);
 
+    // Optimize Y-axis: use better tick formatting and ensure readable scale
+    const maxRequests = d3.max(data, (d) => d.requests) || 1000;
     const yScale = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.requests) || 1000])
+      .domain([0, maxRequests])
       .nice()
       .range([height - margin.bottom, margin.top]);
+    
+    // Format Y-axis ticks for better readability
+    const yAxisFormatter = d3.axisLeft(yScale)
+      .tickFormat((d) => {
+        const value = Number(d);
+        if (value >= 1000) {
+          return `${(value / 1000).toFixed(1)}k`;
+        }
+        return value.toString();
+      })
+      .ticks(8); // Limit to 8 ticks for better readability
 
     // Update bars with smooth transitions to prevent flashing
-    const bars = svg.selectAll("rect").data(data, (d: NetworkTrafficData) => d.serverId);
+    const bars = svg.selectAll<SVGRectElement, NetworkTrafficData>("rect").data(data, (d) => d.serverId);
     
     // Remove old bars
     bars.exit()
@@ -470,7 +483,7 @@ export default function NetworkTrafficDemo() {
       .attr("opacity", 0.8);
 
     // Update labels with smooth transitions
-    const labels = svg.selectAll("text.label").data(data, (d: NetworkTrafficData) => d.serverId);
+    const labels = svg.selectAll<SVGTextElement, NetworkTrafficData>("text.label").data(data, (d) => d.serverId);
     
     labels.exit().remove();
     
@@ -897,7 +910,8 @@ export default function NetworkTrafficDemo() {
     };
   }, [data, scenarios, utilization, p95Latency]);
 
-  const recommendation = getRecommendedStrategy();
+  // Memoize recommendation to prevent unnecessary re-renders
+  const recommendation = useMemo(() => getRecommendedStrategy(), [data, scenarios, utilization, p95Latency, lbStrategy]);
 
   // Anomaly detection
   const anomalies = data.filter(d => 
@@ -1242,13 +1256,22 @@ export default function NetworkTrafficDemo() {
           </div>
         </div>
 
-        {/* Load Balancing Info */}
-        {currentRequest && (
-          <div className="notification is-info mb-6">
-            <strong>Latest Request:</strong> {currentRequest.id} → {currentRequest.target} 
-            <span className="ml-2 tag is-light">{(Date.now() - currentRequest.timestamp)}ms ago</span>
-          </div>
-        )}
+        {/* Load Balancing Info - Fixed height to prevent layout shift */}
+        <div className="mb-6" style={{ minHeight: "60px" }}>
+          {currentRequest ? (
+            <div className="notification is-info">
+              <strong>Latest Request:</strong> {currentRequest.id} → {currentRequest.target} 
+              <span className="ml-2 tag is-light">{(() => {
+                const age = Date.now() - currentRequest.timestamp;
+                return age < 1000 ? `${age}ms ago` : `${(age / 1000).toFixed(1)}s ago`;
+              })()}</span>
+            </div>
+          ) : (
+            <div className="notification is-light">
+              <strong>Latest Request:</strong> <span className="has-text-grey">Waiting for requests...</span>
+            </div>
+          )}
+        </div>
 
         {/* Load Balancing Visualization */}
         <div className="box mb-6">
@@ -1257,50 +1280,59 @@ export default function NetworkTrafficDemo() {
             Shows how requests are distributed across servers using {lbStrategy.replace("-", " ")} algorithm
           </p>
           
-          {/* Real-time Request Flow Animation */}
-          {routingHistory.length > 0 && (
-            <div className="box mb-4">
-              <h4 className="title is-5 mb-3">Real-time Request Routing (Last 20 Requests)</h4>
+          {/* Real-time Request Flow Animation - Fixed container to prevent layout shift */}
+          <div className="box mb-4" style={{ minHeight: "200px" }}>
+            <h4 className="title is-5 mb-3">Real-time Request Routing (Last 20 Requests)</h4>
+            {routingHistory.length > 0 ? (
               <div className="columns is-multiline">
-                {routingHistory.slice(-20).reverse().map((route, idx) => {
-                  const server = data.find(d => d.serverId === route.to);
-                  const age = Date.now() - route.timestamp;
-                  const isRecent = age < 2000; // Show animation for requests < 2 seconds old
-                  
-                  return (
-                    <motion.div
-                      key={route.id}
-                      className="column is-2"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: isRecent ? 1 : 0.5, x: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className={`box ${isRecent ? "has-background-info-light" : ""}`}>
-                        <div className="content">
-                          <p className="is-size-7">
-                            <strong>{route.id}</strong>
-                          </p>
-                          <p className="is-size-7">
-                            <span className="tag is-small">LB</span> →{" "}
-                            <span className={`tag is-small ${
-                              server?.isDown ? "is-danger" :
-                              server?.errorRate > 3 ? "is-warning" :
-                              "is-success"
-                            }`}>
-                              {route.to.split("-")[0]}
-                            </span>
-                          </p>
-                          <p className="is-size-7 has-text-grey">
-                            {age < 1000 ? `${age}ms ago` : `${(age / 1000).toFixed(1)}s ago`}
-                          </p>
+                {(() => {
+                  // Use stable slice to prevent re-rendering all items
+                  const displayRoutes = routingHistory.slice(-20).reverse();
+                  return displayRoutes.map((route) => {
+                    const server = data.find(d => d.serverId === route.to);
+                    const age = Date.now() - route.timestamp;
+                    const isRecent = age < 2000; // Show animation for requests < 2 seconds old
+                    
+                    return (
+                      <motion.div
+                        key={route.id}
+                        className="column is-2"
+                        initial={false}
+                        animate={{ opacity: isRecent ? 1 : 0.5 }}
+                        transition={{ duration: 0.2 }}
+                        layout
+                      >
+                        <div className={`box ${isRecent ? "has-background-info-light" : ""}`}>
+                          <div className="content">
+                            <p className="is-size-7">
+                              <strong>{route.id}</strong>
+                            </p>
+                            <p className="is-size-7">
+                              <span className="tag is-small">LB</span> →{" "}
+                              <span className={`tag is-small ${
+                                server?.isDown ? "is-danger" :
+                                (server?.errorRate ?? 0) > 3 ? "is-warning" :
+                                "is-success"
+                              }`}>
+                                {route.to.split("-")[0]}
+                              </span>
+                            </p>
+                            <p className="is-size-7 has-text-grey">
+                              {age < 1000 ? `${age}ms ago` : `${(age / 1000).toFixed(1)}s ago`}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  });
+                })()}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="has-text-grey">
+                <p>Waiting for request routing data...</p>
+              </div>
+            )}
+          </div>
           
           <div className="table-container">
             <svg ref={lbVizRef} width="100%" height="400" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet"></svg>
@@ -1440,22 +1472,25 @@ export default function NetworkTrafficDemo() {
                     </select>
                   </div>
                 </div>
-                {recommendation.strategy !== lbStrategy && (
-                  <div className="notification is-info mt-2">
-                    <button className="delete" onClick={() => {}}></button>
-                    <strong>💡 Recommended: {recommendation.strategy.replace("-", " ").toUpperCase()}</strong>
-                    <p className="mt-2">{recommendation.reason}</p>
-                    <button
-                      className="button is-small is-primary mt-2"
-                      onClick={() => {
-                        setLbStrategy(recommendation.strategy);
-                        setRequestDistribution(new Map());
-                      }}
-                    >
-                      Switch to Recommended Strategy
-                    </button>
-                  </div>
-                )}
+                {/* Fixed height recommendation section to prevent layout shift */}
+                <div className="mt-2" style={{ minHeight: recommendation.strategy !== lbStrategy ? "120px" : "0px" }}>
+                  {recommendation.strategy !== lbStrategy && (
+                    <div className="notification is-info">
+                      <button className="delete" onClick={() => {}}></button>
+                      <strong>💡 Recommended: {recommendation.strategy.replace("-", " ").toUpperCase()}</strong>
+                      <p className="mt-2">{recommendation.reason}</p>
+                      <button
+                        className="button is-small is-primary mt-2"
+                        onClick={() => {
+                          setLbStrategy(recommendation.strategy);
+                          setRequestDistribution(new Map());
+                        }}
+                      >
+                        Switch to Recommended Strategy
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
