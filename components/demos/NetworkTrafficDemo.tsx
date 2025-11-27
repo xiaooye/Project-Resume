@@ -525,6 +525,70 @@ export default function NetworkTrafficDemo() {
   // Health check
   const healthyServers = data.filter(d => d.errorRate < 3 && d.latency < 150).length;
   const healthPercentage = data.length > 0 ? (healthyServers / data.length) * 100 : 0;
+  
+  // SLA Monitoring (CTO cares about this)
+  const slaTargets = {
+    availability: 99.9, // 99.9% uptime
+    latencyP95: 200, // P95 latency < 200ms
+    latencyP99: 500, // P99 latency < 500ms
+    errorRate: 1, // Error rate < 1%
+  };
+  
+  const slaCompliance = {
+    availability: healthPercentage >= slaTargets.availability,
+    latencyP95: p95Latency <= slaTargets.latencyP95,
+    latencyP99: p99Latency <= slaTargets.latencyP99,
+    errorRate: totalErrors <= slaTargets.errorRate,
+  };
+  
+  const slaScore = Object.values(slaCompliance).filter(Boolean).length / Object.keys(slaCompliance).length * 100;
+  
+  // Traffic prediction (simple linear trend)
+  const predictNextMinute = dataHistory.length >= 10 ? (() => {
+    const recentTotals = dataHistory.slice(-10).map(snapshot => 
+      snapshot.reduce((sum, d) => sum + d.requests, 0)
+    );
+    const trend = recentTotals[recentTotals.length - 1] - recentTotals[0];
+    return Math.max(0, totalRequests + trend);
+  })() : totalRequests;
+  
+  // Performance optimization recommendations
+  const optimizations = [];
+  if (p99Latency > 200) {
+    optimizations.push({
+      type: "critical",
+      title: "High P99 Latency",
+      description: "P99 latency exceeds SLA. Consider database query optimization, caching, or CDN.",
+      impact: "High",
+    });
+  }
+  if (utilization > 80) {
+    optimizations.push({
+      type: "warning",
+      title: "High Capacity Utilization",
+      description: "Consider horizontal scaling or auto-scaling configuration.",
+      impact: "Medium",
+    });
+  }
+  if (anomalies.length > data.length * 0.1) {
+    optimizations.push({
+      type: "warning",
+      title: "Multiple Anomalies Detected",
+      description: "Investigate root cause. May indicate infrastructure issues.",
+      impact: "High",
+    });
+  }
+  
+  // Cost optimization
+  const estimatedMonthlyCost = data.length * 50 * 730;
+  const costPerRequest = totalRequests > 0 ? (estimatedMonthlyCost / (totalRequests * 2592000)) * 1000 : 0;
+  const costOptimizations = [];
+  if (utilization < 30) {
+    costOptimizations.push({
+      title: "Underutilized Resources",
+      description: `Current utilization (${utilization.toFixed(1)}%) is low. Consider downsizing to save ~$${Math.floor(estimatedMonthlyCost * 0.3)}/month.`,
+    });
+  }
 
   return (
     <div className="container">
@@ -570,6 +634,132 @@ export default function NetworkTrafficDemo() {
               volatility, correlations) to demonstrate real-world scenarios. In production, this would 
               connect to actual monitoring systems like Prometheus, Datadog, or CloudWatch.
             </p>
+          </div>
+        </div>
+
+        {/* System Architecture Overview */}
+        <div className="box mb-6">
+          <h3 className="title is-4 mb-4">System Architecture Overview</h3>
+          <div className="columns">
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Infrastructure</h5>
+                <ul>
+                  <li><strong>Total Servers:</strong> {data.length} across {Object.keys(regionStats).length} regions</li>
+                  <li><strong>Load Balancer:</strong> Multi-region with {lbStrategy.replace("-", " ")} algorithm</li>
+                  <li><strong>Data Stream:</strong> Server-Sent Events (SSE) at 200ms intervals</li>
+                  <li><strong>Monitoring:</strong> Real-time metrics with D3.js visualization</li>
+                </ul>
+              </div>
+            </div>
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Architecture Pattern</h5>
+                <ul>
+                  <li><strong>Pattern:</strong> Distributed microservices with load balancing</li>
+                  <li><strong>Scalability:</strong> Horizontal scaling ready</li>
+                  <li><strong>Resilience:</strong> Multi-region failover</li>
+                  <li><strong>Observability:</strong> Full-stack monitoring and alerting</li>
+                </ul>
+              </div>
+            </div>
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Technology Stack</h5>
+                <ul>
+                  <li><strong>Frontend:</strong> Next.js 14, React 19, D3.js</li>
+                  <li><strong>Backend:</strong> Next.js API Routes, SSE</li>
+                  <li><strong>Real-time:</strong> Server-Sent Events</li>
+                  <li><strong>Visualization:</strong> D3.js, Framer Motion</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SLA Monitoring */}
+        <div className="box mb-6">
+          <h3 className="title is-4 mb-4">SLA Compliance & Service Level Monitoring</h3>
+          <div className="columns">
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">SLA Targets</h5>
+                <table className="table is-narrow">
+                  <thead>
+                    <tr>
+                      <th>Metric</th>
+                      <th>Target</th>
+                      <th>Current</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Availability</td>
+                      <td>≥{slaTargets.availability}%</td>
+                      <td>{healthPercentage.toFixed(2)}%</td>
+                      <td>
+                        <span className={`tag ${slaCompliance.availability ? "is-success" : "is-danger"}`}>
+                          {slaCompliance.availability ? "✓" : "✗"}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>P95 Latency</td>
+                      <td>≤{slaTargets.latencyP95}ms</td>
+                      <td>{p95Latency.toFixed(2)}ms</td>
+                      <td>
+                        <span className={`tag ${slaCompliance.latencyP95 ? "is-success" : "is-danger"}`}>
+                          {slaCompliance.latencyP95 ? "✓" : "✗"}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>P99 Latency</td>
+                      <td>≤{slaTargets.latencyP99}ms</td>
+                      <td>{p99Latency.toFixed(2)}ms</td>
+                      <td>
+                        <span className={`tag ${slaCompliance.latencyP99 ? "is-success" : "is-danger"}`}>
+                          {slaCompliance.latencyP99 ? "✓" : "✗"}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Error Rate</td>
+                      <td>≤{slaTargets.errorRate}%</td>
+                      <td>{totalErrors.toFixed(2)}%</td>
+                      <td>
+                        <span className={`tag ${slaCompliance.errorRate ? "is-success" : "is-danger"}`}>
+                          {slaCompliance.errorRate ? "✓" : "✗"}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Overall SLA Score</h5>
+                <div className="has-text-centered">
+                  <p className={`title is-1 ${slaScore >= 100 ? "has-text-success" : slaScore >= 75 ? "has-text-warning" : "has-text-danger"}`}>
+                    {slaScore.toFixed(1)}%
+                  </p>
+                  <progress 
+                    className={`progress ${slaScore >= 100 ? "is-success" : slaScore >= 75 ? "is-warning" : "is-danger"}`}
+                    value={slaScore}
+                    max={100}
+                  >
+                    {slaScore.toFixed(1)}%
+                  </progress>
+                  <p className="mt-3">
+                    {slaScore >= 100 ? "✓ All SLA targets met" : 
+                     slaScore >= 75 ? "⚠ Some SLA targets at risk" : 
+                     "✗ SLA targets not met - Action required"}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -752,6 +942,106 @@ export default function NetworkTrafficDemo() {
             <svg ref={chartRef} width="100%" height="400" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet"></svg>
           </div>
         </div>
+
+        {/* Performance Optimization Recommendations */}
+        {optimizations.length > 0 && (
+          <div className="box mt-6">
+            <h3 className="title is-4 mb-4">Performance Optimization Recommendations</h3>
+            <div className="columns is-multiline">
+              {optimizations.map((opt, idx) => (
+                <div key={idx} className="column is-half">
+                  <div className={`notification ${opt.type === "critical" ? "is-danger" : "is-warning"}`}>
+                    <strong>{opt.title}</strong>
+                    <p className="mt-2">{opt.description}</p>
+                    <p className="mt-2">
+                      <span className="tag">Impact: {opt.impact}</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Traffic Prediction & Forecasting */}
+        <div className="box mt-6">
+          <h3 className="title is-4 mb-4">Traffic Prediction & Forecasting</h3>
+          <div className="columns">
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Current & Predicted Load</h5>
+                <div className="level">
+                  <div className="level-item has-text-centered">
+                    <div>
+                      <p className="heading">Current Requests/sec</p>
+                      <p className="title">{totalRequests.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="level-item has-text-centered">
+                    <div>
+                      <p className="heading">Predicted (1 min)</p>
+                      <p className={`title ${predictNextMinute > totalRequests * 1.2 ? "has-text-warning" : "has-text-success"}`}>
+                        {predictNextMinute.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="level-item has-text-centered">
+                    <div>
+                      <p className="heading">Trend</p>
+                      <p className={`title ${predictNextMinute > totalRequests ? "has-text-warning" : "has-text-success"}`}>
+                        {predictNextMinute > totalRequests ? "↑ Increasing" : "↓ Decreasing"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="column">
+              <div className="content">
+                <h5 className="title is-5">Capacity Forecast</h5>
+                {predictNextMinute > totalRequests * 1.2 && (
+                  <div className="notification is-warning">
+                    <strong>⚠️ Traffic Spike Predicted</strong>
+                    <p className="mt-2">
+                      Expected increase of {((predictNextMinute / totalRequests - 1) * 100).toFixed(1)}% in next minute.
+                      Consider pre-scaling.
+                    </p>
+                  </div>
+                )}
+                {predictNextMinute < totalRequests * 0.8 && (
+                  <div className="notification is-info">
+                    <strong>ℹ️ Traffic Decreasing</strong>
+                    <p className="mt-2">
+                      Expected decrease of {((1 - predictNextMinute / totalRequests) * 100).toFixed(1)}%.
+                      Monitor for scaling down opportunities.
+                    </p>
+                  </div>
+                )}
+                {predictNextMinute >= totalRequests * 0.8 && predictNextMinute <= totalRequests * 1.2 && (
+                  <div className="notification is-success">
+                    <strong>✓ Stable Traffic</strong>
+                    <p className="mt-2">Traffic is expected to remain stable.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cost Optimization */}
+        {costOptimizations.length > 0 && (
+          <div className="box mt-6">
+            <h3 className="title is-4 mb-4">Cost Optimization Opportunities</h3>
+            <div className="content">
+              {costOptimizations.map((opt, idx) => (
+                <div key={idx} className="notification is-info">
+                  <strong>💰 {opt.title}</strong>
+                  <p className="mt-2">{opt.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Capacity Planning & Recommendations */}
         <div className="box mt-6">
