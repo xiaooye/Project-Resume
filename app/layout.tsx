@@ -43,10 +43,10 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <Navbar />
-          <div className="fixed top-20 right-4 z-40">
+          <div style={{ position: "fixed", top: "80px", right: "16px", zIndex: 40 }}>
             <ThemeToggle />
           </div>
-          <main className="min-h-screen">{children}</main>
+          <main style={{ minHeight: "100vh", paddingTop: "64px" }}>{children}</main>
         </ThemeProvider>
       </body>
     </html>

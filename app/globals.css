@@ -18,7 +18,7 @@ body {
   --bulma-text-strong: #ffffff;
 }
 
-.dark .navbar {
+.dark .navbar.has-background-white {
   background-color: rgba(10, 10, 10, 0.95) !important;
 }
 
