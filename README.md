@@ -1,4 +1,15 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Senior Full Stack Developer Portfolio
+
+A Next.js portfolio website showcasing advanced full-stack development skills including real-time systems, WebAssembly, AI/ML, cloud services, and more.
+
+## Important Development Rules
+
+**⚠️ CRITICAL: Use ONLY Bulma CSS - No Custom CSS**
+
+- Only use Bulma's native classes and components
+- Do NOT add custom CSS classes or styles
+- Do NOT override Bulma's default styles
+- See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed guidelines
 
 ## Getting Started
 
