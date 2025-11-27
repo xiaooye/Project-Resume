@@ -173,7 +173,11 @@ export default function Web3Demo() {
     try {
       const abi = JSON.parse(contractABI);
       const contract = new ethers.Contract(contractAddress, abi, signer || provider);
-      const methods = Object.keys(contract.interface.functions).filter((name) => !name.includes("("));
+      const fragments = contract.interface.fragments as Record<string, any>;
+      const methods = Object.keys(fragments).filter((name) => {
+        const fragment = fragments[name];
+        return !name.includes("(") && fragment && fragment.type === "function";
+      });
       setContractMethods(methods);
       setSelectedMethod(methods[0] || "");
     } catch (error: any) {

@@ -6,6 +6,12 @@ import { Project } from "@/types";
 import { getProjectIcon } from "@/data/projects";
 import Link from "next/link";
 import EnterpriseMicroservicesDemo from "./EnterpriseMicroservicesDemo";
+import DistributedMonitoringDemo from "./DistributedMonitoringDemo";
+import MultiTenantSaaSDemo from "./MultiTenantSaaSDemo";
+import HighPerformanceAPIGatewayDemo from "./HighPerformanceAPIGatewayDemo";
+import RealTimeDataStreamingDemo from "./RealTimeDataStreamingDemo";
+import CostOptimizationAnalyticsDemo from "./CostOptimizationAnalyticsDemo";
+import GraphQLFederationDemo from "./GraphQLFederationDemo";
 
 interface ProjectDemoProps {
   project: Project;
@@ -235,21 +241,7 @@ function DefaultProjectDemo({ project }: { project: Project }) {
 }
 
 // Placeholder components for projects without specific demos yet
-function DistributedMonitoringDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
 
-function MultiTenantSaaSDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function HighPerformanceAPIGatewayDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function RealTimeDataStreamingDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
 
 function AutoScalingInfrastructureDemo({ project }: { project: Project }) {
   return <DefaultProjectDemo project={project} />;
@@ -267,19 +259,11 @@ function DeveloperProductivityDemo({ project }: { project: Project }) {
   return <DefaultProjectDemo project={project} />;
 }
 
-function CostOptimizationAnalyticsDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
 function PerformanceOptimizationDemo({ project }: { project: Project }) {
   return <DefaultProjectDemo project={project} />;
 }
 
 function ScalableEcommerceDemo({ project }: { project: Project }) {
-  return <DefaultProjectDemo project={project} />;
-}
-
-function GraphQLFederationDemo({ project }: { project: Project }) {
   return <DefaultProjectDemo project={project} />;
 }
 

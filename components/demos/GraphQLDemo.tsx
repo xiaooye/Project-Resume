@@ -498,7 +498,7 @@ export default function GraphQLDemo() {
                     {usersLoading && <p className="liquid-glass-text">加载中...</p>}
                     {usersError && (
                       <div className="notification is-danger">
-                        <p>错误: {usersError.message}</p>
+                        <p>错误: {usersError}</p>
                       </div>
                     )}
                     {usersData && (
@@ -536,7 +536,7 @@ export default function GraphQLDemo() {
                     {postsLoading && <p className="liquid-glass-text">加载中...</p>}
                     {postsError && (
                       <div className="notification is-danger">
-                        <p>错误: {postsError.message}</p>
+                        <p>错误: {postsError}</p>
                       </div>
                     )}
                     {postsData && (
