@@ -141,10 +141,11 @@ export function AgentProvider({ children }: AgentProviderProps) {
               responseContent = `Available actions on this page:\n${actions.map(a => `- ${a.description}`).join("\n")}`;
               break;
             case "help":
-              responseContent = agentService.executeCommand({ type: "help" }) as string;
+              // Use the result from executeCommand which already called getHelp()
+              responseContent = result as string;
               break;
             default:
-              responseContent = `Executed: ${intent.type}`;
+              responseContent = result ? String(result) : `Executed: ${intent.type}`;
           }
 
           const assistantMessage: AIChatMessage = {
