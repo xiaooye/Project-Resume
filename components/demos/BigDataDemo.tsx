@@ -882,50 +882,76 @@ export default function BigDataDemo() {
     return () => clearTimeout(timeoutId);
   }, [filteredData, analysisType, analysisConfig.anomalyThreshold]);
 
-  // Advanced Analysis: Capacity Planning
+  // Advanced Analysis: Capacity Planning using WebAssembly
   useEffect(() => {
     if (analysisType !== "capacity" || filteredData.length < 100) return;
     
-    const calculateCapacity = () => {
+    const calculateCapacity = async () => {
       const currentLoad = filteredData.length;
-      const avgValue = stats.averageValue;
-      const maxValue = stats.maxValue;
       
-      // Projected load (assuming 20% growth)
-      const projectedLoad = currentLoad * 1.2;
-      
-      // Recommended capacity (with 30% headroom)
-      const recommendedCapacity = Math.ceil(projectedLoad * 1.3);
-      
-      // Cost estimate (simplified: $0.01 per 1000 items)
-      const costEstimate = (recommendedCapacity / 1000) * 0.01;
-      
-      const recommendations: string[] = [];
-      if (currentLoad > 500000) {
-        recommendations.push("Consider horizontal scaling with distributed storage");
+      try {
+        // Use WebAssembly for capacity planning
+        const result = await wasmCalculations.capacityPlanning(
+          currentLoad,
+          analysisConfig.growthRate,
+          analysisConfig.headroom
+        );
+        
+        const recommendations: string[] = [];
+        if (currentLoad > 500000) {
+          recommendations.push("Consider horizontal scaling with distributed storage");
+        }
+        if (stats.maxValue > stats.averageValue * 2) {
+          recommendations.push("Implement caching layer for high-value items");
+        }
+        if (stats.standardDeviation > stats.averageValue * 0.5) {
+          recommendations.push("Data shows high variance - consider load balancing");
+        }
+        if (result.recommendedCapacity > 1000000) {
+          recommendations.push("Scale to multi-region deployment for better performance");
+        }
+        
+        setCapacityPlanning({
+          currentLoad,
+          projectedLoad: result.projectedLoad,
+          recommendedCapacity: result.recommendedCapacity,
+          costEstimate: result.costEstimate * analysisConfig.costPerUnit / 0.01, // Scale by user config
+          recommendations,
+        });
+      } catch (error) {
+        console.error("WASM capacity planning error:", error);
+        // Fallback to JS
+        const projectedLoad = currentLoad * (1 + analysisConfig.growthRate / 100);
+        const recommendedCapacity = Math.ceil(projectedLoad * (1 + analysisConfig.headroom / 100));
+        const costEstimate = (recommendedCapacity / 1000) * analysisConfig.costPerUnit;
+        
+        const recommendations: string[] = [];
+        if (currentLoad > 500000) {
+          recommendations.push("Consider horizontal scaling with distributed storage");
+        }
+        if (stats.maxValue > stats.averageValue * 2) {
+          recommendations.push("Implement caching layer for high-value items");
+        }
+        if (stats.standardDeviation > stats.averageValue * 0.5) {
+          recommendations.push("Data shows high variance - consider load balancing");
+        }
+        if (recommendedCapacity > 1000000) {
+          recommendations.push("Scale to multi-region deployment for better performance");
+        }
+        
+        setCapacityPlanning({
+          currentLoad,
+          projectedLoad,
+          recommendedCapacity,
+          costEstimate,
+          recommendations,
+        });
       }
-      if (maxValue > avgValue * 2) {
-        recommendations.push("Implement caching layer for high-value items");
-      }
-      if (stats.standardDeviation > avgValue * 0.5) {
-        recommendations.push("Data shows high variance - consider load balancing");
-      }
-      if (recommendedCapacity > 1000000) {
-        recommendations.push("Scale to multi-region deployment for better performance");
-      }
-      
-      setCapacityPlanning({
-        currentLoad,
-        projectedLoad,
-        recommendedCapacity,
-        costEstimate,
-        recommendations,
-      });
     };
     
     const timeoutId = setTimeout(calculateCapacity, 200);
     return () => clearTimeout(timeoutId);
-  }, [filteredData, analysisType, stats]);
+  }, [filteredData, analysisType, stats, analysisConfig.growthRate, analysisConfig.headroom, analysisConfig.costPerUnit]);
   
   // Process data with sorting and grouping
   const processedData = useMemo(() => {
@@ -1580,23 +1606,376 @@ export default function BigDataDemo() {
         {viewMode === "analysis" && (
           <>
             <div className="box mb-6">
-              <div className="field">
-                <label className="label">Analysis Type</label>
-                <div className="control">
-                  <div className="select is-fullwidth">
-                    <select
-                      value={analysisType}
-                      onChange={(e) => setAnalysisType(e.target.value as AnalysisType)}
-                      aria-label="Analysis type"
-                    >
-                      <option value="descriptive">Descriptive Statistics</option>
-                      <option value="time-series">Time Series Analysis</option>
-                      <option value="correlation">Correlation Analysis</option>
-                      <option value="anomaly">Anomaly Detection</option>
-                      <option value="forecast">Forecast & Prediction</option>
-                      <option value="capacity">Capacity Planning</option>
-                    </select>
+              <div className="level">
+                <div className="level-left">
+                  <div className="level-item">
+                    <div className="field">
+                      <label className="label">Analysis Type</label>
+                      <div className="control">
+                        <div className="select">
+                          <select
+                            value={analysisType}
+                            onChange={(e) => setAnalysisType(e.target.value as AnalysisType)}
+                            aria-label="Analysis type"
+                          >
+                            <option value="descriptive">Descriptive Statistics</option>
+                            <option value="time-series">Time Series Analysis</option>
+                            <option value="correlation">Correlation Analysis</option>
+                            <option value="anomaly">Anomaly Detection</option>
+                            <option value="forecast">Forecast & Prediction</option>
+                            <option value="capacity">Capacity Planning</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                </div>
+                <div className="level-right">
+                  <div className="level-item">
+                    <button
+                      className="button is-light"
+                      onClick={() => {
+                        const configPanel = document.getElementById("analysis-config-panel");
+                        if (configPanel) {
+                          const isHidden = configPanel.classList.contains("is-hidden");
+                          configPanel.classList.toggle("is-hidden");
+                          const button = document.querySelector('[aria-controls="analysis-config-panel"]') as HTMLButtonElement;
+                          if (button) {
+                            button.setAttribute("aria-expanded", String(!isHidden));
+                          }
+                        }
+                      }}
+                      aria-expanded="false"
+                      aria-controls="analysis-config-panel"
+                    >
+                      <span>⚙️ Configure Analysis</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Analysis Configuration Panel - User Adjustable Parameters */}
+            <div id="analysis-config-panel" className="box mb-6 is-hidden">
+              <h3 className="title is-5 mb-4">Analysis Configuration</h3>
+              <div className="columns">
+                {/* Anomaly Detection Configuration */}
+                <div className="column">
+                  <h4 className="title is-6 mb-3">Anomaly Detection</h4>
+                  <div className="field">
+                    <label className="label">Detection Threshold (Z-score)</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.1"
+                        value={analysisConfig.anomalyThreshold}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            anomalyThreshold: parseFloat(e.target.value) || 2.5,
+                          }))
+                        }
+                        aria-label="Anomaly detection threshold"
+                      />
+                    </div>
+                    <p className="help">Higher values detect fewer but more extreme anomalies</p>
+                  </div>
+                  <div className="field">
+                    <label className="label">Detection Method</label>
+                    <div className="control">
+                      <div className="select is-fullwidth">
+                        <select
+                          value={analysisConfig.anomalyMethod}
+                          onChange={(e) =>
+                            setAnalysisConfig((prev) => ({
+                              ...prev,
+                              anomalyMethod: e.target.value as "zscore" | "iqr" | "isolation",
+                            }))
+                          }
+                          aria-label="Anomaly detection method"
+                        >
+                          <option value="zscore">Z-Score (Standard Deviation)</option>
+                          <option value="iqr">IQR (Interquartile Range)</option>
+                          <option value="isolation">Isolation Forest</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Time Series Configuration */}
+                <div className="column">
+                  <h4 className="title is-6 mb-3">Time Series Analysis</h4>
+                  <div className="field">
+                    <label className="label">Trend Window Size</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="10"
+                        max="1000"
+                        step="10"
+                        value={analysisConfig.trendWindow}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            trendWindow: parseInt(e.target.value) || 100,
+                          }))
+                        }
+                        aria-label="Trend window size"
+                      />
+                    </div>
+                    <p className="help">Number of data points for trend calculation</p>
+                  </div>
+                  <div className="field">
+                    <label className="label">Forecast Periods</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="1"
+                        max="50"
+                        step="1"
+                        value={analysisConfig.forecastPeriods}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            forecastPeriods: parseInt(e.target.value) || 10,
+                          }))
+                        }
+                        aria-label="Forecast periods"
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="checkbox">
+                      <input
+                        type="checkbox"
+                        checked={analysisConfig.seasonalityDetection}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            seasonalityDetection: e.target.checked,
+                          }))
+                        }
+                      />
+                      Enable Seasonality Detection
+                    </label>
+                  </div>
+                </div>
+
+                {/* Correlation Configuration */}
+                <div className="column">
+                  <h4 className="title is-6 mb-3">Correlation Analysis</h4>
+                  <div className="field">
+                    <label className="label">Minimum Correlation</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={analysisConfig.minCorrelation}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            minCorrelation: parseFloat(e.target.value) || 0.2,
+                          }))
+                        }
+                        aria-label="Minimum correlation threshold"
+                      />
+                    </div>
+                    <p className="help">Filter correlations below this threshold</p>
+                  </div>
+                  <div className="field">
+                    <label className="label">Correlation Method</label>
+                    <div className="control">
+                      <div className="select is-fullwidth">
+                        <select
+                          value={analysisConfig.correlationMethod}
+                          onChange={(e) =>
+                            setAnalysisConfig((prev) => ({
+                              ...prev,
+                              correlationMethod: e.target.value as "pearson" | "spearman",
+                            }))
+                          }
+                          aria-label="Correlation method"
+                        >
+                          <option value="pearson">Pearson (Linear)</option>
+                          <option value="spearman">Spearman (Rank-based)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Capacity Planning Configuration */}
+                <div className="column">
+                  <h4 className="title is-6 mb-3">Capacity Planning</h4>
+                  <div className="field">
+                    <label className="label">Expected Growth Rate (%)</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={analysisConfig.growthRate}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            growthRate: parseFloat(e.target.value) || 20,
+                          }))
+                        }
+                        aria-label="Expected growth rate"
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="label">Capacity Headroom (%)</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={analysisConfig.headroom}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            headroom: parseFloat(e.target.value) || 30,
+                          }))
+                        }
+                        aria-label="Capacity headroom"
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label className="label">Cost per 1000 Items ($)</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.01"
+                        value={analysisConfig.costPerUnit}
+                        onChange={(e) =>
+                          setAnalysisConfig((prev) => ({
+                            ...prev,
+                            costPerUnit: parseFloat(e.target.value) || 0.01,
+                          }))
+                        }
+                        aria-label="Cost per unit"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Filtering Configuration */}
+              <div className="box mt-4">
+                <h4 className="title is-6 mb-3">Data Filtering</h4>
+                <div className="columns">
+                  <div className="column">
+                    <div className="field">
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={analysisConfig.outlierRemoval}
+                          onChange={(e) =>
+                            setAnalysisConfig((prev) => ({
+                              ...prev,
+                              outlierRemoval: e.target.checked,
+                            }))
+                          }
+                        />
+                        Remove Outliers Before Analysis
+                      </label>
+                    </div>
+                  </div>
+                  {analysisConfig.outlierRemoval && (
+                    <>
+                      <div className="column">
+                        <div className="field">
+                          <label className="label">Outlier Detection Method</label>
+                          <div className="control">
+                            <div className="select is-fullwidth">
+                              <select
+                                value={analysisConfig.outlierMethod}
+                                onChange={(e) =>
+                                  setAnalysisConfig((prev) => ({
+                                    ...prev,
+                                    outlierMethod: e.target.value as "iqr" | "zscore",
+                                  }))
+                                }
+                                aria-label="Outlier detection method"
+                              >
+                                <option value="zscore">Z-Score</option>
+                                <option value="iqr">IQR (Interquartile Range)</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="column">
+                        <div className="field">
+                          <label className="label">Outlier Threshold</label>
+                          <div className="control">
+                            <input
+                              className="input"
+                              type="number"
+                              min="1"
+                              max="5"
+                              step="0.1"
+                              value={analysisConfig.outlierThreshold}
+                              onChange={(e) =>
+                                setAnalysisConfig((prev) => ({
+                                  ...prev,
+                                  outlierThreshold: parseFloat(e.target.value) || 2.5,
+                                }))
+                              }
+                              aria-label="Outlier threshold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Reset to Defaults Button */}
+              <div className="field is-grouped mt-4">
+                <div className="control">
+                  <button
+                    className="button is-light"
+                    onClick={() =>
+                      setAnalysisConfig({
+                        anomalyThreshold: 2.5,
+                        anomalyMethod: "zscore",
+                        trendWindow: 100,
+                        forecastPeriods: 10,
+                        seasonalityDetection: true,
+                        minCorrelation: 0.2,
+                        correlationMethod: "pearson",
+                        growthRate: 20,
+                        headroom: 30,
+                        costPerUnit: 0.01,
+                        outlierRemoval: false,
+                        outlierMethod: "iqr",
+                        outlierThreshold: 2.5,
+                      })
+                    }
+                  >
+                    Reset to Defaults
+                  </button>
                 </div>
               </div>
             </div>
