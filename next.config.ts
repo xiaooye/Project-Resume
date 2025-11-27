@@ -18,6 +18,21 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Enable cross-origin isolation for WASM multi-threading
+        // Note: This may break some third-party scripts. Test thoroughly.
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+        ],
+      },
     ];
   },
 };

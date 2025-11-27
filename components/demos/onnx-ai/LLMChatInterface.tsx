@@ -58,7 +58,14 @@ export default function LLMChatInterface({
     try {
       // Convert messages to the format expected by the model manager
       // The onSendMessage expects Message[] but model manager only needs role and content
+      console.log("[Chat Debug] Sending message:", userMessage.content);
+      console.log("[Chat Debug] Conversation history:", updatedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 50) + "..." })));
+      
       const result = await onSendMessage(userMessage.content, updatedMessages);
+      
+      console.log("[Chat Debug] Received result:", result);
+      console.log("[Chat Debug] Result text:", result.text);
+      console.log("[Chat Debug] Result text length:", result.text?.length);
       
       const assistantMessage: Message = {
         id: `msg-${Date.now()}-assistant`,
@@ -67,6 +74,7 @@ export default function LLMChatInterface({
         timestamp: Date.now(),
       };
 
+      console.log("[Chat Debug] Assistant message content:", assistantMessage.content);
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Failed to generate response:", error);

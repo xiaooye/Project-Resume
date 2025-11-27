@@ -388,6 +388,10 @@ export class ModelManager {
         fullPrompt = `User: ${prompt}\nAssistant:`;
       }
 
+      // Debug: Log the prompt being sent
+      console.log("[LLM Debug] Full prompt:", fullPrompt);
+      console.log("[LLM Debug] Prompt length:", fullPrompt.length);
+      
       const result = await this.transformersPipeline(fullPrompt, {
         max_new_tokens: options?.maxLength || 100,
         temperature: options?.temperature || 0.7,
@@ -398,62 +402,92 @@ export class ModelManager {
 
       const inferenceTime = performance.now() - startTime;
 
+      // Debug: Log the raw result
+      console.log("[LLM Debug] Raw result type:", typeof result);
+      console.log("[LLM Debug] Raw result:", result);
+      console.log("[LLM Debug] Is array?", Array.isArray(result));
+      if (Array.isArray(result)) {
+        console.log("[LLM Debug] Array length:", result.length);
+        console.log("[LLM Debug] First item:", result[0]);
+      }
+
       // Extract generated text
-      // Transformers.js text-generation pipeline returns an array of objects
-      // Each object has a 'generated_text' field containing the full text (prompt + generated)
+      // Transformers.js text-generation pipeline returns different formats:
+      // - For single input: { generated_text: "full text including prompt" }
+      // - For array input: [{ generated_text: "..." }, ...]
       let generatedText = "";
       
       try {
+        // Handle array result
         if (Array.isArray(result)) {
-          // If result is an array, get the first item
           const firstResult = result[0];
           if (firstResult?.generated_text) {
             generatedText = firstResult.generated_text;
+            console.log("[LLM Debug] Extracted from array[0].generated_text:", generatedText);
           } else if (typeof firstResult === "string") {
             generatedText = firstResult;
+            console.log("[LLM Debug] Extracted from array[0] (string):", generatedText);
+          } else {
+            console.warn("[LLM Debug] Array[0] is not in expected format:", firstResult);
           }
-        } else if (result?.generated_text) {
-          // If result is an object with generated_text
-          generatedText = result.generated_text;
-        } else if (typeof result === "string") {
-          // If result is directly a string
+        } 
+        // Handle object result
+        else if (result && typeof result === "object") {
+          if (result.generated_text) {
+            generatedText = result.generated_text;
+            console.log("[LLM Debug] Extracted from result.generated_text:", generatedText);
+          } else {
+            // Try other possible fields
+            const textFields = ["text", "output", "response", "content"];
+            for (const field of textFields) {
+              if (result[field]) {
+                generatedText = String(result[field]);
+                console.log(`[LLM Debug] Extracted from result.${field}:`, generatedText);
+                break;
+              }
+            }
+          }
+        } 
+        // Handle string result
+        else if (typeof result === "string") {
           generatedText = result;
+          console.log("[LLM Debug] Result is string:", generatedText);
         }
         
         // Remove the prompt from generated text if it's included
         // The generated_text might include the full prompt, we only want the new part
-        if (generatedText && fullPrompt && generatedText.includes(fullPrompt)) {
-          // Find where the prompt ends and extract only the new generated part
-          const promptIndex = generatedText.indexOf(fullPrompt);
-          if (promptIndex === 0) {
-            // Prompt is at the start, remove it
+        if (generatedText && fullPrompt) {
+          const originalText = generatedText;
+          
+          // Check if prompt is at the start
+          if (generatedText.startsWith(fullPrompt)) {
             generatedText = generatedText.slice(fullPrompt.length).trim();
-          } else {
-            // Prompt is somewhere in the middle, extract everything after it
-            const afterPrompt = generatedText.slice(promptIndex + fullPrompt.length);
-            generatedText = afterPrompt.trim();
+            console.log("[LLM Debug] Removed prompt from start. Original:", originalText.substring(0, 100), "... New:", generatedText.substring(0, 100));
+          } 
+          // Check if prompt is somewhere in the text
+          else if (generatedText.includes(fullPrompt)) {
+            const promptIndex = generatedText.indexOf(fullPrompt);
+            generatedText = generatedText.slice(promptIndex + fullPrompt.length).trim();
+            console.log("[LLM Debug] Removed prompt from middle. Original:", originalText.substring(0, 100), "... New:", generatedText.substring(0, 100));
           }
-        }
-        
-        // If still empty, try to extract from the end (sometimes the format is different)
-        if (!generatedText && typeof result === "object") {
-          // Try to find any text field
-          const textFields = ["text", "output", "response", "content"];
-          for (const field of textFields) {
-            if (result[field]) {
-              generatedText = String(result[field]);
-              break;
-            }
+          // Check if we need to remove just the "Assistant:" part at the end
+          else if (generatedText.startsWith("Assistant:")) {
+            generatedText = generatedText.slice("Assistant:".length).trim();
+            console.log("[LLM Debug] Removed 'Assistant:' prefix. New:", generatedText.substring(0, 100));
           }
         }
         
         // Fallback: if we still don't have text, log the result for debugging
-        if (!generatedText) {
-          console.warn("Could not extract generated text from result:", result);
+        if (!generatedText || generatedText.trim().length === 0) {
+          console.error("[LLM Debug] Could not extract generated text from result:", result);
+          console.error("[LLM Debug] Full prompt was:", fullPrompt);
           generatedText = "No response generated. Please check the console for details.";
+        } else {
+          console.log("[LLM Debug] Final generated text:", generatedText);
         }
       } catch (error) {
-        console.error("Error extracting generated text:", error, result);
+        console.error("[LLM Debug] Error extracting generated text:", error);
+        console.error("[LLM Debug] Result was:", result);
         generatedText = "Error generating response. Please check the console.";
       }
 

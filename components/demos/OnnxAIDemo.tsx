@@ -457,6 +457,15 @@ export default function OnnxAIDemo() {
                         <strong>CPU Backend</strong>
                       </p>
                     )}
+                    {typeof window !== "undefined" && (
+                      <p className="is-size-7 has-text-grey mt-1">
+                        Cross-Origin Isolation: {window.crossOriginIsolated ? (
+                          <span className="has-text-success">✓ Enabled</span>
+                        ) : (
+                          <span className="has-text-warning">✗ Disabled</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
