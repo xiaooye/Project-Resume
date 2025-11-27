@@ -348,9 +348,24 @@ export default function BigDataDemo() {
   });
 
   // Create a config hash to force recalculation when config changes
+  // Use individual values instead of stringify to ensure proper reactivity
   const configHash = useMemo(() => {
-    return JSON.stringify(analysisConfig);
-  }, [analysisConfig]);
+    return `${analysisConfig.anomalyThreshold}-${analysisConfig.anomalyMethod}-${analysisConfig.trendWindow}-${analysisConfig.forecastPeriods}-${analysisConfig.seasonalityDetection}-${analysisConfig.minCorrelation}-${analysisConfig.correlationMethod}-${analysisConfig.growthRate}-${analysisConfig.headroom}-${analysisConfig.costPerUnit}-${analysisConfig.outlierRemoval}-${analysisConfig.outlierMethod}-${analysisConfig.outlierThreshold}`;
+  }, [
+    analysisConfig.anomalyThreshold,
+    analysisConfig.anomalyMethod,
+    analysisConfig.trendWindow,
+    analysisConfig.forecastPeriods,
+    analysisConfig.seasonalityDetection,
+    analysisConfig.minCorrelation,
+    analysisConfig.correlationMethod,
+    analysisConfig.growthRate,
+    analysisConfig.headroom,
+    analysisConfig.costPerUnit,
+    analysisConfig.outlierRemoval,
+    analysisConfig.outlierMethod,
+    analysisConfig.outlierThreshold,
+  ]);
 
   // Detect mobile
   useEffect(() => {
