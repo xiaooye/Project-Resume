@@ -167,14 +167,14 @@ export default function HeroSection() {
   }, [displayText, isDeleting, currentRole]);
 
   return (
-    <section className="hero is-fullheight">
+    <section className="hero is-fullheight is-relative">
       {/* 3D Background */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+      <div className="is-absolute is-fullwidth is-fullheight">
         <Scene3D />
       </div>
 
       {/* Content */}
-      <div className="hero-body" style={{ position: "relative", zIndex: 10 }}>
+      <div className="hero-body is-relative">
         <div className="container has-text-centered">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -195,13 +195,12 @@ export default function HeroSection() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              style={{ minHeight: "4rem" }}
             >
               <span className="has-text-primary">{displayText}</span>
               <motion.span
+                className="ml-1 has-text-primary"
                 animate={{ opacity: showCursor ? 1 : 0 }}
                 transition={{ duration: 0.1 }}
-                style={{ marginLeft: "4px", color: "var(--bulma-primary)" }}
               >
                 |
               </motion.span>
@@ -260,15 +259,14 @@ export default function HeroSection() {
 
       {/* Scroll Indicator */}
       <motion.div
-        className="hero-foot"
-        style={{ position: "relative", zIndex: 10 }}
+        className="hero-foot is-relative"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, repeat: Infinity, repeatType: "reverse", duration: 1.5 }}
       >
         <div className="container has-text-centered">
           <svg
-            style={{ width: "24px", height: "24px" }}
+            className="icon"
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"

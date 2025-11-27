@@ -275,10 +275,14 @@ The goal is to create an impressive, interactive portfolio that not only lists s
 
 ## Development Rules
 
-⚠️ **CRITICAL: Use ONLY Bulma CSS - No Custom CSS**
-- Only use Bulma's native classes and components
-- Do NOT add custom CSS classes or styles
-- Do NOT override Bulma's default styles
+⚠️ **CRITICAL: Use ONLY Bulma CSS - No Custom CSS, No Inline Styles**
+- **STRICTLY** use only Bulma's native classes and components
+- **ABSOLUTELY NO** inline CSS styles (`style={{}}`)
+- **ABSOLUTELY NO** custom CSS classes or styles
+- **ABSOLUTELY NO** overriding Bulma's default styles
+- Use Bulma's built-in modifiers: `is-*`, `has-*`, spacing utilities (`mb-*`, `mt-*`, etc.)
+- For positioning, use Bulma classes: `is-relative`, `is-absolute`, `is-fixed`
+- For sizing, use Bulma classes: `is-fullwidth`, `is-fullheight`, etc.
 - See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed guidelines
 
 ## Package Manager

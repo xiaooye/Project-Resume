@@ -20,7 +20,6 @@ export default function ThemeToggle() {
       >
         {theme === "dark" ? (
           <svg
-            style={{ width: "20px", height: "20px" }}
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -32,7 +31,6 @@ export default function ThemeToggle() {
           </svg>
         ) : (
           <svg
-            style={{ width: "20px", height: "20px" }}
             fill="currentColor"
             viewBox="0 0 20 20"
           >
