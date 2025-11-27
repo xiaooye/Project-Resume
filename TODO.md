@@ -396,14 +396,16 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
     - [ ] 项目详情模态框 - 匹配技能模态框设计，显示完整项目信息
     - [ ] 国际化 - 所有文本改为英文
     - [ ] 对比度优化 - 确保 WCAG 2.2 AAA 标准
-  - [ ] **新增项目（21个）**
-    - [ ] Languages 分类项目（3个）- TypeScript工具、JavaScript性能分析器、Python数据处理
-    - [ ] Frontend 分类项目（3个）- React组件库、Next.js电商平台、PWA框架
-    - [ ] Backend 分类项目（3个）- GraphQL网关、微服务编排、实时API服务器
-    - [ ] Cloud 分类项目（3个）- AWS Serverless、Azure多区域部署、多云成本优化
-    - [ ] DevOps 分类项目（3个）- Kubernetes CI/CD、Docker注册表、基础设施即代码
-    - [ ] Advanced 分类项目（3个）- WebAssembly视频处理、WebRTC多用户平台、Web3 NFT市场
-    - [ ] AI/ML 分类项目（3个）- ONNX Runtime平台、AI Agent框架、ML模型训练平台
+  - [ ] **新增项目（21个独立项目，不包含demos）**
+    - [ ] System Architecture & Design（3个）- 企业微服务平台、分布式监控平台、多租户SaaS架构
+    - [ ] Production-Ready Systems（3个）- 高性能API网关、实时数据流管道、自动扩展基础设施
+    - [ ] Technical Leadership（3个）- 企业TypeScript框架、组件设计系统、开发者生产力平台
+    - [ ] Business Impact（3个）- 成本优化分析平台、性能优化平台、可扩展电商平台
+    - [ ] Full Stack Expertise（3个）- GraphQL联邦平台、Serverless应用框架、实时协作平台
+    - [ ] Advanced Architecture（3个）- 事件驱动架构、分布式缓存系统、API限流系统
+    - [ ] Security & Compliance（2个）- 安全审计平台、身份访问管理系统
+    - [ ] Data & Analytics（1个）- 大数据处理引擎
+    - [ ] **注意**：所有项目都是独立的、展示Staff Full Stack Architect技能的项目，不包含portfolio中的demos
   - [ ] **可视化（可选）**
     - [ ] 项目时间线图表 - D3.js 可视化，按完成日期展示
     - [ ] 项目分类分布图 - 饼图或柱状图，展示项目分布
