@@ -41,9 +41,10 @@ export default function NetworkTrafficDemo() {
   const svgRef = useRef<SVGSVGElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
   const lbVizRef = useRef<SVGSVGElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const requestCounterRef = useRef(0);
   const serverStatesRef = useRef<Map<string, ServerState>>(new Map());
+  const sessionIdRef = useRef<string | null>(null);
 
   // Initialize server states
   const initializeServerStates = useCallback(() => {
@@ -64,90 +65,6 @@ export default function NetworkTrafficDemo() {
     serverStatesRef.current = states;
   }, []);
 
-  // Generate network data with scenarios
-  const generateNetworkData = useCallback((): NetworkTrafficData[] => {
-    const now = Date.now();
-    const states = serverStatesRef.current;
-    const data: NetworkTrafficData[] = [];
-    
-    // Apply scenarios
-    const activeScenarios = scenarios.filter(s => s.enabled);
-    const downServers = new Set<string>();
-    let globalTrafficMultiplier = 1.0;
-    
-    activeScenarios.forEach(scenario => {
-      if (scenario.type === "traffic-spike") {
-        globalTrafficMultiplier *= (scenario.trafficMultiplier || 3.0);
-      } else if (scenario.type === "server-down" && scenario.affectedServers) {
-        scenario.affectedServers.forEach(id => downServers.add(id));
-      } else if (scenario.type === "region-outage" && scenario.affectedServers) {
-        scenario.affectedServers.forEach(id => downServers.add(id));
-      }
-    });
-
-    for (let i = 0; i < SERVER_COUNT; i++) {
-      const region = REGIONS[i % REGIONS.length];
-      const serverId = `${region}-server-${Math.floor(i / REGIONS.length) + 1}`;
-      const state = states.get(serverId);
-      
-      if (!state) continue;
-      
-      const isDown = downServers.has(serverId) || state.isDown;
-      
-      if (isDown) {
-        data.push({
-          timestamp: now,
-          serverId,
-          region,
-          requests: 0,
-          latency: 0,
-          throughput: 0,
-          errorRate: 100,
-          isDown: true,
-        });
-        continue;
-      }
-
-      // Update trend
-      state.trend += (Math.random() - 0.5) * 0.05;
-      state.trend = Math.max(-0.5, Math.min(0.5, state.trend));
-
-      // Calculate requests with trend, volatility, manual multiplier, and scenarios
-      const trendEffect = state.baseRequests * state.trend * 0.1;
-      const volatilityEffect = state.baseRequests * state.volatility * (Math.random() - 0.5) * 2;
-      const requests = Math.max(100, Math.floor(
-        (state.baseRequests + trendEffect + volatilityEffect) * 
-        (state.manualMultiplier || 1.0) * 
-        globalTrafficMultiplier
-      ));
-
-      // Latency correlated with load
-      const loadFactor = requests / state.baseRequests;
-      const latency = Math.max(10, state.baseLatency * (0.8 + loadFactor * 0.4) + Math.random() * 20);
-
-      // Throughput correlated with requests
-      const throughput = requests * (0.05 + Math.random() * 0.1);
-
-      // Error rate increases with high load or scenarios
-      let errorRate = loadFactor > 1.5 ? Math.random() * 8 + 2 : Math.random() * 2;
-      if (activeScenarios.some(s => s.type === "ddos")) {
-        errorRate += Math.random() * 10;
-      }
-
-      data.push({
-        timestamp: now,
-        serverId,
-        region,
-        requests: Math.round(requests),
-        latency: Math.round(latency * 100) / 100,
-        throughput: Math.round(throughput * 100) / 100,
-        errorRate: Math.round(errorRate * 100) / 100,
-        isDown: false,
-      });
-    }
-
-    return data;
-  }, [scenarios]);
 
   // Initialize only on client side to avoid hydration mismatch
   useEffect(() => {
@@ -231,40 +148,111 @@ export default function NetworkTrafficDemo() {
     });
   };
 
-  // Client-side data generation with adjustable interval
-  useEffect(() => {
-    if (!isMounted || !isConnected) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
-
-    // Generate initial data
-    const newData = generateNetworkData();
-    setData(newData);
-    setDataHistory([newData]);
-    simulateLoadBalancing(newData, lbStrategy);
-
-    // Set up interval for updates
-    intervalRef.current = setInterval(() => {
-      const updatedData = generateNetworkData();
-      setData(updatedData);
-      setDataHistory((prev) => {
-        const updated = [...prev, updatedData];
-        return updated.slice(-50); // Keep only last 50 updates
+  // Update server configuration when settings change
+  const updateServerConfig = useCallback(async () => {
+    if (!sessionIdRef.current) return;
+    
+    try {
+      const serverMultipliers: Record<string, number> = {};
+      const downServers: string[] = [];
+      
+      serverStates.forEach((state, serverId) => {
+        if (state.manualMultiplier !== undefined && state.manualMultiplier !== 1.0) {
+          serverMultipliers[serverId] = state.manualMultiplier;
+        }
+        if (state.isDown) {
+          downServers.push(serverId);
+        }
       });
-      simulateLoadBalancing(updatedData, lbStrategy);
-    }, updateInterval);
+      
+      await fetch("/api/network-traffic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current,
+          config: {
+            updateInterval,
+            serverMultipliers,
+            downServers,
+            scenarios: scenarios.map(s => ({
+              type: s.type,
+              enabled: s.enabled,
+              affectedServers: s.affectedServers,
+              trafficMultiplier: s.trafficMultiplier,
+            })),
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Error updating server configuration:", error);
+    }
+  }, [updateInterval, serverStates, scenarios]);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+  // Real-time WebSocket-like connection using Server-Sent Events
+  useEffect(() => {
+    if (!isMounted) return;
+
+    if (isConnected) {
+      // Connect to real-time data stream
+      const eventSource = new EventSource("/api/network-traffic");
+      eventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (event) => {
+        try {
+          const newData = JSON.parse(event.data) as NetworkTrafficData[];
+          setData(newData);
+          // Maintain history for latency trend chart (last 50 updates)
+          setDataHistory((prev) => {
+            const updated = [...prev, newData];
+            return updated.slice(-50); // Keep only last 50 updates
+          });
+          
+          // Simulate load balancing logic for visualization
+          if (isConnected) {
+            simulateLoadBalancing(newData, lbStrategy);
+          }
+        } catch (error) {
+          console.error("Error parsing network traffic data:", error);
+        }
+      };
+
+      // Get session ID from response headers (if available)
+      eventSource.onopen = () => {
+        // Session ID will be in the URL or we'll generate one
+        if (!sessionIdRef.current) {
+          sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+        // Send initial configuration
+        updateServerConfig();
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("EventSource error:", error);
+        eventSource.close();
+        setIsConnected(false);
+      };
+
+      return () => {
+        eventSource.close();
+        eventSourceRef.current = null;
+      };
+    } else {
+      // Disconnect
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
-    };
-  }, [isConnected, isMounted, updateInterval, generateNetworkData, lbStrategy]);
+    }
+  }, [isConnected, isMounted, updateServerConfig]);
+
+  // Update server config when settings change
+  useEffect(() => {
+    if (isConnected && sessionIdRef.current) {
+      updateServerConfig();
+    }
+  }, [updateInterval, serverStates, scenarios, isConnected, updateServerConfig]);
 
   useEffect(() => {
     if (!isMounted || !svgRef.current || !data.length) return;
