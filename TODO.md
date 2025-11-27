@@ -397,6 +397,9 @@ This portfolio should demonstrate capabilities that a CTO would expect from a **
   - [x] **响应式优化** - 移动端图表适配，简化视图
   - [x] **WCAG 2.2 AAA** - 图表数据表格化，颜色对比度
   - [x] **数据驱动** - 技能数据管理，动态更新
+  - [x] **功能增强** - 搜索、排序、技能详情模态框
+  - [x] **国际化** - 所有文本改为英文
+  - [x] **对比度优化** - 修复文本对比度，确保 WCAG 2.2 AAA 标准
 
 - [x] **联系表单页面** (Staff Level: User Experience)
   - [x] 表单验证 - 实时验证，错误提示
