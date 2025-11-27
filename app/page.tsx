@@ -37,7 +37,7 @@ export default function Home() {
     {
       title: "AI Agents",
       description: "Gemini & GPT integration with streaming",
-      href: "/demos/ai-agents",
+      href: "/demos/ai-agent",
       icon: "💬",
     },
   ];
