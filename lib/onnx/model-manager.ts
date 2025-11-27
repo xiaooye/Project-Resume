@@ -408,9 +408,10 @@ export class ModelManager {
       
       const result = await this.transformersPipeline(fullPrompt, {
         max_new_tokens: options?.maxLength || 100,
-        temperature: options?.temperature || 0.7,
-        top_k: options?.topK,
-        top_p: options?.topP,
+        temperature: options?.temperature || 0.9, // Higher default temperature to reduce repetition
+        top_k: options?.topK || 40,
+        top_p: options?.topP || 0.95,
+        repetition_penalty: 1.2, // Add repetition penalty to discourage repetitive outputs
         return_full_text: false, // Only return generated text, not the full prompt
       });
 
@@ -526,7 +527,9 @@ export class ModelManager {
             }
             
             // Strategy 5: Remove repetitive patterns (model got stuck in a loop)
-            // Split by lines and remove duplicate consecutive lines
+            // Handle both line-based and phrase-based repetition
+            
+            // First, try line-based deduplication
             const lines = generatedText.split("\n");
             if (lines.length > 2) {
               const cleanedLines: string[] = [];
@@ -558,7 +561,72 @@ export class ModelManager {
               }
             }
             
-            // Strategy 6: If text still contains "Assistant:" multiple times, extract only the first meaningful response
+            // Strategy 6: Remove repetitive phrases/words (e.g., "I'm sorry, I'm sorry, I'm sorry...")
+            // Split by common delimiters and detect repeating patterns
+            const words = generatedText.split(/[\s,]+/).filter(w => w.length > 0);
+            if (words.length > 10) {
+              // Look for repeating patterns of 2-5 words
+              let hasRepetition = false;
+              for (let patternLen = 5; patternLen >= 2; patternLen--) {
+                if (words.length < patternLen * 3) continue; // Need at least 3 repetitions
+                
+                // Check if the first patternLen words repeat
+                const pattern = words.slice(0, patternLen).join(" ");
+                let repeatCount = 1;
+                
+                for (let i = patternLen; i < words.length; i += patternLen) {
+                  const nextPattern = words.slice(i, i + patternLen).join(" ");
+                  if (nextPattern === pattern) {
+                    repeatCount++;
+                  } else {
+                    break;
+                  }
+                }
+                
+                // If we found significant repetition (3+ times), truncate
+                if (repeatCount >= 3) {
+                  generatedText = words.slice(0, patternLen * 2).join(" ").trim();
+                  console.log(`[LLM Debug] Detected repetitive pattern (${patternLen} words, ${repeatCount} times), truncated to first 2 occurrences`);
+                  hasRepetition = true;
+                  break;
+                }
+              }
+              
+              // Fallback: If no pattern found but text is very repetitive, take first 50 words
+              if (!hasRepetition && words.length > 50) {
+                // Check if there's high word repetition
+                const wordFreq = new Map<string, number>();
+                words.forEach(w => wordFreq.set(w, (wordFreq.get(w) || 0) + 1));
+                const maxFreq = Math.max(...Array.from(wordFreq.values()));
+                const totalWords = words.length;
+                const repetitionRatio = maxFreq / totalWords;
+                
+                // If a single word/phrase appears more than 30% of the time, it's repetitive
+                if (repetitionRatio > 0.3) {
+                  // Take first unique 30 words or until we see significant repetition
+                  const uniqueWords: string[] = [];
+                  const seen = new Set<string>();
+                  let consecutiveRepeats = 0;
+                  
+                  for (let i = 0; i < words.length && uniqueWords.length < 30; i++) {
+                    const word = words[i];
+                    if (seen.has(word)) {
+                      consecutiveRepeats++;
+                      if (consecutiveRepeats > 3) break; // Stop after 3 consecutive repeats
+                    } else {
+                      consecutiveRepeats = 0;
+                      seen.add(word);
+                    }
+                    uniqueWords.push(word);
+                  }
+                  
+                  generatedText = uniqueWords.join(" ").trim();
+                  console.log(`[LLM Debug] Detected high word repetition (${(repetitionRatio * 100).toFixed(1)}%), truncated to first unique words`);
+                }
+              }
+            }
+            
+            // Strategy 7: If text still contains "Assistant:" multiple times, extract only the first meaningful response
             const assistantMatches = generatedText.match(/Assistant:\s*(.+?)(?=\n|$)/g);
             if (assistantMatches && assistantMatches.length > 1) {
               // Take only the first assistant response

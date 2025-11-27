@@ -252,10 +252,10 @@ export default function OnnxAIDemo() {
         }));
         
         const result = await modelManager.runTextGeneration(message, {
-          maxLength: 200,
-          temperature: 0.7,
-          topK: 50,
-          topP: 0.9,
+          maxLength: 100, // Reduce max length to prevent long repetitive outputs
+          temperature: 0.9, // Increase temperature for more diversity
+          topK: 40, // Reduce topK to focus on more likely tokens
+          topP: 0.95, // Slightly increase topP for better sampling
           conversationHistory: history,
         });
 
