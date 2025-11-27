@@ -6,7 +6,6 @@ import * as d3 from "d3";
 import { NetworkTrafficData } from "@/types";
 
 const SERVER_COUNT = 5;
-const UPDATE_INTERVAL = 1000; // 1 second
 
 function generateMockData(): NetworkTrafficData[] {
   return Array.from({ length: SERVER_COUNT }, (_, i) => ({
@@ -25,24 +24,50 @@ export default function NetworkTrafficDemo() {
   const [isMounted, setIsMounted] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Initialize data only on client side to avoid hydration mismatch
+  // Initialize only on client side to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
+    // Set initial empty data
     setData(generateMockData());
   }, []);
 
+  // Real-time WebSocket-like connection using Server-Sent Events
   useEffect(() => {
     if (!isMounted) return;
-    
-    // Simulate WebSocket connection
-    const interval = setInterval(() => {
-      if (isConnected) {
-        setData(generateMockData());
-      }
-    }, UPDATE_INTERVAL);
 
-    return () => clearInterval(interval);
+    if (isConnected) {
+      // Connect to real-time data stream
+      const eventSource = new EventSource("/api/network-traffic");
+      eventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (event) => {
+        try {
+          const newData = JSON.parse(event.data) as NetworkTrafficData[];
+          setData(newData);
+        } catch (error) {
+          console.error("Error parsing network traffic data:", error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("EventSource error:", error);
+        eventSource.close();
+        setIsConnected(false);
+      };
+
+      return () => {
+        eventSource.close();
+        eventSourceRef.current = null;
+      };
+    } else {
+      // Disconnect
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    }
   }, [isConnected, isMounted]);
 
   useEffect(() => {

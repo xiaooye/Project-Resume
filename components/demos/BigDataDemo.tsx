@@ -19,13 +19,20 @@ function generateData(count: number): BigDataItem[] {
 }
 
 export default function BigDataDemo() {
-  const [allData] = useState<BigDataItem[]>(() => generateData(TOTAL_ITEMS));
+  const [allData, setAllData] = useState<BigDataItem[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [useVirtualization, setUseVirtualization] = useState(true);
   const [renderMethod, setRenderMethod] = useState<"virtual" | "traditional">("virtual");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
+
+  // Initialize data only on client side to avoid hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+    setAllData(generateData(TOTAL_ITEMS));
+  }, []);
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return allData;
@@ -46,18 +53,20 @@ export default function BigDataDemo() {
     return filteredData.slice(start, end);
   }, [filteredData, currentPage]);
 
-  // Virtual scrolling
+  // Virtual scrolling - simplified to work without inline styles
   const visibleRange = useMemo(() => {
-    if (!useVirtualization) return { start: 0, end: paginatedData.length };
-    const start = Math.floor(scrollTop / VIRTUAL_ITEM_HEIGHT);
-    const end = Math.min(start + Math.ceil(800 / VIRTUAL_ITEM_HEIGHT) + 2, filteredData.length);
+    if (!useVirtualization || !isMounted) return { start: 0, end: paginatedData.length };
+    const containerHeight = 600; // Fixed container height
+    const start = Math.max(0, Math.floor(scrollTop / VIRTUAL_ITEM_HEIGHT) - 2);
+    const visibleCount = Math.ceil(containerHeight / VIRTUAL_ITEM_HEIGHT) + 4;
+    const end = Math.min(start + visibleCount, filteredData.length);
     return { start, end };
-  }, [scrollTop, filteredData.length, useVirtualization, paginatedData.length]);
+  }, [scrollTop, filteredData.length, useVirtualization, paginatedData.length, isMounted]);
 
   const virtualItems = useMemo(() => {
-    if (!useVirtualization) return paginatedData;
+    if (!useVirtualization || !isMounted) return paginatedData;
     return filteredData.slice(visibleRange.start, visibleRange.end);
-  }, [filteredData, visibleRange, useVirtualization, paginatedData]);
+  }, [filteredData, visibleRange, useVirtualization, paginatedData, isMounted]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
@@ -154,28 +163,25 @@ export default function BigDataDemo() {
             ref={scrollContainerRef}
             onScroll={handleScroll}
             className="has-background-white"
-            style={{ height: "600px", overflowY: "auto" }}
           >
-            {renderMethod === "virtual" ? (
-              <div
-                className="is-relative"
-                style={{
-                  height: filteredData.length * VIRTUAL_ITEM_HEIGHT,
-                }}
-              >
-                <div
-                  style={{
-                    transform: `translateY(${visibleRange.start * VIRTUAL_ITEM_HEIGHT}px)`,
-                  }}
-                >
-                  {virtualItems.map((item, index) => (
+            {!isMounted ? (
+              <div className="has-text-centered py-6">
+                <p className="subtitle">Loading...</p>
+              </div>
+            ) : renderMethod === "virtual" ? (
+              <div className="is-relative">
+                {/* Spacer for items before visible range */}
+                {visibleRange.start > 0 && (
+                  <div style={{ height: `${visibleRange.start * VIRTUAL_ITEM_HEIGHT}px` }} />
+                )}
+                <div>
+                  {virtualItems.map((item) => (
                     <motion.div
                       key={item.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="is-flex is-align-items-center is-justify-content-space-between"
-                      style={{ height: VIRTUAL_ITEM_HEIGHT, padding: "12px", borderBottom: "1px solid #dbdbdb" }}
+                      className="is-flex is-align-items-center is-justify-content-space-between py-3 px-3"
                     >
                       <div>
                         <strong>{item.name}</strong>
@@ -191,6 +197,10 @@ export default function BigDataDemo() {
                     </motion.div>
                   ))}
                 </div>
+                {/* Spacer for items after visible range */}
+                {visibleRange.end < filteredData.length && (
+                  <div style={{ height: `${(filteredData.length - visibleRange.end) * VIRTUAL_ITEM_HEIGHT}px` }} />
+                )}
               </div>
             ) : (
               <div>
@@ -199,8 +209,7 @@ export default function BigDataDemo() {
                     key={item.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="is-flex is-align-items-center is-justify-content-space-between"
-                    style={{ padding: "12px", borderBottom: "1px solid #dbdbdb" }}
+                    className="is-flex is-align-items-center is-justify-content-space-between py-3 px-3"
                   >
                     <div>
                       <strong>{item.name}</strong>
