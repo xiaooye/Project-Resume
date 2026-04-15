@@ -5,6 +5,7 @@ import Link from "next/link";
 const quickLinks = [
   { name: "Home", href: "/" },
   { name: "Case Studies", href: "/case-studies" },
+  { name: "Projects", href: "/projects" },
   { name: "Demos", href: "/demos" },
   { name: "Contact", href: "/contact" },
 ];

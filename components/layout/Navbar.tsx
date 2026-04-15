@@ -8,6 +8,7 @@ import ThemeToggle from "./ThemeToggle";
 const navItems = [
   { name: "Home", href: "/", ariaLabel: "Navigate to home page" },
   { name: "Case Studies", href: "/case-studies", ariaLabel: "Read case studies" },
+  { name: "Projects", href: "/projects", ariaLabel: "View projects" },
   { name: "Skills", href: "/skills", ariaLabel: "Technical skills" },
   { name: "Demos", href: "/demos", ariaLabel: "Live demos" },
   { name: "Contact", href: "/contact", ariaLabel: "Get in touch" },

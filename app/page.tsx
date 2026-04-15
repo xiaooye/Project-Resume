@@ -183,6 +183,49 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Projects */}
+      <section className="section py-6">
+        <div className="container" style={{ maxWidth: "780px" }}>
+          <h2 className="title is-4 font-display mb-2">Projects</h2>
+          <p className="text-secondary mb-4" style={{ fontSize: "0.9rem", lineHeight: 1.6 }}>
+            Live applications I&apos;ve architected and built end-to-end.
+          </p>
+          <Link
+            href="https://storefront-xiaooyes-projects.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="case-study-row"
+            style={{ borderBottom: "none" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+              }}
+            >
+              <h3 className="title is-5 mb-1">THREAD — E-Commerce Platform</h3>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
+                <span className="has-text-accent has-text-weight-bold">280+ components</span>
+                <span className="hover-arrow has-text-accent">→</span>
+              </div>
+            </div>
+            <p className="text-secondary" style={{ lineHeight: 1.6 }}>
+              Headless commerce on Medusa.js v2 + Next.js 15. Custom backend modules, event-driven architecture, demo mode fallback pattern.
+            </p>
+          </Link>
+          <Link
+            href="/projects"
+            className="has-text-accent has-text-weight-semibold accent-underline mt-4"
+            style={{ display: "inline-block" }}
+          >
+            View all projects →
+          </Link>
+        </div>
+      </section>
+
       {/* Process */}
       <section className="section py-6">
         <ScrollReveal>
