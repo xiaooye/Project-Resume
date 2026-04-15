@@ -1,63 +1,51 @@
 import { Skill } from "@/types";
 
-// Skill icon mapping (using emoji and text icons)
-export const skillIcons: Record<string, string> = {
-  TypeScript: "📘",
-  JavaScript: "📜",
-  Python: "🐍",
-  React: "⚛️",
-  "Next.js": "▲",
-  "Node.js": "🟢",
-  GraphQL: "🔷",
-  AWS: "☁️",
-  Azure: "🔷",
-  Docker: "🐳",
-  Kubernetes: "☸️",
-  WebAssembly: "🔷",
-  WebRTC: "📡",
-  "Machine Learning": "🤖",
-  "Vue.js": "💚",
-  Angular: "🔴",
-  "Express.js": "⚡",
-  MongoDB: "🍃",
-  PostgreSQL: "🐘",
-  Redis: "🔴",
-  Git: "📦",
-  "CI/CD": "🔄",
-  Linux: "🐧",
-};
-
-// Skills data
+// Skills data - curated top 20 production tools (5 years total professional experience)
 export const skillsData: Skill[] = [
-  { name: "TypeScript", level: 95, category: "Languages", yearsOfExperience: 8 },
-  { name: "JavaScript", level: 98, category: "Languages", yearsOfExperience: 10 },
-  { name: "Python", level: 85, category: "Languages", yearsOfExperience: 6 },
-  { name: "React", level: 95, category: "Frontend", yearsOfExperience: 8 },
-  { name: "Next.js", level: 90, category: "Frontend", yearsOfExperience: 5 },
-  { name: "Node.js", level: 92, category: "Backend", yearsOfExperience: 8 },
-  { name: "GraphQL", level: 85, category: "Backend", yearsOfExperience: 4 },
-  { name: "AWS", level: 88, category: "Cloud", yearsOfExperience: 6 },
-  { name: "Azure", level: 82, category: "Cloud", yearsOfExperience: 4 },
-  { name: "Docker", level: 90, category: "DevOps", yearsOfExperience: 5 },
-  { name: "Kubernetes", level: 80, category: "DevOps", yearsOfExperience: 3 },
-  { name: "WebAssembly", level: 75, category: "Advanced", yearsOfExperience: 2 },
-  { name: "WebRTC", level: 78, category: "Advanced", yearsOfExperience: 3 },
-  { name: "Machine Learning", level: 70, category: "AI/ML", yearsOfExperience: 3 },
+  // Core Languages
+  { name: "TypeScript", level: 95, category: "Core Languages", yearsOfExperience: 4 },
+  { name: "JavaScript", level: 98, category: "Core Languages", yearsOfExperience: 5 },
+  { name: "SQL", level: 90, category: "Core Languages", yearsOfExperience: 5 },
+  { name: "Python", level: 85, category: "Core Languages", yearsOfExperience: 3 },
+
+  // Frontend
+  { name: "Vue.js", level: 95, category: "Frontend", yearsOfExperience: 4 },
+  { name: "React", level: 92, category: "Frontend", yearsOfExperience: 3 },
+  { name: "Nuxt.js", level: 90, category: "Frontend", yearsOfExperience: 3 },
+  { name: "Next.js", level: 90, category: "Frontend", yearsOfExperience: 3 },
+  { name: "Tailwind CSS", level: 92, category: "Frontend", yearsOfExperience: 3 },
+
+  // Backend
+  { name: "Node.js", level: 92, category: "Backend", yearsOfExperience: 5 },
+  { name: "Fastify", level: 85, category: "Backend", yearsOfExperience: 2 },
+  { name: "GraphQL", level: 85, category: "Backend", yearsOfExperience: 3 },
+  { name: "PostgreSQL", level: 90, category: "Backend", yearsOfExperience: 4 },
+  { name: "Redis", level: 82, category: "Backend", yearsOfExperience: 3 },
+
+  // AI & Tooling
+  { name: "Claude API", level: 90, category: "AI & Tooling", yearsOfExperience: 2 },
+  { name: "RAG Pipelines", level: 85, category: "AI & Tooling", yearsOfExperience: 1 },
+  { name: "MCP Servers", level: 88, category: "AI & Tooling", yearsOfExperience: 1 },
+
+  // DevOps
+  { name: "Docker", level: 88, category: "DevOps", yearsOfExperience: 4 },
+  { name: "CI/CD", level: 88, category: "DevOps", yearsOfExperience: 4 },
+  { name: "AWS", level: 85, category: "DevOps", yearsOfExperience: 3 },
 ];
+
+// Skill icon mapping
+export const skillIcons: Record<string, string> = {};
 
 // Get skill icon
 export function getSkillIcon(skillName: string): string {
-  return skillIcons[skillName] || "💻";
+  return skillIcons[skillName] || "";
 }
 
 // Skill category configuration
 export const skillCategories = [
-  { name: "Languages", label: "编程语言", color: "is-primary" },
-  { name: "Frontend", label: "前端技术", color: "is-info" },
-  { name: "Backend", label: "后端技术", color: "is-success" },
-  { name: "Cloud", label: "云服务", color: "is-warning" },
-  { name: "DevOps", label: "DevOps", color: "is-danger" },
-  { name: "Advanced", label: "高级技术", color: "is-link" },
-  { name: "AI/ML", label: "AI/ML", color: "is-dark" },
+  { name: "Core Languages", label: "Core Languages", color: "is-primary" },
+  { name: "Frontend", label: "Frontend", color: "is-info" },
+  { name: "Backend", label: "Backend", color: "is-success" },
+  { name: "AI & Tooling", label: "AI & Tooling", color: "is-dark" },
+  { name: "DevOps", label: "DevOps", color: "is-warning" },
 ];
-

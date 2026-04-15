@@ -1,1072 +1,806 @@
 @import "bulma/css/bulma.css";
 
+/* ==========================================================================
+   Design System: "Quiet Confidence"
+   Clean, minimal, WCAG 2.2 AAA compliant
+   ========================================================================== */
+
 :root {
-  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
-  /* 液态玻璃颜色变量 - 护眼配色 - Apple Design Guide */
-  --glass-bg-light: rgba(255, 255, 255, 0.75);
-  --glass-bg-dark: rgba(28, 28, 30, 0.98);
-  --glass-border-light: rgba(255, 255, 255, 0.9);
-  --glass-border-dark: rgba(255, 255, 255, 0.2);
-  --glass-blur: 20px;
-  --glass-saturate: 180%;
-  --glass-shadow-light: 0 8px 32px 0 rgba(0, 0, 0, 0.06), 0 2px 8px 0 rgba(0, 0, 0, 0.03);
-  --glass-shadow-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.4), 0 2px 8px 0 rgba(0, 0, 0, 0.3);
-  
-  /* 动画性能优化 */
-  --animation-duration-fast: 0.15s;
-  --animation-duration-normal: 0.3s;
-  --animation-duration-slow: 0.5s;
-  --animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
-  --animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  
-  /* WebAssembly 动画优化 */
-  --wasm-transform-gpu: translateZ(0);
-  --wasm-will-change: transform, opacity;
+  --accent: #c9a227;
+  --accent-hover: #b89220;
+  --bg: #fafafa;
+  --bg-surface: #ffffff;
+  --bg-subtle: rgba(0, 0, 0, 0.025);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted: #595959;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.04);
+  --transition: 0.15s ease;
 }
+
+html.dark {
+  --bg: #0e0e10;
+  --bg-surface: #18181b;
+  --bg-subtle: rgba(255, 255, 255, 0.03);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #717171;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
 
 body {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: #fafafa;
+  background: var(--bg);
+  color: var(--text-primary);
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-  color: #000000;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 现代动态背景层 - Mesh Gradient效果 - 护眼配色 */
+html.dark body {
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+.font-display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.title, .subtitle {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.has-text-accent {
+  color: var(--accent);
+}
+
+.accent-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+}
+
+/* ==========================================================================
+   Ambient Background (subtle, not distracting)
+   ========================================================================== */
+
 body::before {
   content: '';
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   z-index: -2;
-  background: 
-    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
-    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
-    radial-gradient(circle at 40% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 60%),
-    radial-gradient(circle at 60% 60%, rgba(99, 102, 241, 0.05) 0%, transparent 60%),
-    radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
-    linear-gradient(135deg, #fafafa 0%, #f5f5f5 20%, #f0f0f0 40%, #f5f5f5 60%, #fafafa 80%, #ffffff 100%);
-  background-size: 
-    120% 120%, 
-    120% 120%, 
-    120% 120%, 
-    120% 120%, 
-    120% 120%, 
-    400% 400%;
-  animation: meshGradient 25s ease infinite;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(201, 162, 39, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(99, 102, 241, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 80%, rgba(59, 130, 246, 0.03) 0%, transparent 60%);
   pointer-events: none;
-  will-change: background-position;
-  transform: var(--wasm-transform-gpu);
-}
-
-/* 尊重 prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  body::before {
-    animation: none;
-  }
-}
-
-@keyframes meshGradient {
-  0%, 100% {
-    background-position: 
-      0% 0%, 
-      100% 100%, 
-      50% 0%, 
-      0% 100%, 
-      100% 0%, 
-      0% 50%;
-  }
-  25% {
-    background-position: 
-      100% 50%, 
-      0% 50%, 
-      100% 50%, 
-      50% 0%, 
-      0% 100%, 
-      25% 75%;
-  }
-  50% {
-    background-position: 
-      50% 100%, 
-      50% 0%, 
-      0% 100%, 
-      100% 50%, 
-      50% 50%, 
-      50% 50%;
-  }
-  75% {
-    background-position: 
-      0% 50%, 
-      100% 100%, 
-      50% 0%, 
-      0% 0%, 
-      100% 50%, 
-      75% 25%;
-  }
-}
-
-/* 网格点阵背景 - 护眼配色 */
-body::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  background-image: 
-    linear-gradient(rgba(99, 102, 241, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.02) 1px, transparent 1px);
-  background-size: 50px 50px;
-  background-position: 0 0, 0 0;
-  animation: gridMove 20s linear infinite;
-  pointer-events: none;
-  will-change: background-position;
-  transform: var(--wasm-transform-gpu);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::after {
-    animation: none;
-  }
-}
-
-@keyframes gridMove {
-  0% {
-    background-position: 0 0, 0 0;
-  }
-  100% {
-    background-position: 50px 50px, 50px 50px;
-  }
-}
-
-/* 浮动几何形状 */
-.floating-shapes {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  pointer-events: none;
-  overflow: hidden;
-  will-change: transform;
-  transform: var(--wasm-transform-gpu);
-}
-
-.floating-shapes::before,
-.floating-shapes::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 25s ease-in-out infinite;
-  will-change: transform;
-  transform: var(--wasm-transform-gpu);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .floating-shapes::before,
-  .floating-shapes::after {
-    animation: none;
-  }
-}
-
-.floating-shapes::before {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 50%, transparent 70%);
-  top: -250px;
-  left: -250px;
-  animation-delay: 0s;
-}
-
-.floating-shapes::after {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 50%, transparent 70%);
-  bottom: -200px;
-  right: -200px;
-  animation-delay: 12s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1) rotate(0deg);
-  }
-  20% {
-    transform: translate(150px, 200px) scale(1.2) rotate(90deg);
-  }
-  40% {
-    transform: translate(-100px, 300px) scale(0.8) rotate(180deg);
-  }
-  60% {
-    transform: translate(200px, -150px) scale(1.1) rotate(270deg);
-  }
-  80% {
-    transform: translate(-50px, 100px) scale(0.95) rotate(360deg);
-  }
-}
-
-/* 动态噪点纹理 */
-.noise-texture {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  opacity: 0.03;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  animation: noise 0.2s steps(8) infinite;
-  will-change: transform;
-  transform: var(--wasm-transform-gpu);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .noise-texture {
-    animation: none;
-  }
-}
-
-@keyframes noise {
-  0%, 100% {
-    transform: translate(0, 0);
-  }
-  10% {
-    transform: translate(-5%, -10%);
-  }
-  20% {
-    transform: translate(-15%, 5%);
-  }
-  30% {
-    transform: translate(7%, -25%);
-  }
-  40% {
-    transform: translate(-5%, 25%);
-  }
-  50% {
-    transform: translate(-15%, 10%);
-  }
-  60% {
-    transform: translate(15%, 0%);
-  }
-  70% {
-    transform: translate(0%, 15%);
-  }
-  80% {
-    transform: translate(3%, 35%);
-  }
-  90% {
-    transform: translate(-10%, 10%);
-  }
-}
-
-/* 深色模式背景 - 护眼配色 - WCAG 2.2 AAA 对比度 */
-html.dark body {
-  background: #0a0a0a;
-  color: #ffffff;
 }
 
 html.dark body::before {
-  background: 
-    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
-    linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 25%, #171717 50%, #1a1a1a 75%, #0f0f0f 100%);
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(201, 162, 39, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
 }
 
-html.dark body::after {
-  background-image: 
-    linear-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.08) 1px, transparent 1px);
+/* Grid pattern */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.4;
+  pointer-events: none;
 }
 
-html.dark .floating-shapes::before {
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+.floating-shapes, .noise-texture {
+  display: none;
 }
 
-html.dark .floating-shapes::after {
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
-}
+/* ==========================================================================
+   Cards — Clean, not glassy
+   ========================================================================== */
 
-/* 液态玻璃效果基础类 - 护眼配色 - Apple's Liquid Glass Style */
-.liquid-glass {
-  background: var(--glass-bg-light);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid var(--glass-border-light);
-  box-shadow: var(--glass-shadow-light);
-  border-radius: 16px;
-  transition: all var(--animation-duration-normal) var(--animation-easing);
-  will-change: transform, background-color, box-shadow;
-  transform: var(--wasm-transform-gpu);
-  /* 层次深度效果 */
+.liquid-glass,
+.liquid-glass-card,
+.box.liquid-glass-card,
+.card.liquid-glass-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: hidden;
   position: relative;
-  isolation: isolate;
 }
 
-.liquid-glass::before {
+.liquid-glass::before { display: none; }
+
+.liquid-glass:hover,
+.liquid-glass-card:hover,
+.box.liquid-glass-card:hover,
+.card.liquid-glass-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Navigation
+   ========================================================================== */
+
+.liquid-glass-nav {
+  background: rgba(250, 250, 250, 0.92);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+
+html.dark .liquid-glass-nav {
+  background: rgba(14, 14, 16, 0.92);
+  border-bottom-color: var(--border);
+}
+
+.liquid-glass-nav .navbar-item {
+  color: var(--text-secondary);
+  font-weight: 500;
+  border-radius: 6px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.liquid-glass-nav .navbar-item:hover {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.button {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all var(--transition);
+  border-color: var(--border);
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button.is-primary,
+.liquid-glass-button.is-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.button.is-primary:hover,
+.liquid-glass-button.is-primary:hover {
+  background: var(--accent-hover);
+  color: #1a1a1a;
+}
+
+.liquid-glass-button {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.liquid-glass-button:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+html.dark .button.is-light {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+html.dark .button.is-light:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   Text on cards (legacy class compatibility)
+   ========================================================================== */
+
+.liquid-glass-text {
+  color: var(--text-primary);
+  font-weight: inherit;
+}
+
+.liquid-glass-text strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+strong, b {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.content strong {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+.input, .textarea, .select select {
+  border-radius: 8px;
+  border-color: var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.input:focus, .textarea:focus, .select select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.12);
+}
+
+.input::placeholder, .textarea::placeholder {
+  color: var(--text-muted);
+}
+
+html.dark .input, html.dark .textarea, html.dark .select select {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.help {
+  color: var(--text-secondary);
+}
+
+.help.is-danger {
+  color: #dc3545;
+}
+
+html.dark .help.is-danger {
+  color: #ff6b6b;
+}
+
+/* ==========================================================================
+   Tabs
+   ========================================================================== */
+
+.tabs a {
+  color: var(--text-secondary);
+  border-color: transparent;
+  font-weight: 500;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.tabs a:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--border-strong);
+}
+
+.tabs li.is-active a {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.tabs.is-boxed a {
+  border-radius: 8px 8px 0 0;
+}
+
+.tabs.is-boxed li.is-active a {
+  background: var(--bg-surface);
+  border-color: var(--border);
+  border-bottom-color: transparent;
+  color: var(--accent);
+}
+
+html.dark .tabs.is-boxed li.is-active a {
+  background: var(--bg-surface);
+  border-color: var(--border);
+  border-bottom-color: transparent;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.table {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.table thead th {
+  color: var(--text-primary) !important;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-strong);
+  background: transparent;
+}
+
+.table tbody td {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border);
+  background: transparent;
+}
+
+.table tbody tr:hover {
+  background: var(--bg-subtle);
+}
+
+.table.is-striped tbody tr:nth-child(even) {
+  background: var(--bg-subtle);
+}
+
+.table tbody td code {
+  color: var(--accent) !important;
+  background: var(--bg-subtle);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Tags & Notifications
+   ========================================================================== */
+
+.tag {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.notification {
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border-left: 3px solid;
+  color: var(--text-primary);
+}
+
+.notification.is-success {
+  background: rgba(40, 167, 69, 0.08);
+  border-left-color: #28a745;
+}
+
+.notification.is-danger {
+  background: rgba(220, 53, 69, 0.08);
+  border-left-color: #dc3545;
+}
+
+.notification.is-info {
+  background: rgba(59, 130, 246, 0.08);
+  border-left-color: #3b82f6;
+}
+
+.notification.is-warning {
+  background: rgba(201, 162, 39, 0.08);
+  border-left-color: var(--accent);
+}
+
+html.dark .notification {
+  background: var(--bg-surface);
+}
+
+html.dark .notification.is-success { background: rgba(40, 167, 69, 0.1); }
+html.dark .notification.is-danger { background: rgba(220, 53, 69, 0.1); }
+html.dark .notification.is-info { background: rgba(59, 130, 246, 0.1); }
+html.dark .notification.is-warning { background: rgba(201, 162, 39, 0.1); }
+
+/* ==========================================================================
+   Progress bars
+   ========================================================================== */
+
+.progress {
+  background: var(--bg-subtle);
+  border-radius: 4px;
+  height: 6px;
+}
+
+.progress::-webkit-progress-value { background: var(--accent); border-radius: 4px; }
+.progress::-moz-progress-bar { background: var(--accent); border-radius: 4px; }
+.progress.is-primary::-webkit-progress-value { background: var(--accent); }
+.progress.is-primary::-moz-progress-bar { background: var(--accent); }
+
+/* ==========================================================================
+   Modal
+   ========================================================================== */
+
+.modal-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-card-head, .modal-card-foot {
+  background: transparent;
+  border-color: var(--border);
+}
+
+.modal-card-title { color: var(--text-primary); font-weight: 600; }
+.modal-card-body { background: transparent; }
+.modal-background { background: rgba(0, 0, 0, 0.4); }
+html.dark .modal-background { background: rgba(0, 0, 0, 0.6); }
+
+/* ==========================================================================
+   Layout helpers
+   ========================================================================== */
+
+.container.is-fluid {
+  max-width: 1100px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* ==========================================================================
+   Scroll & Focus
+   ========================================================================== */
+
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ==========================================================================
+   Animation utilities
+   ========================================================================== */
+
+.wasm-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease; }
+.animate-slide-up { animation: slideUp 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .container.is-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* ==========================================================================
+   High contrast mode
+   ========================================================================== */
+
+@media (prefers-contrast: high) {
+  :root {
+    --border: rgba(0, 0, 0, 0.2);
+    --border-strong: rgba(0, 0, 0, 0.4);
+  }
+
+  html.dark {
+    --border: rgba(255, 255, 255, 0.3);
+    --border-strong: rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* ==========================================================================
+   Status Indicator
+   ========================================================================== */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 100px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.06);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+html.dark .status-badge {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+}
+
+/* ==========================================================================
+   Stat Values
+   ========================================================================== */
+
+.stat-value {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   Interactive Rows
+   ========================================================================== */
+
+.service-row {
+  padding: 1.25rem 1rem;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+
+.service-row:hover {
+  background: var(--bg-subtle);
+}
+
+.case-study-row {
+  display: block;
+  padding: 1.5rem 1rem;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+
+.case-study-row:hover {
+  background: rgba(201, 162, 39, 0.04);
+}
+
+html.dark .case-study-row:hover {
+  background: rgba(201, 162, 39, 0.06);
+}
+
+/* ==========================================================================
+   Hover Arrow
+   ========================================================================== */
+
+.hover-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+a:hover .hover-arrow,
+.case-study-row:hover .hover-arrow,
+.liquid-glass-card:hover .hover-arrow {
+  transform: translateX(4px);
+}
+
+/* ==========================================================================
+   Card Accent Line
+   ========================================================================== */
+
+.liquid-glass-card::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--animation-duration-normal) var(--animation-easing);
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
 }
 
-.liquid-glass:hover {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.08), 0 4px 12px 0 rgba(0, 0, 0, 0.04);
-  transform: translateY(-2px) var(--wasm-transform-gpu);
+.liquid-glass-card:hover::after {
+  transform: scaleX(1);
 }
 
-.liquid-glass:hover::before {
-  opacity: 1;
+/* ==========================================================================
+   Process Steps
+   ========================================================================== */
+
+.process-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  position: relative;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .liquid-glass {
-    transition: none;
+.process-grid::before {
+  content: '';
+  position: absolute;
+  top: 1.125rem;
+  left: 10%;
+  right: 10%;
+  height: 0;
+  border-top: 1px dashed var(--border);
+  z-index: 0;
+}
+
+.process-step-num {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .process-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  
-  .liquid-glass:hover {
-    transform: none;
+  .process-grid::before {
+    display: none;
   }
 }
 
-/* 深色模式下的液态玻璃 - 护眼配色 */
-html.dark .liquid-glass {
-  background: var(--glass-bg-dark);
-  border: 1px solid var(--glass-border-dark);
-  box-shadow: var(--glass-shadow-dark);
-}
+/* ==========================================================================
+   Skill Bars
+   ========================================================================== */
 
-html.dark .liquid-glass::before {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-}
-
-html.dark .liquid-glass:hover {
-  background: rgba(30, 30, 30, 0.9);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 4px 12px 0 rgba(0, 0, 0, 0.35);
-}
-
-/* 导航栏液态玻璃 - 护眼配色 */
-.liquid-glass-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.04), 0 1px 4px 0 rgba(0, 0, 0, 0.02);
-}
-
-.liquid-glass-nav .navbar-item {
-  color: #000000;
-}
-
-.liquid-glass-nav .navbar-item:hover {
-  background-color: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
-}
-
-html.dark .liquid-glass-nav {
-  background: rgba(18, 18, 18, 0.95);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.4), 0 1px 4px 0 rgba(0, 0, 0, 0.3);
-}
-
-html.dark .liquid-glass-nav .navbar-item {
-  color: #ffffff;
-}
-
-html.dark .liquid-glass-nav .navbar-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #818cf8;
-}
-
-/* 卡片液态玻璃 - 护眼配色 - WCAG 2.2 AAA 对比度 */
-.liquid-glass-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), 0 2px 8px 0 rgba(0, 0, 0, 0.04);
-  border-radius: 20px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.skill-bar-track {
+  height: 3px;
+  background: var(--bg-subtle);
+  border-radius: 2px;
+  margin-top: 0.5rem;
   overflow: hidden;
 }
 
-.liquid-glass-card:hover {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.12), 0 4px 12px 0 rgba(0, 0, 0, 0.06);
-  transform: translateY(-4px) scale(1.01);
+html.dark .skill-bar-track {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-html.dark .liquid-glass-card {
-  background: rgba(28, 28, 30, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), 0 2px 8px 0 rgba(0, 0, 0, 0.3);
-}
-
-html.dark .liquid-glass-card:hover {
-  background: rgba(32, 32, 34, 1);
-  box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.5), 0 4px 12px 0 rgba(0, 0, 0, 0.35);
-}
-
-/* 按钮液态玻璃 - 护眼配色 */
-.liquid-glass-button {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.08), 0 2px 4px 0 rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #1a1a1a;
-}
-
-.liquid-glass-button:hover {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.25);
-  color: #6366f1;
-}
-
-.liquid-glass-button.is-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-  color: white;
-  border: none;
-}
-
-.liquid-glass-button.is-primary:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-  color: white;
-}
-
-html.dark .liquid-glass-button {
-  background: rgba(30, 30, 30, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
-  color: #ffffff;
-}
-
-html.dark .liquid-glass-button:hover {
-  background: rgba(40, 40, 40, 1);
-  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.5);
-  color: #ffffff;
-}
-
-html.dark .liquid-glass-button.is-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-  color: white;
-}
-
-html.dark .liquid-glass-button.is-primary:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-  color: white;
-}
-
-/* 文本在液态玻璃上的可读性 - 护眼配色 - WCAG 2.2 AAA 对比度 - Apple Design Guide */
-.liquid-glass-text {
-  color: #000000;
-  text-shadow: none;
-  /* 确保 WCAG 2.2 AAA 对比度 7:1 */
-  font-weight: 600;
-}
-
-html.dark .liquid-glass-text {
-  color: #ffffff;
-  text-shadow: none;
-  /* 确保 WCAG 2.2 AAA 对比度 7:1 - Apple Dark Mode */
-  font-weight: 600;
-  opacity: 1;
-}
-
-/* 确保 strong 标签在 liquid-glass-text 中有足够的对比度 */
-.liquid-glass-text strong {
-  font-weight: 700;
-  color: inherit;
-}
-
-html.dark .liquid-glass-text strong {
-  font-weight: 700;
-  color: inherit;
-}
-
-/* 确保 help 文本在 liquid-glass-card 中有足够的对比度 */
-.liquid-glass-card .help {
-  color: #000000;
-  font-weight: 500;
-}
-
-html.dark .liquid-glass-card .help {
-  color: #ffffff;
-  font-weight: 500;
-  opacity: 0.9;
-}
-
-/* 确保 help 文本在 liquid-glass-text 中有足够的对比度 */
-.help.liquid-glass-text {
-  color: #000000;
-  font-weight: 500;
-}
-
-html.dark .help.liquid-glass-text {
-  color: #ffffff;
-  font-weight: 500;
-  opacity: 0.9;
-}
-
-/* 表格主题支持 - 护眼配色 - Apple Design Guide - WCAG 2.2 AAA 对比度 */
-.liquid-glass-card table,
-.table-container table,
-.table-container table.liquid-glass-card,
-.table-container .liquid-glass-card table,
-.box.liquid-glass-card table,
-.box.liquid-glass-card .table-container table {
-  background-color: transparent;
-  color: #000000;
-}
-
-.liquid-glass-card table thead th,
-.table-container table thead th,
-.table-container table.liquid-glass-card thead th,
-.table-container .liquid-glass-card table thead th,
-.box.liquid-glass-card table thead th,
-.box.liquid-glass-card .table-container table thead th {
-  color: #000000 !important;
-  font-weight: 700;
-  border-bottom-color: rgba(0, 0, 0, 0.15);
-  background-color: transparent;
-}
-
-.liquid-glass-card table thead th.liquid-glass-text,
-.table-container table thead th.liquid-glass-text,
-.table-container table.liquid-glass-card thead th.liquid-glass-text,
-.table-container .liquid-glass-card table thead th.liquid-glass-text,
-.box.liquid-glass-card table thead th.liquid-glass-text,
-.box.liquid-glass-card .table-container table thead th.liquid-glass-text {
-  color: #000000 !important;
-}
-
-.liquid-glass-card table tbody td,
-.table-container table tbody td,
-.table-container table.liquid-glass-card tbody td,
-.table-container .liquid-glass-card table tbody td,
-.box.liquid-glass-card table tbody td,
-.box.liquid-glass-card .table-container table tbody td {
-  color: #000000 !important;
-  border-bottom-color: rgba(0, 0, 0, 0.08);
-  background-color: transparent;
-}
-
-.liquid-glass-card table tbody td.liquid-glass-text,
-.table-container table tbody td.liquid-glass-text,
-.table-container table.liquid-glass-card tbody td.liquid-glass-text,
-.table-container .liquid-glass-card table tbody td.liquid-glass-text,
-.box.liquid-glass-card table tbody td.liquid-glass-text,
-.box.liquid-glass-card .table-container table tbody td.liquid-glass-text {
-  color: #000000 !important;
-}
-
-.liquid-glass-card table tbody td code,
-.liquid-glass-card table tbody td code.liquid-glass-text,
-.table-container table tbody td code,
-.table-container table tbody td code.liquid-glass-text,
-.table-container table.liquid-glass-card tbody td code,
-.table-container table.liquid-glass-card tbody td code.liquid-glass-text,
-.table-container .liquid-glass-card table tbody td code,
-.table-container .liquid-glass-card table tbody td code.liquid-glass-text,
-.box.liquid-glass-card table tbody td code,
-.box.liquid-glass-card table tbody td code.liquid-glass-text,
-.box.liquid-glass-card .table-container table tbody td code,
-.box.liquid-glass-card .table-container table tbody td code.liquid-glass-text {
-  color: #000000 !important;
-  background-color: rgba(0, 0, 0, 0.05);
-  font-weight: 600;
-}
-
-.liquid-glass-card table tbody tr:hover,
-.table-container table tbody tr:hover,
-.box.liquid-glass-card table tbody tr:hover,
-.box.liquid-glass-card .table-container table tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.03);
-}
-
-.liquid-glass-card table tbody tr:hover td,
-.table-container table tbody tr:hover td,
-.box.liquid-glass-card table tbody tr:hover td,
-.box.liquid-glass-card .table-container table tbody tr:hover td {
-  color: #000000 !important;
-}
-
-.liquid-glass-card table.is-striped tbody tr:nth-child(even),
-.table-container table.is-striped tbody tr:nth-child(even),
-.box.liquid-glass-card table.is-striped tbody tr:nth-child(even),
-.box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
-.table-container table.is-striped tbody tr:nth-child(even) td,
-.box.liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
-.box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) td {
-  color: #000000 !important;
-}
-
-/* 深色模式表格样式 */
-html.dark .liquid-glass-card table,
-html.dark .table-container table,
-html.dark .table-container table.liquid-glass-card,
-html.dark .table-container .liquid-glass-card table,
-html.dark .box.liquid-glass-card table,
-html.dark .box.liquid-glass-card .table-container table {
-  color: #ffffff;
-}
-
-html.dark .liquid-glass-card table thead th,
-html.dark .table-container table thead th,
-html.dark .table-container table.liquid-glass-card thead th,
-html.dark .table-container .liquid-glass-card table thead th,
-html.dark .box.liquid-glass-card table thead th,
-html.dark .box.liquid-glass-card .table-container table thead th {
-  color: #ffffff !important;
-  font-weight: 700;
-  border-bottom-color: rgba(255, 255, 255, 0.15);
-  background-color: transparent;
-}
-
-html.dark .liquid-glass-card table thead th.liquid-glass-text,
-html.dark .table-container table thead th.liquid-glass-text,
-html.dark .table-container table.liquid-glass-card thead th.liquid-glass-text,
-html.dark .table-container .liquid-glass-card table thead th.liquid-glass-text,
-html.dark .box.liquid-glass-card table thead th.liquid-glass-text,
-html.dark .box.liquid-glass-card .table-container table thead th.liquid-glass-text {
-  color: #ffffff !important;
-}
-
-html.dark .liquid-glass-card table tbody td,
-html.dark .table-container table tbody td,
-html.dark .table-container table.liquid-glass-card tbody td,
-html.dark .table-container .liquid-glass-card table tbody td,
-html.dark .box.liquid-glass-card table tbody td,
-html.dark .box.liquid-glass-card .table-container table tbody td {
-  color: #ffffff !important;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-  background-color: transparent;
-}
-
-html.dark .liquid-glass-card table tbody td.liquid-glass-text,
-html.dark .table-container table tbody td.liquid-glass-text,
-html.dark .table-container table.liquid-glass-card tbody td.liquid-glass-text,
-html.dark .table-container .liquid-glass-card table tbody td.liquid-glass-text,
-html.dark .box.liquid-glass-card table tbody td.liquid-glass-text,
-html.dark .box.liquid-glass-card .table-container table tbody td.liquid-glass-text {
-  color: #ffffff !important;
-}
-
-html.dark .liquid-glass-card table tbody td code,
-html.dark .liquid-glass-card table tbody td code.liquid-glass-text,
-html.dark .table-container table tbody td code,
-html.dark .table-container table tbody td code.liquid-glass-text,
-html.dark .table-container table.liquid-glass-card tbody td code,
-html.dark .table-container table.liquid-glass-card tbody td code.liquid-glass-text,
-html.dark .table-container .liquid-glass-card table tbody td code,
-html.dark .table-container .liquid-glass-card table tbody td code.liquid-glass-text,
-html.dark .box.liquid-glass-card table tbody td code,
-html.dark .box.liquid-glass-card table tbody td code.liquid-glass-text,
-html.dark .box.liquid-glass-card .table-container table tbody td code,
-html.dark .box.liquid-glass-card .table-container table tbody td code.liquid-glass-text {
-  color: #ffffff !important;
-  background-color: rgba(255, 255, 255, 0.1);
-  font-weight: 600;
-}
-
-html.dark .liquid-glass-card table tbody tr:hover,
-html.dark .table-container table tbody tr:hover,
-html.dark .box.liquid-glass-card table tbody tr:hover,
-html.dark .box.liquid-glass-card .table-container table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-html.dark .liquid-glass-card table tbody tr:hover td,
-html.dark .table-container table tbody tr:hover td,
-html.dark .box.liquid-glass-card table tbody tr:hover td,
-html.dark .box.liquid-glass-card .table-container table tbody tr:hover td {
-  color: #ffffff !important;
-}
-
-html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even),
-html.dark .table-container table.is-striped tbody tr:nth-child(even),
-html.dark .box.liquid-glass-card table.is-striped tbody tr:nth-child(even),
-html.dark .box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
-html.dark .table-container table.is-striped tbody tr:nth-child(even) td,
-html.dark .box.liquid-glass-card table.is-striped tbody tr:nth-child(even) td,
-html.dark .box.liquid-glass-card .table-container table.is-striped tbody tr:nth-child(even) td {
-  color: #ffffff !important;
-}
-
-html.dark .liquid-glass-card table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-html.dark .liquid-glass-card table tbody tr:hover td {
-  color: #ffffff !important;
-}
-
-html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-html.dark .liquid-glass-card table.is-striped tbody tr:nth-child(even) td {
-  color: #ffffff !important;
-}
-
-/* WebAssembly 动画优化类 */
-.wasm-accelerated {
-  will-change: var(--wasm-will-change);
-  transform: var(--wasm-transform-gpu);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-/* 高性能动画工具类 */
-.animate-fade-in {
-  animation: fadeIn var(--animation-duration-normal) var(--animation-easing);
-}
-
-.animate-slide-up {
-  animation: slideUp var(--animation-duration-normal) var(--animation-easing);
-}
-
-.animate-scale-in {
-  animation: scaleIn var(--animation-duration-normal) var(--animation-easing);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px) var(--wasm-transform-gpu);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) var(--wasm-transform-gpu);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) var(--wasm-transform-gpu);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) var(--wasm-transform-gpu);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-slide-up,
-  .animate-scale-in {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* 平滑滚动优化 */
-html {
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
-
-/* 焦点指示器 - WCAG 2.2 AAA 要求 */
-*:focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
+.skill-bar-fill {
+  height: 100%;
+  background: var(--accent);
   border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html.dark *:focus-visible {
-  outline-color: #818cf8;
-}
+/* ==========================================================================
+   Page Entrance
+   ========================================================================== */
 
-/* 响应式优化 - 移动端性能 */
-@media (max-width: 768px) {
-  /* 移动端减少模糊效果以提升性能 */
-  .liquid-glass {
-    backdrop-filter: blur(10px) saturate(150%);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  
-  .liquid-glass-nav {
-    backdrop-filter: blur(15px) saturate(150%);
-    -webkit-backdrop-filter: blur(15px) saturate(150%);
-  }
-  
-  /* 移动端减少动画复杂度 */
-  body::before {
-    animation-duration: 40s;
-  }
-  
-  .floating-shapes::before,
-  .floating-shapes::after {
-    animation-duration: 40s;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* 确保表单元素对比度 - WCAG 2.2 AAA */
-.liquid-glass-card .input,
-.liquid-glass-card .textarea,
-.liquid-glass-card .select select {
-  background-color: #ffffff;
-  border-color: #000000;
-  color: #000000;
+.page-enter {
+  animation: page-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.liquid-glass-card .input::placeholder,
-.liquid-glass-card .textarea::placeholder {
-  color: #666666;
+.page-enter-delay-1 { animation-delay: 0.08s; }
+.page-enter-delay-2 { animation-delay: 0.16s; }
+.page-enter-delay-3 { animation-delay: 0.24s; }
+
+/* ==========================================================================
+   Enhanced Buttons
+   ========================================================================== */
+
+.button.is-primary {
+  box-shadow: 0 1px 2px rgba(201, 162, 39, 0.2);
+}
+
+.button.is-primary:hover {
+  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.25);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Dark Mode Tags
+   ========================================================================== */
+
+html.dark .tag.is-light {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Scroll Reveal
+   ========================================================================== */
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.is-visible {
   opacity: 1;
-}
-
-.liquid-glass-card .label {
-  color: #000000;
-  font-weight: 600;
-}
-
-.liquid-glass-card .help {
-  color: #000000;
-  font-weight: 600;
-}
-
-.liquid-glass-card .help.is-danger {
-  color: #cc0000;
-  font-weight: 600;
-}
-
-html.dark .liquid-glass-card .input,
-html.dark .liquid-glass-card .textarea,
-html.dark .liquid-glass-card .select select {
-  background-color: rgba(36, 36, 38, 0.95);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-  font-weight: 500;
-}
-
-html.dark .liquid-glass-card .input::placeholder,
-html.dark .liquid-glass-card .textarea::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-  opacity: 1;
-}
-
-html.dark .liquid-glass-card .label {
-  color: #ffffff;
-  font-weight: 600;
-  opacity: 1;
-}
-
-html.dark .liquid-glass-card .help {
-  color: #ffffff;
-  font-weight: 600;
-  opacity: 1;
-}
-
-html.dark .liquid-glass-card .help.is-danger {
-  color: #ff6b6b;
-  font-weight: 600;
-}
-
-/* 确保标签和通知对比度 */
-.liquid-glass-card .tag {
-  background-color: #6366f1;
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.liquid-glass-card .tag.is-info {
-  background-color: #3b82f6;
-  color: #ffffff;
-}
-
-.liquid-glass-card .notification {
-  background-color: #ffffff;
-  color: #000000;
-  border-left: 4px solid;
-}
-
-.liquid-glass-card .notification.is-success {
-  background-color: #d4edda;
-  color: #155724;
-  border-left-color: #28a745;
-}
-
-.liquid-glass-card .notification.is-danger {
-  background-color: #f8d7da;
-  color: #721c24;
-  border-left-color: #dc3545;
-}
-
-html.dark .liquid-glass-card .tag {
-  background-color: #6366f1;
-  color: #ffffff;
-  font-weight: 600;
-}
-
-html.dark .liquid-glass-card .tag.is-info {
-  background-color: #3b82f6;
-  color: #ffffff;
-}
-
-html.dark .liquid-glass-card .notification {
-  background-color: #1a1a1a;
-  color: #ffffff;
-  border-left: 4px solid;
-}
-
-html.dark .liquid-glass-card .notification.is-success {
-  background-color: #1e3a1e;
-  color: #90ee90;
-  border-left-color: #28a745;
-}
-
-html.dark .liquid-glass-card .notification.is-danger {
-  background-color: #3a1e1e;
-  color: #ff6b6b;
-  border-left-color: #dc3545;
-}
-
-/* Modal card styles - Apple Design Guide - Eye-friendly */
-.modal-card {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.15), 0 8px 24px 0 rgba(0, 0, 0, 0.1);
-}
-
-html.dark .modal-card {
-  background: rgba(28, 28, 30, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.6), 0 8px 24px 0 rgba(0, 0, 0, 0.4);
-}
-
-.modal-card-head,
-.modal-card-foot {
-  background: transparent;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-html.dark .modal-card-head,
-html.dark .modal-card-foot {
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.modal-card-title {
-  color: #000000;
-  font-weight: 600;
-}
-
-html.dark .modal-card-title {
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.modal-card-body {
-  background: transparent;
-}
-
-.modal-background {
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-html.dark .modal-background {
-  background-color: rgba(0, 0, 0, 0.7);
-}
-
-/* Title and subtitle in liquid glass cards - Enhanced contrast */
-.liquid-glass-card .title,
-.liquid-glass-card .subtitle {
-  color: #000000;
-  font-weight: 600;
-}
-
-html.dark .liquid-glass-card .title,
-html.dark .liquid-glass-card .subtitle {
-  color: #ffffff;
-  font-weight: 600;
-  opacity: 1;
-}
-
-/* Progress bar text contrast */
-.progress {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-html.dark .progress {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-/* 高对比度模式支持 */
-@media (prefers-contrast: high) {
-  .liquid-glass {
-    background: rgba(255, 255, 255, 0.95);
-    border: 2px solid rgba(0, 0, 0, 0.2);
-  }
-  
-  html.dark .liquid-glass {
-    background: rgba(32, 32, 34, 0.98);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .liquid-glass-text {
-    color: #000000;
-    font-weight: 600;
-  }
-  
-  html.dark .liquid-glass-text {
-    color: #ffffff;
-    font-weight: 600;
-  }
+  transform: translateY(0);
 }

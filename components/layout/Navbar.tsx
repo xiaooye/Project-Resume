@@ -3,15 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 
 const navItems = [
   { name: "Home", href: "/", ariaLabel: "Navigate to home page" },
-  { name: "Projects", href: "/projects", ariaLabel: "Navigate to projects page" },
-  { name: "Skills", href: "/skills", ariaLabel: "Navigate to skills page" },
-  { name: "Demos", href: "#demos", ariaLabel: "Navigate to demos section" },
-  { name: "Contact", href: "/contact", ariaLabel: "Navigate to contact page" },
+  { name: "Case Studies", href: "/case-studies", ariaLabel: "Read case studies" },
+  { name: "Skills", href: "/skills", ariaLabel: "Technical skills" },
+  { name: "Demos", href: "/demos", ariaLabel: "Live demos" },
+  { name: "Contact", href: "/contact", ariaLabel: "Get in touch" },
 ];
 
 export default function Navbar() {
@@ -136,23 +135,21 @@ export default function Navbar() {
   };
 
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
+    <nav
       className={`navbar is-fixed-top liquid-glass-nav ${
-        isScrolled ? "" : ""
+        isScrolled ? "has-shadow" : ""
       }`}
       role="navigation"
       aria-label="Main navigation"
     >
       <div className="container">
         <div className="navbar-brand">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="navbar-item"
             aria-label="Portfolio home page"
           >
-            <span className="title is-4 has-text-primary">Portfolio</span>
+            <span className="title is-4 font-display has-text-accent">Wei</span>
           </Link>
 
           <button
@@ -189,7 +186,7 @@ export default function Navbar() {
                 }}
                 onKeyDown={(e) => handleMenuItemKeyDown(e, item.href)}
                 className={`navbar-item ${
-                  pathname === item.href ? "has-text-primary" : ""
+                  pathname === item.href ? "has-text-accent" : ""
                 }`}
                 aria-label={item.ariaLabel}
                 aria-current={pathname === item.href ? "page" : undefined}
@@ -200,10 +197,18 @@ export default function Navbar() {
             <div className="navbar-item">
               <ThemeToggle />
             </div>
+            <div className="navbar-item">
+              <a
+                href="mailto:contact@wei-dev.com"
+                className="button is-primary is-small liquid-glass-button"
+                aria-label="Hire me - send email"
+              >
+                Hire Me
+              </a>
+            </div>
           </div>
         </div>
       </div>
-    </motion.nav>
+    </nav>
   );
 }
-

@@ -19,11 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = request.headers.get("x-api-key") || process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "OPENAI_API_KEY is not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "No API key provided. Please enter your OpenAI API key." }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
 

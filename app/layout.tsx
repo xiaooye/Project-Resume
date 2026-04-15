@@ -1,35 +1,49 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, DM_Serif_Display, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import Navbar from "@/components/layout/Navbar";
-import { AgentProvider } from "@/lib/ai-agent/agent-context";
-import GlobalAgent from "@/components/ai-agent/GlobalAgent";
+import Footer from "@/components/layout/Footer";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const dmSerif = DM_Serif_Display({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Senior Full Stack Developer Portfolio",
+  title: "Wei | Senior Full Stack Developer - Web App Migration, AI Integration",
   description:
-    "Portfolio showcasing advanced full-stack development skills including real-time systems, WebAssembly, AI/ML, cloud services, and more.",
+    "I help companies modernize legacy web applications and ship AI-powered features. Specializing in code migration, RAG/LLM integration, and production architecture.",
   keywords: [
     "full stack developer",
-    "next.js",
-    "react",
+    "web app migration",
+    "AI integration",
+    "legacy modernization",
+    "RAG pipeline",
+    "LLM integration",
     "typescript",
-    "webassembly",
-    "AI",
-    "machine learning",
-    "cloud services",
+    "vue.js",
+    "nuxt.js",
+    "freelance developer",
   ],
+  openGraph: {
+    title: "Wei | Senior Full Stack Developer",
+    description:
+      "I help companies modernize legacy web applications and ship AI-powered features.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -40,16 +54,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable}`}
+        className={`${dmSans.variable} ${dmSerif.variable} ${geistMono.variable}`}
+        style={{ fontFamily: "var(--font-sans)" }}
       >
-        <div className="floating-shapes"></div>
-        <div className="noise-texture"></div>
         <ThemeProvider>
-          <AgentProvider>
-            <Navbar />
-            <main className="is-fullheight pt-6">{children}</main>
-            <GlobalAgent />
-          </AgentProvider>
+          <Navbar />
+          <main className="is-fullheight pt-6">{children}</main>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>
