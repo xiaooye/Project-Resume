@@ -191,7 +191,7 @@ export default function Home() {
             Live applications I&apos;ve architected and built end-to-end.
           </p>
           <Link
-            href="https://storefront-xiaooyes-projects.vercel.app"
+            href="https://ecom.wei-dev.com"
             target="_blank"
             rel="noopener noreferrer"
             className="case-study-row"

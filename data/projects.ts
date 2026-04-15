@@ -19,7 +19,7 @@ export const projects: ShowcaseProject[] = [
     tagline: "Full-stack headless commerce with custom modules and demo mode architecture",
     description:
       "A complete e-commerce storefront built on Medusa.js v2 (headless commerce engine) and Next.js 15. Features custom backend modules for reviews and webhooks, event-driven architecture with 6 subscribers, and a novel demo mode pattern that lets the site run fully without a live backend. 280+ components, 59 test files, warm editorial design system.",
-    url: "https://storefront-xiaooyes-projects.vercel.app",
+    url: "https://ecom.wei-dev.com",
     githubUrl: "https://github.com/xiaooye/ecom",
     tags: ["E-Commerce", "Full Stack", "Architecture"],
     stack: ["Next.js 15", "React 19", "Medusa.js v2", "PostgreSQL", "Redis", "Stripe", "Tailwind v4", "TypeScript"],
