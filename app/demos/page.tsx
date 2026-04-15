@@ -18,16 +18,23 @@ const demos = [
   {
     title: "Data Pipeline",
     description:
-      "Animated batch processing simulation — records flow through ingestion, parsing, validation, transformation, and loading with live stats.",
+      "Real CSV processor — paste data and watch it parsed, validated, transformed, and loaded. Catches missing fields, bad formats, duplicates. Not simulated.",
     href: "/demos/data-pipeline",
     proves: "Data Engineering",
   },
   {
-    title: "System Monitor",
+    title: "Site Performance Monitor",
     description:
-      "Real-time metrics dashboard with streaming data, sparkline charts, trend indicators, and service health status.",
+      "Real metrics from your browser via Navigation Timing API. Pings this site's GraphQL endpoint and charts latency, p95, and uptime — actual data, not random numbers.",
     href: "/demos/system-monitor",
-    proves: "Full-Stack Streaming",
+    proves: "Observability",
+  },
+  {
+    title: "Markdown Editor",
+    description:
+      "Live split-pane editor with a hand-rolled parser — zero dependencies. Headings, bold, italic, code blocks, lists, links, blockquotes, all from scratch.",
+    href: "/demos/markdown-editor",
+    proves: "Frontend Craft",
   },
 ];
 

@@ -103,7 +103,7 @@ export default function Home() {
               { value: "7+", label: "Years in production" },
               { value: "0", label: "Downtime on migrations" },
               { value: "85%", label: "AI auto-resolution rate" },
-              { value: "4", label: "Live interactive demos" },
+              { value: "5", label: "Live interactive demos" },
             ].map((stat) => (
               <div key={stat.label} className="column">
                 <p className="stat-value">{stat.value}</p>
