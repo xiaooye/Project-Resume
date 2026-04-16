@@ -195,7 +195,6 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
             className="case-study-row"
-            style={{ borderBottom: "none" }}
           >
             <div
               style={{
@@ -214,6 +213,32 @@ export default function Home() {
             </div>
             <p className="text-secondary" style={{ lineHeight: 1.6 }}>
               Headless commerce on Medusa.js v2 + Next.js 15. Custom backend modules, event-driven architecture, demo mode fallback pattern.
+            </p>
+          </Link>
+          <Link
+            href="https://data.wei-dev.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="case-study-row"
+            style={{ borderBottom: "none" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+              }}
+            >
+              <h3 className="title is-5 mb-1">DataPilot — AI Data Analysis</h3>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
+                <span className="has-text-accent has-text-weight-bold">Streaming AI</span>
+                <span className="hover-arrow has-text-accent">→</span>
+              </div>
+            </div>
+            <p className="text-secondary" style={{ lineHeight: 1.6 }}>
+              AI-powered CSV analysis with auto-generated charts, anomaly detection, and natural-language Q&A via streaming SSE.
             </p>
           </Link>
           <Link

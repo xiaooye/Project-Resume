@@ -17,6 +17,12 @@ const socialLinks = [
   { name: "Email", href: "mailto:contact@wei-dev.com" },
 ];
 
+const showcaseLinks = [
+  { name: "WebStore", href: "https://ecom.wei-dev.com" },
+  { name: "DataPilot", href: "https://data.wei-dev.com" },
+  { name: "TeamPilot", href: "https://cms.wei-dev.com" },
+];
+
 export default function Footer() {
   return (
     <footer
@@ -42,7 +48,19 @@ export default function Footer() {
           </div>
 
           <div className="column has-text-right">
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", flexWrap: "wrap" }}>
+              {showcaseLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-secondary is-size-7"
+                  aria-label={`${link.name} — live showcase project`}
+                >
+                  {link.name}
+                </a>
+              ))}
               {socialLinks.map((link) => (
                 <a
                   key={link.name}
